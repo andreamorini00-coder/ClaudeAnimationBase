@@ -50,7 +50,7 @@ STYLES.classic = {
   brushes: { ink: {…}, inkfine: {…}, dry: {…} },          // le definizioni passate a brush.add
   brushScale: 5,
   boil: 12,
-  paint: { fillOp: 1, bleed: 1, tex: 1, sw: 1, washOp: 1, fillAs: 'fill', outline: 'all' },
+  paint: { fillOp: 1, bleed: 1, tex: 1, sw: 1, washOp: 1, fillAs: 'fill' },
 };
 ```
 
@@ -62,10 +62,10 @@ STYLES.classic = {
   `scaleBrushes`, `BOIL`) viene letta da `STYLE`.
 - `STYLE.paint` contiene moltiplicatori e scelte applicate dentro `paint()`/`inkLine()` a ogni chiamata:
   - `fillOp`, `bleed`, `tex`, `washOp`, `sw`: moltiplicatori (1 = invariato);
-  - `fillAs`: `'fill'` (acquerello vero) oppure `'wash'` (colore piatto, più economico);
-  - `outline`: `'all'`, oppure `'characters'` per togliere il contorno dove la chiamata non lo chiede
-    esplicitamente. In pratica si toglie l'`ink` di default dalle forme che hanno solo `fill`, cioè sfondi e ombre.
-    La regola esatta si decide nel piano dopo aver letto le chiamate in `clawd.js` e nella demo.
+  - `fillAs`: `'fill'` (acquerello vero) oppure `'wash'` (colore piatto, più economico).
+  - Il contorno non ha un'opzione a parte: le scene già passano `ink: null` agli sfondi (10 su 13 nella demo) e
+    `clawd.js` passa `ink` esplicito a 58 forme. Il contorno più leggero si ottiene con `sw` e con pennelli più
+    sottili nello stile.
 - **Tecnica.** `paint()` e `inkLine()` delegano a `TECHNIQUES[STYLE.technique]`. Nella Fase 1 esiste solo
   `watercolor`, che è il codice attuale di `paintAt`/`inkLine` spostato senza modifiche. Una tecnica futura
   (`flat`, `papercut`, `pixel`, `comic`, `silhouette`) fornirà la sua `paintAt`/`inkLine` e potrà ignorare
@@ -115,7 +115,8 @@ Più chiaro e più economico (scelta di Andrea):
   puri;
 - `paint`: `fillAs: 'wash'` per gran parte delle forme e opacità dei riempimenti rimasti circa dimezzata
   (`fillOp ~ .5`). Meno riempimenti significa anche render più veloce;
-- contorno: `inkfine`, più sottile (`sw ~ .7`), sui personaggi; sfondi senza contorno;
+- contorno: pennello `ink` ridefinito più sottile e più trasparente (vicino a `inkfine`) e `sw ~ .7`; gli sfondi
+  restano senza contorno come già oggi;
 - carta più chiara, grana e vignettatura ridotte (~60%);
 - `boil` e pennelli invariati, salvo correzioni dopo il primo confronto visivo.
 
