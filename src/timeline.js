@@ -11,6 +11,8 @@ const formatsOf = f => f == null ? ['landscape'] : [].concat(f);
 function shots(list, opts = {}) { SHOTS.push(...list); SHOTS.sort((a, b) => a[0] - b[0]); SHOT_FORMATS.push(formatsOf(opts.format)); }
 // The reason the current scene or loop can't be drawn in FORMAT_NAME, or null. setup() checks it before anything is drawn.
 function formatMismatch() {
+  const asked = new URLSearchParams(location.search).get('loop');
+  if (asked && !LOOPS[asked]) return `Loop "${asked}" inesistente. Disponibili: ${Object.keys(LOOPS).join(', ')}`;
   if (window.LOOP) {
     const name = Object.keys(LOOPS).find(k => LOOPS[k] === window.LOOP), f = formatsOf(window.LOOP.format);
     return f.includes(FORMAT_NAME) ? null : `Il loop "${name}" è composto per ${f.join(', ')}, non per ${FORMAT_NAME}`;

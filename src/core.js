@@ -297,7 +297,11 @@ async function setup() {
   outC = document.getElementById('out'); outC.width = W; outC.height = H; outC.style.aspectRatio = `${W} / ${H}`; outX = outC.getContext('2d');
   await document.fonts.load('100px "Permanent Marker"');
   const mismatch = formatMismatch();
-  if (mismatch) { window.loadError = mismatch; return; }
+  if (mismatch) {   // render.mjs prints loadError; studio.html opened by hand shows it in place of the time
+    window.loadError = mismatch;
+    if (!location.search.includes('render')) { console.error(mismatch); document.getElementById('tt').textContent = mismatch; }
+    return;
+  }
   window.ready = true;
   if (!location.search.includes('render')) devUI();
 }
