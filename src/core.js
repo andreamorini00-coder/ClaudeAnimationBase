@@ -10,6 +10,11 @@ const W = 1920, H = 1080;
 const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = STYLE.boil, DUR = PROJECT.duration;
 const TAU = Math.PI * 2;
 const PAL = STYLE.palette;
+const TECH = TECHNIQUES[STYLE.technique];
+if (!TECH) {
+  window.loadError = `Tecnica "${STYLE.technique}" (stile "${STYLE_NAME}") inesistente. Disponibili: ${Object.keys(TECHNIQUES).join(', ')}`;
+  throw new Error(window.loadError);
+}
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, x) => a + (b - a) * x;
@@ -184,24 +189,26 @@ function centred(pts, draw) {
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   push(); translate(cx, cy); draw(pts.map(([x, y]) => [x - cx, y - cy])); pop();
 }
-function paint(pts, o = {}) { centred(pts, (P) => paintAt(P, o)); }
-function paintAt(pts, o) {
-  if (o.wash || o.fill || o.hatch) {
-    if (o.wash) brush.wash(o.wash, o.washOp ?? 255); else brush.noWash();
-    if (o.fill) { brush.fill(o.fill, o.fillOp ?? 170); brush.fillBleed(o.bleed ?? .1); brush.fillTexture(o.tex ?? .4, o.border ?? .35); } else brush.noFill();
-    if (o.hatch) { brush.hatch(o.hatch.d, o.hatch.a, o.hatch.o || { rand: .15 }); brush.hatchStyle(o.hatch.b || 'HB', o.hatch.c || PAL.ink, o.hatch.w || 1); } else brush.noHatch();
-    brush.noStroke();
-    if (o.curv) { brush.beginShape(o.curv); for (const p of pts) brush.vertex(p[0], p[1]); brush.endShape(true); }
-    else brush.polygon(pts);
+// The marks themselves come from the style's technique (src/techniques/). STYLE.paint scales every call's options;
+// a style whose multipliers are all 1 (classic) passes them through untouched.
+const SP = STYLE.paint;
+const PAINT_AS_IS = SP.fillOp === 1 && SP.bleed === 1 && SP.tex === 1 && SP.washOp === 1 && SP.sw === 1 && SP.fillAs !== 'wash';
+function styled(o) {
+  if (PAINT_AS_IS) return o;
+  const s = { ...o };
+  if (s.fill && SP.fillAs === 'wash') {           // flat colour instead of a watercolour fill: much cheaper to render
+    if (!s.wash) { s.wash = s.fill; s.washOp = (o.fillOp ?? 170) * SP.fillOp; }
+    delete s.fill;
+  } else if (s.fill) {
+    s.fillOp = (o.fillOp ?? 170) * SP.fillOp; s.bleed = (o.bleed ?? .1) * SP.bleed; s.tex = (o.tex ?? .4) * SP.tex;
   }
-  // the outline is one continuous tapered stroke, not a stroke per side
-  if (o.ink !== null) {
-    brush.noWash(); brush.noFill(); brush.noHatch(); brush.set(o.br || 'ink', o.ink || PAL.ink, o.sw ?? 1);
-    brush.beginShape(o.curv || 0); for (const p of pts) brush.vertex(p[0], p[1]); brush.endShape(true);
-  }
+  if (s.wash) s.washOp = Math.min(255, (s.washOp ?? 255) * SP.washOp);
+  s.sw = (o.sw ?? 1) * SP.sw;
+  return s;
 }
+function paint(pts, o = {}) { const so = styled(o); centred(pts, (P) => TECH.paintAt(P, so)); }
 function inkLine(pts, sw = 1, col = PAL.ink, br = 'ink', curv = .5) {
-  centred(pts, (P) => { brush.noFill(); brush.noWash(); brush.noHatch(); brush.set(br, col, sw); brush.spline(P, curv); });
+  centred(pts, (P) => TECH.inkLine(P, sw * SP.sw, col, br, curv));
 }
 
 // ---------- lettering (drawn on the 2D compositor, under the paper grain) ----------
@@ -245,26 +252,8 @@ function flushLetters() {
   push(); resetMatrix(); translate(-W / 2, -H / 2); image(letG, 0, 0); pop();
 }
 
-// ---------- paper ----------
+// ---------- paper (drawn by the technique: TECH.makePaper / TECH.makeGrain) ----------
 function lcg(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
-function makePaper(p = STYLE.paper) {
-  const g = createGraphics(W, H); g.pixelDensity(1); const c = g.drawingContext, rnd = lcg(p.seed);
-  c.fillStyle = PAL.paper; c.fillRect(0, 0, W, H);
-  for (let i = 0; i < p.stains; i++) { const x = rnd() * W, y = rnd() * H, r = p.stainR[0] + rnd() * p.stainR[1], gr = c.createRadialGradient(x, y, 0, x, y, r), a = p.stainAlpha * rnd(); gr.addColorStop(0, `rgba(${p.stainRGB},${a})`); gr.addColorStop(1, `rgba(${p.stainRGB},0)`); c.fillStyle = gr; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
-  c.lineWidth = 1;
-  for (let i = 0; i < p.fibers; i++) { const x = rnd() * W, y = rnd() * H, l = p.fiberLen[0] + rnd() * p.fiberLen[1], a = rnd() * TAU; c.strokeStyle = `rgba(${p.fiberRGB},${p.fiberAlpha[0] + rnd() * p.fiberAlpha[1]})`; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a + .6) * l * .5, y + Math.sin(a + .6) * l * .5, x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); }
-  return g;
-}
-// Static grain + vignette, multiplied over the painted frame so pigment sits "in" the paper.
-function makeGrain(gs = STYLE.grain) {
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), rnd = lcg(gs.seed);
-  const id = c.createImageData(W, H), d = id.data;
-  for (let i = 0; i < d.length; i += 4) { const v = 255 - (rnd() < gs.density ? rnd() * rnd() * gs.depth : 0); d[i] = v; d[i + 1] = v - 1; d[i + 2] = v - 3; d[i + 3] = 255; }
-  c.putImageData(id, 0, 0);
-  const g = c.createRadialGradient(W / 2, H / 2, H * gs.vignetteR[0], W / 2, H / 2, H * gs.vignetteR[1]); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(${gs.vignetteRGB},${gs.vignette})`);
-  c.fillStyle = g; c.fillRect(0, 0, W, H);
-  return cv;
-}
 
 // ---------- custom brushes ----------
 function defineBrushes() {
@@ -275,7 +264,7 @@ function defineBrushes() {
 async function setup() {
   createCanvas(W, H, WEBGL); pixelDensity(1); noLoop();
   brush.scaleBrushes(STYLE.brushScale); defineBrushes();
-  paperG = makePaper(); grainC = makeGrain(); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
+  paperG = TECH.makePaper(STYLE); grainC = TECH.makeGrain(STYLE); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
   outC = document.getElementById('out'); outX = outC.getContext('2d');
   await document.fonts.load('100px "Permanent Marker"');
   window.ready = true;
