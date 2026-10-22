@@ -49,11 +49,15 @@ Branch `fase2a-verticale`. Spec: `../specs/2026-10-22-fase2a-formati-design.md`.
   sottotitoli sta tra ~1150 e ~1500 px, non nel quinto basso (lì c'è la didascalia del social). Opzione per
   disegnare le zone sugli sheet di controllo, mai nel video finale.
 
-### 2b. Audio: musica e voce
+### 2b. Audio: effetti, ambienti, musica · **design approvato, in corso**
 
-- Più tracce unite al video da `render.mjs` con ffmpeg (oggi ce n'è una sola: `--audio` / `PROJECT.audio`).
-- Volume per traccia e abbassamento automatico della musica sotto la voce.
-- Funziona con `--clip`, `--encode` e con il draft a 12 fps.
+Branch `fase2b-audio`. Spec: `../specs/2026-10-23-fase2b-audio-design.md`. Piano: `2026-10-23-fase2b-audio.md`.
+Niente voce per ora (solo un campo riservato); effetti da `assets/sfx/`.
+
+- La scena dichiara i suoni con i tempi dell'animazione: effetti con variazioni automatiche, ambienti in loop con
+  dissolvenze, musica opzionale con ducking leggero sotto gli effetti importanti.
+- Livelli di partenza per categoria, mix normalizzato a −14 LUFS, AAC 48 kHz; `--mix` per il solo audio.
+- Video in `yuv420p` a gamma TV. Funziona con `--clip`, `--encode` e con il draft a 12 fps.
 
 ### 2c. Testi e sottotitoli
 
