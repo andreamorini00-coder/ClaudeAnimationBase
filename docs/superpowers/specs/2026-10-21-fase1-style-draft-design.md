@@ -101,7 +101,7 @@ misurato da solo su uno spezzone fisso della demo prima di tenerlo:
 | meno fotogrammi | 12 fps invece di 24 (mp4 a 12 fps, stessa durata) | ÷2 |
 | riempimenti piatti | forza `fillAs: 'wash'` sopra lo stile scelto | da misurare |
 | mezza risoluzione | tela 960×540 con `scale(.5)` globale; le scene restano in coordinate 1920×1080 | da misurare |
-| riapertura pagina | già attiva per tutti (sezione 3) | evita il rallentamento da ~1,5 a ~3 s |
+| riapertura pagina | scartata: misurata più lenta (sezione 3) | — |
 | più worker | `--frames --workers=N` + `--encode` | da misurare (una sola GPU) |
 
 - Si tengono solo i tagli necessari per stare sotto i 120 s, privilegiando quelli che toccano meno l'aspetto.
