@@ -28,8 +28,11 @@ regole di regia di html-anime.
   disattivata). Chrome headless usa ANGLE/D3D11 sulla Intel UHD.
 - Render via CPU (`--soft-gl`, SwiftShader): ~60 s per fotogramma contro ~1,5 s della Intel UHD. Escluso.
 - Demo attuale, `--clip` completo: 264 fotogrammi in **826 s** (13 min 47 s).
-- Lo stesso fotogramma costa ~1,5 s in una pagina appena aperta e ~3 s dopo 100+ fotogrammi nella stessa pagina:
-  la pagina rallenta durante una sessione lunga.
+- Lo stesso fotogramma costava ~1,5 s in una pagina appena aperta e ~3 s dopo 100+ fotogrammi nella stessa pagina.
+  **Smentito dalle misure del Task 2** (2026-10-22): `--clip --range=0:6` (144 fotogrammi) senza riapertura resta
+  stabile a ~1,4 s per fotogramma, 210 s in tutto; con riapertura ogni 24 o 48 fotogrammi ci mette 245 s e 241 s.
+  La riapertura resta disponibile (`--recycle=N`) ma è spenta per default. Il primo render probabilmente pagava il
+  PC usato in parallelo per altro. I run di misura del 21/10 interrotti erano dovuti allo standby del PC.
 - Il render è deterministico: due render dello stesso fotogramma producono PNG identici byte per byte (verificato a
   t = 2,0 e 6,5). Questo rende possibile la verifica esatta del punto 1.
 
@@ -84,7 +87,7 @@ STYLES.classic = {
 ### 3. Riapertura periodica della pagina (tutti i render)
 
 - `render.mjs` chiude e riapre la pagina ogni N fotogrammi in `--clip`, `--frames` e `--png`
-  (`--recycle=N`, default scelto con la misura del piano, `--recycle=0` la disattiva).
+  (`--recycle=N`; default `0`, cioè spenta, perché misurata più lenta: vedi Contesto misurato).
 - Vale anche per il render finale. Poiché ogni fotogramma è una funzione pura di `t`, l'output non cambia:
   lo si verifica confrontando i fotogrammi con e senza riapertura.
 
@@ -127,7 +130,7 @@ I valori esatti si fissano guardando uno sheet di confronto `classic` / `acquere
 | render | tempo | note |
 |---|---|---|
 | demo, `classic`, `--clip` (prima) | 826 s | 264 fotogrammi, senza riapertura |
-| demo, `classic`, `--clip` con riapertura | — | |
+| spezzone 0–6 s, `classic`, `--clip`, senza / con riapertura 24 / 48 | 210 / 245 / 241 s | riapertura spenta per default |
 | demo, `classic`, `--clip --draft` | — | obiettivo < 120 s |
 | demo, `acquerello-leggero`, `--clip --draft` | — | obiettivo < 120 s |
 | demo, `acquerello-leggero`, `--clip` (finale) | — | richiesto da Andrea |

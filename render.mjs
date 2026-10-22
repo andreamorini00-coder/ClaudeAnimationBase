@@ -78,6 +78,18 @@ async function openPage(tag = '') {
   }
   return page;
 }
+// --recycle=N: --clip, --frames and --png reopen the page every N frames (0 = never, the default). Frames are pure
+// functions of t, so the output doesn't change. Measured on integrated graphics it made a 144-frame clip slower
+// (210 s without, 241–245 s every 24–48 frames), so it's off unless a long render shows a page slowing down.
+const RECYCLE_DEFAULT = 0;
+const recycle = +(args.recycle ?? RECYCLE_DEFAULT);
+// state = { page, n }: one per worker. Returns the page to render the next frame with, reopening it when it's due.
+async function pageFor(state, tag = '') {
+  if (state.page && recycle && state.n >= recycle) { await state.page.close(); state.page = null; }
+  if (!state.page) { state.page = await openPage(tag); state.n = 0; }
+  state.n++;
+  return state.page;
+}
 const frameOf = async (page, t, type, q) => {
   const url = await page.evaluate((t, type, q) => window.renderAt(t, type, q), t, type, q);
   return Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
@@ -109,8 +121,8 @@ if (args.sheet || args.strip) {
   const out = args.out || `out/${args.loop ? 'loop_' + args.loop : 'png'}`, workers = +(args.workers || 3); mkdirSync(out, { recursive: true });
   let next = 0; const start = Date.now();
   await Promise.all(Array.from({ length: workers }, async (_, w) => {
-    const page = await openPage('#' + w);
-    while (next < n) { const i = next++; writeFileSync(`${out}/f${String(i).padStart(4, '0')}.png`, await frameOf(page, a + i / fps, 'image/png')); }
+    const st = {};
+    while (next < n) { const i = next++; writeFileSync(`${out}/f${String(i).padStart(4, '0')}.png`, await frameOf(await pageFor(st, '#' + w), a + i / fps, 'image/png')); }
   }));
   console.log(`${n} frames → ${out}  (${((Date.now() - start) / n).toFixed(0)} ms/frame)`);
 } else if (args.frames) {
@@ -123,10 +135,10 @@ if (args.sheet || args.strip) {
   console.log(`${todo.length} frames to render (${last - first + 1 - todo.length} already done), ${workers} workers`);
   let next = 0, done = 0; const start = Date.now();
   await Promise.all(Array.from({ length: workers }, async (_, w) => {
-    const page = await openPage('#' + w);
+    const st = {};
     while (next < todo.length) {
       const i = todo[next++], f = `${FRAMES_DIR}/f${String(i).padStart(5, '0')}.jpg`;
-      const buf = await frameOf(page, i / fps, 'image/jpeg', .94);
+      const buf = await frameOf(await pageFor(st, '#' + w), i / fps, 'image/jpeg', .94);
       writeFileSync(f + '.tmp', buf); renameSync(f + '.tmp', f);
       if (++done % 24 === 0 || done === todo.length) {
         const el = (Date.now() - start) / 1000;
@@ -143,9 +155,9 @@ if (args.sheet || args.strip) {
     ...(audio ? ['-ss', String(a), '-t', String(b - a), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out],
     { stdio: ['pipe', 'inherit', 'inherit'] });
-  const n = Math.round((b - a) * fps), start = Date.now();
+  const n = Math.round((b - a) * fps), start = Date.now(), st = { page, n: 0 };
   for (let i = 0; i < n; i++) {
-    const buf = await frameOf(page, a + i / fps, 'image/jpeg', .93);
+    const buf = await frameOf(await pageFor(st), a + i / fps, 'image/jpeg', .93);
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
     if (i % 24 === 0 || i === n - 1) console.log(`frame ${i + 1}/${n}  ${((Date.now() - start) / (i + 1)).toFixed(0)} ms/frame`);
   }
