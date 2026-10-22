@@ -6,8 +6,18 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { checkStamp, writeStamp, readStamp } from './stamp.mjs';
 
-const final = { style: 'classic', draft: '', fps: 24 }, draft = { style: 'classic', draft: 'flat', fps: 12 };
+const final = { style: 'classic', draft: '', fps: 24, format: 'landscape' }, draft = { style: 'classic', draft: 'flat', fps: 12, format: 'landscape' };
 const tmp = () => mkdtempSync(join(tmpdir(), 'stamp-'));
+
+test('another format blocks a resume', () => {
+  const d = tmp(); writeStamp(d, final);
+  assert.match(checkStamp(d, { ...final, format: 'vertical' }), /vertical/);
+});
+
+test('old stamp without format counts as landscape', () => {
+  const d = tmp(); writeFileSync(join(d, 'stamp.json'), JSON.stringify({ style: 'classic', draft: '', fps: 24 }));
+  assert.equal(checkStamp(d, final), null);
+});
 
 test('empty folder can be started', () => {
   assert.equal(checkStamp(tmp(), final), null);

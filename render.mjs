@@ -140,7 +140,7 @@ if (args.sheet || args.strip) {
   // Parallel and resumable: each worker pulls the next missing frame; files are written atomically.
   const probe = await openPage(), len = await lengthOf(probe);
   // Resuming only makes sense with the same settings: refuse to mix draft and final frames, or two styles.
-  const stamp = { ...await probe.evaluate(() => ({ style: STYLE_NAME, draft: DRAFT.on ? DRAFT_OPTS : '' })), fps };
+  const stamp = { ...await probe.evaluate(() => ({ style: STYLE_NAME, draft: DRAFT.on ? DRAFT_OPTS : '', format: FORMAT_NAME })), fps };
   await probe.close();
   const clash = checkStamp(FRAMES_DIR, stamp);
   if (clash) { console.error(`${clash}.\nSvuota la cartella e rilancia (CMD: rmdir /s /q out\\frames).`); await browser.close(); process.exit(1); }
