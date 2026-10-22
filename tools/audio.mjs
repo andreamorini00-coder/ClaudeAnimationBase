@@ -38,3 +38,47 @@ export function resolvePlan(raw = {}, { files, dir, duration, range, music = '' 
   const mus = raw.music?.file ? { file: raw.music.file, vol: raw.music.vol ?? 0 } : music ? { file: music, vol: 0 } : null;
   return { sfx, ambience, music: mus, duration: b - a };
 }
+
+// ---------- ducking ----------
+// The music dips by DUCK.depth (0.5 = −6 dB) under every effect with duck: starting DUCK.pre before it, down in
+// DUCK.down, held for the effect's length plus DUCK.hold, back up in DUCK.up. Overlapping dips take the deepest.
+export const DUCK = { depth: .5, pre: .05, down: .1, hold: .2, up: .4 };
+const clip01 = x => Math.min(1, Math.max(0, x));
+const dip = (t, c) => { const s = c.t - DUCK.pre, e = c.t + c.dur + DUCK.hold; return clip01((t - s) / DUCK.down) * clip01((e + DUCK.up - t) / DUCK.up); };
+// 0 = full music, 1 = fully ducked, at time t, for cues [{ t, dur }].
+export const duckAmount = (t, cues) => cues.reduce((m, c) => Math.max(m, dip(t, c)), 0);
+const num = x => String(+x.toFixed(4));
+// The same curve as an ffmpeg expression in t (for volume=…:eval=frame).
+export function duckExpr(cues) {
+  const terms = cues.map(c => { const s = c.t - DUCK.pre, e = c.t + c.dur + DUCK.hold;
+    return `clip((t-${num(s)})/${num(DUCK.down)},0,1)*clip((${num(e + DUCK.up)}-t)/${num(DUCK.up)},0,1)`; });
+  return terms.length ? terms.reduce((acc, x) => `max(${acc},${x})`) : '0';
+}
+
+// ---------- mix graph ----------
+// One ffmpeg filter_complex for a resolved plan: effects delayed to their times, ambiences looped and faded over their
+// span, the music ducked under the effects, everything at 48 kHz stereo, summed and cut to the clip's length.
+// gains/durs: per file, the dB that bring it to its category's level and its length in seconds (levelGains).
+// Returns { inputs: files for -i, in order, filter, out: '[mix]' }.
+export function mixGraph(plan, { gains, durs }) {
+  const uses = [...plan.sfx.map(s => s.file), ...plan.ambience.map(m => m.file), ...(plan.music ? [plan.music.file] : [])];
+  const inputs = [...new Set(uses)], count = {}, taken = {}, parts = [], mixIn = [];
+  uses.forEach(f => count[f] = (count[f] || 0) + 1);
+  inputs.forEach((f, i) => { if (count[f] > 1) parts.push(`[${i}:a]asplit=${count[f]}${Array.from({ length: count[f] }, (_, k) => `[i${i}_${k}]`).join('')}`); });
+  const src = f => { const i = inputs.indexOf(f), k = taken[f] = (taken[f] ?? -1) + 1; return count[f] > 1 ? `[i${i}_${k}]` : `[${i}:a]`; };
+  const base = (f, vol) => `aresample=48000,aformat=channel_layouts=stereo,volume=${num((gains[f] ?? 0) + vol)}dB`;
+  plan.sfx.forEach((s, k) => { parts.push(`${src(s.file)}${base(s.file, s.vol)},adelay=${Math.round(s.t * 1000)}:all=1[s${k}]`); mixIn.push(`[s${k}]`); });
+  plan.ambience.forEach((m, k) => {
+    const d = m.to - m.from, fx = [`aloop=loop=-1:size=2000000000`, `atrim=duration=${num(d)}`];
+    if (m.fadeIn > 0) fx.push(`afade=t=in:d=${num(m.fadeIn)}`);
+    if (m.fadeOut > 0) fx.push(`afade=t=out:st=${num(d - m.fadeOut)}:d=${num(m.fadeOut)}`);
+    parts.push(`${src(m.file)}${base(m.file, m.vol)},${fx.join(',')},adelay=${Math.round(m.from * 1000)}:all=1[a${k}]`); mixIn.push(`[a${k}]`);
+  });
+  if (plan.music) {
+    const cues = plan.sfx.filter(s => s.duck).map(s => ({ t: s.t, dur: durs[s.file] ?? 1 }));
+    const duck = cues.length ? `,volume='1-${num(DUCK.depth)}*(${duckExpr(cues)})':eval=frame` : '';
+    parts.push(`${src(plan.music.file)}${base(plan.music.file, plan.music.vol)}${duck},atrim=duration=${num(plan.duration)}[m0]`); mixIn.push('[m0]');
+  }
+  parts.push(`${mixIn.join('')}amix=inputs=${mixIn.length}:normalize=0:duration=longest,apad,atrim=duration=${num(plan.duration)}[mix]`);
+  return { inputs, filter: parts.join(';'), out: '[mix]' };
+}
