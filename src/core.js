@@ -6,6 +6,13 @@ if (!STYLE) {
   window.loadError = `Stile "${STYLE_NAME}" inesistente. Disponibili: ${Object.keys(STYLES).join(', ')}`;
   throw new Error(window.loadError);
 }
+// A style copied from classic.js with a field left out fails here, by name, instead of somewhere deep in setup().
+const STYLE_MISSING = ['technique', 'palette', 'paper', 'grain', 'brushes', 'brushScale', 'boil', 'paint'].filter(k => STYLE[k] == null)
+  .concat(STYLE.paint ? ['fillOp', 'bleed', 'tex', 'washOp', 'sw', 'fillAs'].filter(k => STYLE.paint[k] == null).map(k => 'paint.' + k) : []);
+if (STYLE_MISSING.length) {
+  window.loadError = `Stile "${STYLE_NAME}" incompleto: mancano ${STYLE_MISSING.join(', ')} (confronta con src/styles/classic.js)`;
+  throw new Error(window.loadError);
+}
 // Draft preview: studio.html?draft=flat,half or render.mjs --draft (plain ?draft means DRAFT_DEFAULT).
 //   flat: watercolour fills are painted as flat colour (the big saving); half: the frame is painted at half
 //   resolution and scaled up to 1920×1080. Scenes keep drawing in 1920×1080 coordinates either way.
