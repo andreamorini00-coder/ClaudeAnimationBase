@@ -15,7 +15,7 @@
     });
     for (let r = 0; r < 4; r++) floor(ch * r + ch - 58);
   };
-  LOOPS.emotions.len = 4;
+  LOOPS.emotions.len = 4; LOOPS.emotions.format = 'landscape';
 
   // Views, motion helpers, hats.
   LOOPS.views = t => {
@@ -39,5 +39,5 @@
     hats.forEach((h, i) => { const x = 82 + i * 125.5; clawd(x, 985, 8, { ...feel('neutral', t, { seed: i }), hat: h }); label(h, x, 1015, 17); });
     floor(985);
   };
-  LOOPS.views.len = 4;
+  LOOPS.views.len = 4; LOOPS.views.format = 'landscape';
 })();

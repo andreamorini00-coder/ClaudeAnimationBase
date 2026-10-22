@@ -159,5 +159,5 @@
     }
   }
 
-  shots([[0, shotFall], [4.4, shotReturn]]);
+  shots([[0, shotFall], [4.4, shotReturn]], { format: 'landscape' });
 })();

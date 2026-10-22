@@ -77,6 +77,7 @@ async function openPage(tag = '') {
   page.on('pageerror', e => { if (!/inesistente|incompleto/.test(e.message)) console.log(`[page error${tag}]`, e.message); });
   const query = '?render' + (args.style ? '&style=' + encodeURIComponent(args.style) : '')
     + (args.format ? '&format=' + encodeURIComponent(args.format) : '')
+    + (args.loop ? '&loop=' + encodeURIComponent(args.loop) : '')
     + (args.draft ? '&draft' + (args.draft === true ? '' : '=' + encodeURIComponent(args.draft)) : '');
   await page.goto(pathToFileURL(resolve('studio.html')).href + query, { waitUntil: 'networkidle0' });
   await page.waitForFunction('window.ready === true || !!window.loadError', { timeout: 60000 });

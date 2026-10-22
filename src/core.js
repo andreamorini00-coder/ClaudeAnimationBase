@@ -296,6 +296,8 @@ async function setup() {
   paperG = TECH.makePaper(STYLE); grainC = TECH.makeGrain(STYLE); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
   outC = document.getElementById('out'); outC.width = W; outC.height = H; outC.style.aspectRatio = `${W} / ${H}`; outX = outC.getContext('2d');
   await document.fonts.load('100px "Permanent Marker"');
+  const mismatch = formatMismatch();
+  if (mismatch) { window.loadError = mismatch; return; }
   window.ready = true;
   if (!location.search.includes('render')) devUI();
 }

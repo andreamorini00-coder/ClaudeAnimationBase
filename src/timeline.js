@@ -1,14 +1,27 @@
 // timeline.js: the shot list, standalone loops, and a brush-wipe transition.
 //
-// shots([[t0, fn], [t1, fn], ...]) registers shots in time order. Each fn(t, lt, dur) is called with t = video time,
-// lt = time since the shot started, dur = the shot's length. It paints the WHOLE frame, background included, and must be
-// a pure function of t: frames render in parallel and out of order, so nothing may carry over from one frame to the next.
+// shots([[t0, fn], [t1, fn], ...], { format }) registers shots in time order. Each fn(t, lt, dur) is called with t = video
+// time, lt = time since the shot started, dur = the shot's length. It paints the WHOLE frame, background included, and
+// must be a pure function of t: frames render in parallel and out of order, so nothing may carry over from one frame to
+// the next. format names the format(s) the shots are composed for ('landscape' if left out, or e.g. ['vertical', 'feed']):
+// rendering them in another format stops with an error instead of a badly framed video.
 
-const SHOTS = [];
-function shots(list) { SHOTS.push(...list); SHOTS.sort((a, b) => a[0] - b[0]); }
+const SHOTS = [], SHOT_FORMATS = [];
+const formatsOf = f => f == null ? ['landscape'] : [].concat(f);
+function shots(list, opts = {}) { SHOTS.push(...list); SHOTS.sort((a, b) => a[0] - b[0]); SHOT_FORMATS.push(formatsOf(opts.format)); }
+// The reason the current scene or loop can't be drawn in FORMAT_NAME, or null. setup() checks it before anything is drawn.
+function formatMismatch() {
+  if (window.LOOP) {
+    const name = Object.keys(LOOPS).find(k => LOOPS[k] === window.LOOP), f = formatsOf(window.LOOP.format);
+    return f.includes(FORMAT_NAME) ? null : `Il loop "${name}" è composto per ${f.join(', ')}, non per ${FORMAT_NAME}`;
+  }
+  const bad = SHOT_FORMATS.find(f => !f.includes(FORMAT_NAME));
+  return bad ? `La scena è composta per ${bad.join(', ')}, non per ${FORMAT_NAME}` : null;
+}
 
 // Standalone loops (model sheets, GIFs, tests), outside the main timeline: window.LOOP = LOOPS[name] swaps the whole
 // frame for that function, called with loop time. Give each a length: LOOPS.x = t => { ... }; LOOPS.x.len = 4;
+// and, if it isn't landscape, its format(s): LOOPS.x.format = ['vertical', 'feed'];
 const LOOPS = {};
 
 function drawWorld(t) {
