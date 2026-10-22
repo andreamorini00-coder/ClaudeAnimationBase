@@ -44,6 +44,8 @@ if (args.safe && (args.clip || args.frames || args.png || args.encode)) {
   console.error('--safe è solo per sheet, strip e stills: non va mai in un video'); process.exit(1);
 }
 const fps = +(args.fps || (args.draft ? 12 : 24)), FRAMES_DIR = 'out/frames';
+// Frames are JPEGs (full-range YUV), so ffmpeg would write yuvj420p; social apps want yuv420p in TV range.
+const TO_TV = ['-vf', 'scale=in_range=pc:out_range=tv,format=yuv420p', '-color_range', 'tv'];
 const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { stdio: 'inherit' }); p.on('close', c => c ? bad(new Error(cmd + ' exited ' + c)) : ok()); });
 const times = s => String(s).split(',').map(Number);
 const span = s => String(s).split(':').map(Number);
@@ -57,7 +59,7 @@ if (args.encode) {
   console.log(`encoding ${n} frames at ${efps} fps → ${out}${audio ? ' with ' + audio : ''}`);
   await run('ffmpeg', ['-y', '-loglevel', 'error', '-stats', '-framerate', String(efps), '-i', `${FRAMES_DIR}/f%05d.jpg`,
     ...(audio ? ['-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
+    ...TO_TV, '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-movflags', '+faststart', out]);
   console.log('wrote ' + out);
   process.exit(0);
 }
@@ -175,7 +177,7 @@ if (args.sheet || args.strip) {
   const out = args.out || 'out/clip.mp4'; mkdirSync(dirname(out), { recursive: true });
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
     ...(audio ? ['-ss', String(a), '-t', String(b - a), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out],
+    ...TO_TV, '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-movflags', '+faststart', out],
     { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round((b - a) * fps), start = Date.now(), st = { page, n: 0 };
   for (let i = 0; i < n; i++) {
