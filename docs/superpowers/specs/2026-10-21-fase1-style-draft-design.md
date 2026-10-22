@@ -131,9 +131,28 @@ I valori esatti si fissano guardando uno sheet di confronto `classic` / `acquere
 |---|---|---|
 | demo, `classic`, `--clip` (prima) | 826 s | 264 fotogrammi, senza riapertura |
 | spezzone 0–6 s, `classic`, `--clip`, senza / con riapertura 24 / 48 | 210 / 245 / 241 s | riapertura spenta per default |
-| demo, `classic`, `--clip --draft` | — | obiettivo < 120 s |
+| demo, `classic`, `--clip --draft` | **25,4 s** | 132 fotogrammi a 12 fps, riempimenti piatti |
 | demo, `acquerello-leggero`, `--clip --draft` | — | obiettivo < 120 s |
 | demo, `acquerello-leggero`, `--clip` (finale) | — | richiesto da Andrea |
+
+### Tagli del draft misurati (2026-10-22)
+
+Spezzone 4–7 s della demo (72 fotogrammi a 24 fps), `classic`:
+
+| prova | tempo |
+|---|---|
+| base | 181,4 s |
+| 12 fps | 101,0 s |
+| riempimenti piatti (`--draft=flat`) | 22,0 s |
+| piatti + mezza risoluzione (`--draft=flat,half`) | 15,6 s |
+| piatti, `--frames` con 2 worker / 1 worker | 17,0 s / 22,1 s |
+
+Decisione: `--draft` = 12 fps + riempimenti piatti (stima ~40 s, misurata 25,4 s sulla demo intera). Mezza risoluzione
+e worker non servono per l'obiettivo e restano opzionali (`--draft=flat,half`, `--workers`). La mezza risoluzione
+fa sparire i contorni lunghi (le colline): non è nel default.
+
+Nota: `--sheet` riporta ms per fotogramma molto bassi (30–130 ms) perché la GPU lavora in modo asincrono; il tempo
+reale di uno strip di 24 fotogrammi è uguale a quello di `--clip` (66,5 s contro 67,9 s).
 
 ## Rischi
 

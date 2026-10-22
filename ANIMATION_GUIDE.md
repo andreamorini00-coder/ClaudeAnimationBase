@@ -205,7 +205,10 @@ Fix what you find, then look again. **Budget:** at least one sheet per shot, a s
 node render.mjs --clip --out=out/video.mp4                      # the whole video, straight to MP4
 node render.mjs --frames --workers=4                            # or: parallel + resumable JPEG frames into out/frames …
 node render.mjs --encode --out=out/video.mp4                    # … then encode them
+node render.mjs --clip --draft --out=out/draft.mp4              # quick preview: 12 fps, fills painted flat
 ```
+
+**Preview with `--draft`** while you build, and render without it only for the final video. On integrated graphics the watercolour fills are most of the cost: the demo takes about 14 minutes in full and about 25 seconds as a draft. `--draft` works with every mode (`--sheet`, `--strip`, `--stills`, `--frames`; pass it to `--encode` too), but a draft frame is not what the final frame looks like, so judge colour and texture on full renders. `--draft=flat,half` also paints at half resolution; long outlines (hills) can drop out at that size. `studio.html?draft` previews the same way.
 
 If a long render slows down as it goes, `--recycle=N` makes `--clip`, `--frames` and `--png` reopen the page every N frames. It's off by default (on integrated graphics it made renders slower), and the frames are the same either way.
 

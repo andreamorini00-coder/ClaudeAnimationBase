@@ -6,6 +6,13 @@ if (!STYLE) {
   window.loadError = `Stile "${STYLE_NAME}" inesistente. Disponibili: ${Object.keys(STYLES).join(', ')}`;
   throw new Error(window.loadError);
 }
+// Draft preview: studio.html?draft=flat,half or render.mjs --draft (plain ?draft means DRAFT_DEFAULT).
+//   flat: watercolour fills are painted as flat colour (the big saving); half: the frame is painted at half
+//   resolution and scaled up to 1920×1080. Scenes keep drawing in 1920×1080 coordinates either way.
+const DRAFT_DEFAULT = 'flat';
+const DRAFT_ARG = new URLSearchParams(location.search).get('draft');
+const DRAFT_OPTS = DRAFT_ARG === '' ? DRAFT_DEFAULT : DRAFT_ARG || '';
+const DRAFT = { on: DRAFT_ARG !== null, flatFills: /\bflat\b/.test(DRAFT_OPTS), scale: /\bhalf\b/.test(DRAFT_OPTS) ? .5 : 1 };
 const W = 1920, H = 1080;
 const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = STYLE.boil, DUR = PROJECT.duration;
 const TAU = Math.PI * 2;
@@ -191,12 +198,12 @@ function centred(pts, draw) {
 }
 // The marks themselves come from the style's technique (src/techniques/). STYLE.paint scales every call's options;
 // a style whose multipliers are all 1 (classic) passes them through untouched.
-const SP = STYLE.paint;
-const PAINT_AS_IS = SP.fillOp === 1 && SP.bleed === 1 && SP.tex === 1 && SP.washOp === 1 && SP.sw === 1 && SP.fillAs !== 'wash';
+const SP = STYLE.paint, FILL_AS = DRAFT.flatFills ? 'wash' : SP.fillAs;
+const PAINT_AS_IS = SP.fillOp === 1 && SP.bleed === 1 && SP.tex === 1 && SP.washOp === 1 && SP.sw === 1 && FILL_AS !== 'wash';
 function styled(o) {
   if (PAINT_AS_IS) return o;
   const s = { ...o };
-  if (s.fill && SP.fillAs === 'wash') {           // flat colour instead of a watercolour fill: much cheaper to render
+  if (s.fill && FILL_AS === 'wash') {           // flat colour instead of a watercolour fill: much cheaper to render
     if (!s.wash) { s.wash = s.fill; s.washOp = (o.fillOp ?? 170) * SP.fillOp; }
     delete s.fill;
   } else if (s.fill) {
@@ -237,8 +244,10 @@ function drawLetters(c) {
 
 // p5.brush defers washes and strokes into a mask layer; a (tiny, off-screen) watercolor fill forces it to composite
 // now, so everything painted before this call really lands under whatever p5 draws next (letters, glow).
+// Screen space: origin top-left, in 1920×1080 units whatever the canvas size (half in a draft).
+function screenSpace() { resetMatrix(); translate(-width / 2, -height / 2); if (DRAFT.scale !== 1) scale(DRAFT.scale); }
 function flushBrush() {
-  push(); resetMatrix(); translate(-W / 2, -H / 2);
+  push(); screenSpace();
   brush.noStroke(); brush.noHatch(); brush.noWash(); brush.fill('#000000', 1); brush.fillBleed(0); brush.fillTexture(0, 0);
   brush.polygon([[-50, -50], [-40, -50], [-40, -40]]); brush.noFill(); pop();
 }
@@ -249,7 +258,7 @@ function flushLetters() {
   letG.clear(); drawLetters(letG.drawingContext); LETTERS = [];
   flushBrush();
   // Letters are already in screen space, so composite them with the base transform even inside camBegin().
-  push(); resetMatrix(); translate(-W / 2, -H / 2); image(letG, 0, 0); pop();
+  push(); screenSpace(); image(letG, 0, 0); pop();
 }
 
 // ---------- paper (drawn by the technique: TECH.makePaper / TECH.makeGrain) ----------
@@ -262,7 +271,7 @@ function defineBrushes() {
 
 // ---------- frame ----------
 async function setup() {
-  createCanvas(W, H, WEBGL); pixelDensity(1); noLoop();
+  createCanvas(W * DRAFT.scale, H * DRAFT.scale, WEBGL); pixelDensity(1); noLoop();
   brush.scaleBrushes(STYLE.brushScale); defineBrushes();
   paperG = TECH.makePaper(STYLE); grainC = TECH.makeGrain(STYLE); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
   outC = document.getElementById('out'); outX = outC.getContext('2d');
@@ -273,7 +282,7 @@ async function setup() {
 function draw() {
   if (!window.ready) return;
   LETTERS = []; CAM = LAST_CAM = null;
-  push(); translate(-W / 2, -H / 2);
+  push(); translate(-width / 2, -height / 2); if (DRAFT.scale !== 1) scale(DRAFT.scale);
   BOILN = Math.floor(T * BOIL); CLAWD_N = 0; boilSeed('frame'); noiseSeed(77);
   image(paperG, 0, 0);
   drawWorld(T);

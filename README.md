@@ -23,6 +23,18 @@ npm install
 node render.mjs --clip --out=out/video.mp4
 ```
 
+For a quick preview while you work, add `--draft` (12 fps, watercolour fills painted as flat colour): on integrated graphics the demo goes from about 14 minutes to about 25 seconds.
+
+```bash
+node render.mjs --clip --draft --out=out/draft.mp4
+```
+
+To pick a look, set `style` in [src/config.js](src/config.js) or pass `--style=` (the styles are in [src/styles/](src/styles/)):
+
+```bash
+node render.mjs --clip --draft --style=acquerello-leggero --out=out/draft-leggero.mp4
+```
+
 That renders the 11-second demo in [src/scenes/demo.js](src/scenes/demo.js). Open [studio.html](studio.html) in Chrome to scrub through it. Add `?loop=emotions` or `?loop=views` to see the model sheets. If Chrome isn't in a standard location, pass `--chrome=<path>` or set `CHROME_PATH`.
 
 On Linux, `render.mjs` starts Chrome with `--no-sandbox` (Ubuntu 23.10+ blocks Chrome's sandbox in headless use) and also finds a Chromium installed by Playwright. With no GPU at all, add `--soft-gl` to render WebGL in software: slow on watercolour fills, but it works. On a headless Linux machine with an NVIDIA GPU (a cloud or cluster node), add `--gpu-angle=gl-egl` (or `vulkan`); `node gpu_probe.mjs <chrome path>` shows which renderer each set of flags gets.
