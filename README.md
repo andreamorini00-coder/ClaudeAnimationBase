@@ -35,6 +35,12 @@ To pick a look, set `style` in [src/config.js](src/config.js) or pass `--style=`
 node render.mjs --clip --draft --style=acquerello-leggero --out=out/draft-leggero.mp4
 ```
 
+For reels, stories and Instagram posts, pick the format before you start (`format` in [src/config.js](src/config.js), or `--format=vertical` / `--format=feed`) and compose the scene for it. `--safe` draws the social apps' safe zones on a sheet to check the framing:
+
+```bash
+node render.mjs --loop=tall --format=vertical --sheet=1,2,3 --safe --out=out/check/safe.jpg
+```
+
 That renders the 11-second demo in [src/scenes/demo.js](src/scenes/demo.js). Open [studio.html](studio.html) in Chrome to scrub through it. Add `?loop=emotions` or `?loop=views` to see the model sheets. If Chrome isn't in a standard location, pass `--chrome=<path>` or set `CHROME_PATH`.
 
 On Linux, `render.mjs` starts Chrome with `--no-sandbox` (Ubuntu 23.10+ blocks Chrome's sandbox in headless use) and also finds a Chromium installed by Playwright. With no GPU at all, add `--soft-gl` to render WebGL in software: slow on watercolour fills, but it works. On a headless Linux machine with an NVIDIA GPU (a cloud or cluster node), add `--gpu-angle=gl-egl` (or `vulkan`); `node gpu_probe.mjs <chrome path>` shows which renderer each set of flags gets.

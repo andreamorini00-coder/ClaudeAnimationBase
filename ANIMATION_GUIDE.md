@@ -117,6 +117,7 @@ These are the classic principles of character animation, as they apply here. Mos
 Write `STORYBOARD.md` before any scene code:
 
 ```
+Format: landscape | vertical | feed   (pick it first: it decides every composition; see Social formats)
 Logline: one sentence. Clawd wants ___, but ___, so ___.
 World: setting, a small palette, light, how the colour changes across the video.
 Motif: the thing that recurs and pays off.
@@ -227,6 +228,7 @@ If a long render slows down as it goes, `--recycle=N` makes `--clip`, `--frames`
 | `src/timeline.js` | `shots()`, `LOOPS`, `brushWipe()` |
 | `src/sheets.js` | the model sheets as loops (`?loop=emotions`, `?loop=views`) |
 | `src/scenes/demo.js` | an 11-second example. **Don't copy it** (see the end of this guide) |
+| `src/scenes/tall_example.js` | `LOOPS.tall`, a 5-second check of the tall formats (`--loop=tall --format=vertical`) |
 | `studio.html` | open it in Chrome to scrub the video (`?t=2.5` jumps to a time, `?loop=emotions` shows a loop) |
 | `render.mjs` | headless renderer: sheets, strips, crops, stills, PNG loops, MP4 |
 
@@ -238,6 +240,22 @@ A style is everything that decides how the film looks but not what happens in it
 - To make one, copy `classic.js`, rename the entry, change the values and add its `<script>` tag in `studio.html`. Keep the `PAL` names: scenes use them.
 - Character proportions are not part of a style.
 
+### Social formats
+
+The format is chosen before anything is drawn, and the scene is composed for it. **Never crop a 16:9 picture into a tall frame**: compose tall from the start.
+
+| format | size | for | margins the app covers (top / bottom / left / right) | subtitle band (y) |
+|---|---|---|---|---|
+| `landscape` | 1920×1080 | YouTube | none | none |
+| `vertical` | 1080×1920 | reels, stories, TikTok, Shorts | 220 / 420 / 0 / 140 | 1150–1500 |
+| `feed` | 1080×1350 | Instagram posts (4:5) | 60 / 60 / 100 / 100 | 940–1170 |
+
+- Pick it with `format` in [src/config.js](src/config.js); `?format=name` and `--format=name` override it. `W` and `H` follow the format, and so do paper, grain, transitions, the camera and crops.
+- **Declare the format a scene is composed for:** `shots([...], { format: 'vertical' })` (or `['vertical', 'feed']`), and `LOOPS.name.format` for a loop. Leaving it out means `'landscape'`. Rendering a scene in a format it doesn't declare stops with an error instead of a badly framed video.
+- **Safe zones.** The app's interface covers the margins, and in `vertical` its caption sits in the bottom 420 px, so subtitles go in the band above it, not in the bottom fifth. Faces and important actions stay in the safe centre (inside the margins), and nothing important sits in the subtitle band: only background. Scenes read the numbers from `SAFE` (`{ top, bottom, left, right, subs: [y0, y1] | null }`) instead of writing them by hand.
+- **Check the framing** with `--safe` on a sheet, strip or still: red = margins, yellow = subtitle band, red line = safe centre. It's refused for videos, so it never ends up in one.
+- Tall frames: the head in the upper half, depth built from top to bottom (sky, horizon, ground), and the ground line just above the subtitle band. `src/scenes/tall_example.js` shows the idea with positions computed from `W`, `H` and `SAFE`.
+
 ### Frames are pure functions of time
 
 - **Frames render in parallel and out of order.** A shot is `fn(t, lt, dur)` and must draw the same frame for the same `t`, every time. No state carried between frames, no counters, no `Math.random()`, no physics that integrates frame by frame. Compute everything from `t`, in closed form (the helpers below do this for you).
@@ -247,7 +265,7 @@ A style is everything that decides how the film looks but not what happens in it
   - Call it before each separate element: each background layer, prop and effect.
   - `clawd()` seeds itself and each of its parts, then reseeds when it's done, so nothing drawn after it depends on its pose. Its key is its call order; set `boilKey` if characters come and go mid-shot.
 - **Each shot paints the whole frame,** background included. The paper texture is under everything and the grain is multiplied over the top, so leaving paper showing is a valid look.
-- **Canvas:** 1920×1080, origin top-left, y down.
+- **Canvas:** `W` × `H` from the format (1920×1080 in `landscape`), origin top-left, y down.
 - `LOOPS.name = t => {...}; LOOPS.name.len = 4;` makes a standalone loop (tests, GIFs, sheets), rendered with `--loop=name`.
 
 ### Painting
@@ -336,6 +354,8 @@ clawd(x, y, u, options)   // (x, y) = ground point between the feet; u = size un
 | medium | 20–28 | the usual acting size |
 | close-up | 40–70 | face acting |
 | extreme close-up | 90+ | camera pushed in on the eyes |
+
+In the tall formats the frame is 1080 wide, so the same `u` fills more of it. In `vertical`: wide 12–16, medium 24–34, close-up 50–80. `feed` is the same with less room above the head.
 
 ### Options
 

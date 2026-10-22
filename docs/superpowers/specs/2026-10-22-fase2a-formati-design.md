@@ -116,6 +116,19 @@ verificare i formati; non è una seconda demo da copiare.
 | timbro | `--frames` in un formato dopo fotogrammi di un altro → rifiutato (test unitario + prova reale) |
 | ok di Andrea | sheet di `LOOPS.tall` con `--safe`, in `vertical` e `feed`, in `classic` e `acquerello-leggero` |
 
+## Misure (2026-10-22)
+
+| render | tempo | note |
+|---|---|---|
+| `LOOPS.tall`, `vertical`, `--clip --draft` | 11,4 s | 60 fotogrammi a 12 fps, 1080×1920 |
+| `LOOPS.tall`, `feed`, `--clip --draft` | 9,4 s | 60 fotogrammi a 12 fps, 1080×1350 |
+| `--frames --draft` + `--encode`, `vertical` | — | 1080×1920, 12 fps, 5,0 s; timbro con `format` |
+
+- `brushWipe` copre tutta la tela in `vertical` e `feed` (strip 4,7–5 s): bande più alte ma nessuna area scoperta,
+  quindi resta invariato.
+- Osservazione (non legata ai formati): tutti gli mp4, anche quelli della Fase 1 e del codice originale, escono
+  `yuvj420p` a gamma piena, perché i fotogrammi sono JPEG. Da valutare a parte.
+
 ## Rischi
 
 - Il problema noto di p5.brush con i contorni lunghi potrebbe comparire su forme molto alte: si vede negli sheet.
