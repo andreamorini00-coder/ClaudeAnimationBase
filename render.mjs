@@ -23,6 +23,7 @@ import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
+import { checkStamp, writeStamp, readStamp } from './tools/stamp.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 const CHROMES = [args.chrome, process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -45,9 +46,11 @@ const span = s => String(s).split(':').map(Number);
 const fields = s => { const out = []; let d = 0, cur = ''; for (const ch of String(s)) { if (ch === ',' && !d) { out.push(cur); cur = ''; continue; } d += ch === '(' ? 1 : ch === ')' ? -1 : 0; cur += ch; } out.push(cur); return out.map(v => isNaN(+v) ? v : +v); };
 
 if (args.encode) {
+  // the frames' own fps (stamped by --frames) wins over the default, so a draft doesn't play at double speed
   const out = args.out || 'out/video.mp4', n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length, audio = args.audio;
-  console.log(`encoding ${n} frames → ${out}${audio ? ' with ' + audio : ''}`);
-  await run('ffmpeg', ['-y', '-loglevel', 'error', '-stats', '-framerate', String(fps), '-i', `${FRAMES_DIR}/f%05d.jpg`,
+  const efps = args.fps ? fps : readStamp(FRAMES_DIR)?.fps ?? fps;
+  console.log(`encoding ${n} frames at ${efps} fps → ${out}${audio ? ' with ' + audio : ''}`);
+  await run('ffmpeg', ['-y', '-loglevel', 'error', '-stats', '-framerate', String(efps), '-i', `${FRAMES_DIR}/f%05d.jpg`,
     ...(audio ? ['-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
   console.log('wrote ' + out);
@@ -133,9 +136,14 @@ if (args.sheet || args.strip) {
   console.log(`${n} frames → ${out}  (${((Date.now() - start) / n).toFixed(0)} ms/frame)`);
 } else if (args.frames) {
   // Parallel and resumable: each worker pulls the next missing frame; files are written atomically.
-  const probe = await openPage(), len = await lengthOf(probe); await probe.close();
+  const probe = await openPage(), len = await lengthOf(probe);
+  // Resuming only makes sense with the same settings: refuse to mix draft and final frames, or two styles.
+  const stamp = { ...await probe.evaluate(() => ({ style: STYLE_NAME, draft: DRAFT.on ? DRAFT_OPTS : '' })), fps };
+  await probe.close();
+  const clash = checkStamp(FRAMES_DIR, stamp);
+  if (clash) { console.error(`${clash}.\nSvuota la cartella e rilancia (CMD: rmdir /s /q out\\frames).`); await browser.close(); process.exit(1); }
   const [a, b] = args.range ? span(args.range) : [0, len], workers = +(args.workers || 4);
-  mkdirSync(FRAMES_DIR, { recursive: true });
+  writeStamp(FRAMES_DIR, stamp);
   const first = Math.round(a * fps), last = Math.min(Math.ceil(len * fps) - 1, Math.round(b * fps) - 1);
   const todo = []; for (let i = first; i <= last; i++) { const f = `${FRAMES_DIR}/f${String(i).padStart(5, '0')}.jpg`; if (!existsSync(f) || statSync(f).size < 1000) todo.push(i); }
   console.log(`${todo.length} frames to render (${last - first + 1 - todo.length} already done), ${workers} workers`);
