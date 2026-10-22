@@ -37,8 +37,10 @@ export function resolvePlan(raw = {}, { files, dir, duration, range, music = '' 
   const ambience = (raw.ambience || []).map(m => ({ name: m.name, from: m.from ?? 0, to: m.to ?? duration, fadeIn: m.fadeIn ?? .5, fadeOut: m.fadeOut ?? .8, vol: m.vol ?? 0 }))
     .filter(m => m.to > a && m.from < b)
     .map(m => ({ file: `${dir}/${fileOf(m.name)[0]}`, from: Math.max(m.from, a) - a, to: Math.min(m.to, b) - a,
-                 fadeIn: m.from >= a ? m.fadeIn : 0, fadeOut: m.to <= b ? m.fadeOut : 0, vol: m.vol }));
-  const mus = raw.music?.file ? { file: raw.music.file, vol: raw.music.vol ?? 0 } : music ? { file: music, vol: 0 } : null;
+                 fadeIn: m.from >= a ? m.fadeIn : 0, fadeOut: m.to <= b ? m.fadeOut : 0, vol: m.vol,
+                 skip: Math.max(0, a - m.from) }));   // seconds of the loop already played before the clip starts
+  // start: the music plays from the clip's start time, as it would in the whole video
+  const mus = raw.music?.file ? { file: raw.music.file, vol: raw.music.vol ?? 0, start: a } : music ? { file: music, vol: 0, start: a } : null;
   return { sfx, ambience, music: mus, duration: b - a };
 }
 
@@ -72,15 +74,20 @@ export function mixGraph(plan, { gains, durs }) {
   const base = (f, vol) => `aresample=48000,aformat=channel_layouts=stereo,volume=${num((gains[f] ?? 0) + vol)}dB`;
   plan.sfx.forEach((s, k) => { parts.push(`${src(s.file)}${base(s.file, s.vol)},adelay=${Math.round(s.t * 1000)}:all=1[s${k}]`); mixIn.push(`[s${k}]`); });
   plan.ambience.forEach((m, k) => {
-    const d = m.to - m.from, fx = [`aloop=loop=-1:size=2000000000`, `atrim=duration=${num(d)}`];
-    if (m.fadeIn > 0) fx.push(`afade=t=in:d=${num(m.fadeIn)}`);
-    if (m.fadeOut > 0) fx.push(`afade=t=out:st=${num(d - m.fadeOut)}:d=${num(m.fadeOut)}`);
+    const d = m.to - m.from, skip = m.skip ? m.skip % (durs[m.file] || Infinity) : 0;
+    const fx = [`aloop=loop=-1:size=2000000000`, skip ? `atrim=start=${num(skip)}:duration=${num(d)},asetpts=PTS-STARTPTS` : `atrim=duration=${num(d)}`];
+    // fades never outlast the span (a short span shares it between the two)
+    let fi = Math.min(m.fadeIn, d), fo = Math.min(m.fadeOut, d);
+    if (fi > 0 && fo > 0 && fi + fo > d) fi = fo = d / 2;
+    if (fi > 0) fx.push(`afade=t=in:d=${num(fi)}`);
+    if (fo > 0) fx.push(`afade=t=out:st=${num(d - fo)}:d=${num(fo)}`);
     parts.push(`${src(m.file)}${base(m.file, m.vol)},${fx.join(',')},adelay=${Math.round(m.from * 1000)}:all=1[a${k}]`); mixIn.push(`[a${k}]`);
   });
   if (plan.music) {
     const cues = plan.sfx.filter(s => s.duck).map(s => ({ t: s.t, dur: durs[s.file] ?? 1 }));
     const duck = cues.length ? `,volume='1-${num(DUCK.depth)}*(${duckExpr(cues)})':eval=frame` : '';
-    parts.push(`${src(plan.music.file)}${base(plan.music.file, plan.music.vol)}${duck},atrim=duration=${num(plan.duration)}[m0]`); mixIn.push('[m0]');
+    const from = plan.music.start ? `atrim=start=${num(plan.music.start)},asetpts=PTS-STARTPTS,` : '';
+    parts.push(`${src(plan.music.file)}${from}${base(plan.music.file, plan.music.vol)}${duck},atrim=duration=${num(plan.duration)}[m0]`); mixIn.push('[m0]');
   }
   parts.push(`${mixIn.join('')}amix=inputs=${mixIn.length}:normalize=0:duration=longest,apad,atrim=duration=${num(plan.duration)}[mix]`);
   return { inputs, filter: parts.join(';'), out: '[mix]' };
@@ -124,13 +131,32 @@ export async function levelGains(plan, { cachePath = 'out/audio-cache.json', mea
 // applies a linear gain to it. TP aims at -1.5 because AAC encoding lifts true peaks by a few tenths of a dB.
 export const LOUD = { I: -14, TP: -1.5, LRA: 11 };
 const lastJson = log => JSON.parse(log.slice(log.lastIndexOf('{'), log.lastIndexOf('}') + 1));
-// Mixes a resolved plan to out (.wav, or .m4a for AAC 192 kbps), 48 kHz. Returns { lufs, tp } of the result.
+// Mixes a resolved plan to out (.wav, or .m4a for AAC 192 kbps), 48 kHz. Returns { lufs, tp, warn } of the result.
+// A linear gain keeps the dynamics, but on a short clip with a loud hit the peak ceiling can hold it well under the
+// target: then a dynamic pass is used instead. Too short or silent to measure (-inf): mixed as is, with a warning.
 export async function renderMix(plan, { out, gains, durs }) {
   const g = mixGraph(plan, { gains, durs }), ins = g.inputs.flatMap(f => ['-i', f]), ln = `loudnorm=I=${LOUD.I}:TP=${LOUD.TP}:LRA=${LOUD.LRA}`;
-  const m = lastJson(await ffmpegOut(['-hide_banner', '-nostats', ...ins, '-filter_complex', `${g.filter};${g.out}${ln}:print_format=json[o]`, '-map', '[o]', '-f', 'null', '-']));
-  const second = `${ln}:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true:print_format=json`;
   const codec = out.endsWith('.m4a') ? ['-c:a', 'aac', '-b:a', '192k'] : [];
-  const r = lastJson(await ffmpegOut(['-hide_banner', '-nostats', '-y', ...ins, '-filter_complex', `${g.filter};${g.out}${second},aresample=48000[o]`,
-    '-map', '[o]', '-ar', '48000', ...codec, out]));
-  return { lufs: +r.output_i, tp: +r.output_tp };
+  const pass = filter => ffmpegOut(['-hide_banner', '-nostats', '-y', ...ins, '-filter_complex', `${g.filter};${g.out}${filter}[o]`, '-map', '[o]', '-ar', '48000', ...codec, out]);
+  const m = lastJson(await ffmpegOut(['-hide_banner', '-nostats', ...ins, '-filter_complex', `${g.filter};${g.out}${ln}:print_format=json[o]`, '-map', '[o]', '-f', 'null', '-']));
+  if (!isFinite(+m.input_i)) {
+    await pass('aresample=48000');
+    return { lufs: -Infinity, tp: -Infinity, warn: 'clip troppo corto o silenzioso per misurarne il volume: mixato senza normalizzazione' };
+  }
+  const linear = `${ln}:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true:print_format=json`;
+  let r = lastJson(await pass(`${linear},aresample=48000`));
+  let lufs = +r.output_i, tp = +r.output_tp;
+  if (Math.abs(lufs - LOUD.I) > 1) {
+    // a hit too loud for the clip's length: raise the whole clip and let a limiter hold the peaks (2 dB under TP,
+    // as the limiter works on samples, not true peaks), measure what came out, and correct the gain by the miss
+    const lim = Math.pow(10, (LOUD.TP - 2) / 20).toFixed(3);
+    let gain = LOUD.I - +m.input_i;
+    for (let i = 0; i < 3 && Math.abs(lufs - LOUD.I) > 1; i++) {
+      await pass(`volume=${num(gain)}dB,alimiter=limit=${lim}:attack=1:release=50:level=disabled,aresample=48000`);
+      const e = await ffmpegOut(['-hide_banner', '-nostats', '-i', out, '-af', 'ebur128=peak=true', '-f', 'null', '-']);
+      lufs = +e.match(/Integrated loudness:\s*\n\s*I:\s*(-?[\d.]+)/)[1]; tp = +e.match(/Peak:\s*(-?[\d.]+)/g).pop().replace(/Peak:\s*/, '');
+      gain += LOUD.I - lufs;
+    }
+  }
+  return { lufs, tp, warn: Math.abs(lufs - LOUD.I) > 1 ? `volume ${lufs} LUFS, lontano da ${LOUD.I}: il clip è forse troppo corto` : '' };
 }

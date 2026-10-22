@@ -113,7 +113,14 @@ async function mixFor(page, [a, b], out) {
     if (plan.music && !existsSync(plan.music.file)) throw new Error(`Musica "${plan.music.file}" inesistente`);
   } catch (e) { console.error(e.message); await browser.close(); process.exit(1); }
   if (!plan.sfx.length && !plan.ambience.length && !plan.music) return null;
-  return renderMix(plan, { out, ...await levelGains(plan) });
+  try {
+    const r = await renderMix(plan, { out, ...await levelGains(plan) });
+    if (r.warn) console.warn('Attenzione: ' + r.warn);
+    return r;
+  } catch (e) {   // an ffmpeg failure: say what failed in a line, and don't leave Chrome running
+    console.error('Mix audio fallito: ' + e.message.split('\n').filter(Boolean).slice(-2).join(' / '));
+    await browser.close(); process.exit(1);
+  }
 }
 const frameOf = async (page, t, type, q) => {
   const url = await page.evaluate((t, type, q) => window.renderAt(t, type, q), t, type, q);

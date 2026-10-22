@@ -61,8 +61,8 @@ test('range shifts and trims, variants picked before the cut', () => {
 });
 
 test('project music is used when the scene has none, scene music wins', () => {
-  assert.deepEqual(resolvePlan({}, opts({ music: 'assets/m.mp3' })).music, { file: 'assets/m.mp3', vol: 0 });
-  assert.deepEqual(resolvePlan({ music: { file: 'a.mp3', vol: -3 } }, opts({ music: 'assets/m.mp3' })).music, { file: 'a.mp3', vol: -3 });
+  assert.deepEqual(resolvePlan({}, opts({ music: 'assets/m.mp3' })).music, { file: 'assets/m.mp3', vol: 0, start: 0 });
+  assert.deepEqual(resolvePlan({ music: { file: 'a.mp3', vol: -3 } }, opts({ music: 'assets/m.mp3' })).music, { file: 'a.mp3', vol: -3, start: 0 });
 });
 
 // ---------- ducking and mix graph ----------
@@ -145,4 +145,19 @@ test('cache notices a changed file', async () => {
   copyFileSync(TONFO, f);
   const b = (await levelGains(plan, { cachePath: c })).gains[f];
   near(b, -4.1, .3); assert.ok(Math.abs(a - b) > .5);
+});
+
+// ---------- fixes from the branch review ----------
+test('range keeps the music and ambience in step with the video', () => {
+  const r = resolvePlan({ ambience: [{ name: 'amb_notte_grilli_loop', from: 1, to: 11 }], music: { file: 'm.mp3' } }, opts({ range: [4, 7] }));
+  assert.equal(r.music.start, 4); assert.equal(r.ambience[0].skip, 3);
+  const g = mixGraph(r, { gains: {}, durs: { 'sfx/amb_notte_grilli_loop.mp3': 10, 'm.mp3': 60 } });
+  assert.match(g.filter, /atrim=start=4,asetpts=PTS-STARTPTS/);
+  assert.match(g.filter, /aloop=loop=-1:size=2000000000,atrim=start=3:duration=3,asetpts=PTS-STARTPTS/);
+});
+
+test('fades never outlast a short ambience', () => {
+  const g = mixGraph({ ...one, ambience: [{ file: 'a.mp3', from: 0, to: .4, fadeIn: .5, fadeOut: .8, vol: 0, skip: 0 }] }, { gains: {}, durs: { 'a.mp3': 10 } });
+  assert.match(g.filter, /afade=t=in:d=0\.2,/); assert.match(g.filter, /afade=t=out:st=0\.2:d=0\.2/);
+  assert.doesNotMatch(g.filter, /st=-/);
 });
