@@ -1,7 +1,10 @@
 // audio.test.mjs: tests for tools/audio.mjs (run with `npm test`).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { variantsOf, resolvePlan, duckAmount, duckExpr, mixGraph } from './audio.mjs';
+import { variantsOf, resolvePlan, duckAmount, duckExpr, mixGraph, measureFile, levelGains, TARGETS } from './audio.mjs';
+import { mkdtempSync, copyFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 const FILES = ['bonk_01.mp3', 'bonk_02.mp3', 'bonk_03.mp3', 'scintillio_01.mp3', 'scintillio_02.mp3', 'pop_01.mp3', 'pop_02.mp3',
   'pop_03.mp3', 'caduta_tonfo_01.mp3', 'amb_notte_grilli_loop.mp3', 'licenze.md'];
@@ -109,4 +112,37 @@ test('no music, no duck filter; music ducks under the effects', () => {
   assert.doesNotMatch(mixGraph(plan, opt).filter, /eval=frame/);
   const g = mixGraph({ ...plan, music: { file: 'm.mp3', vol: 0 } }, opt);
   assert.match(g.filter, /volume='1-0\.5\*\(.+\)':eval=frame/); assert.deepEqual(g.inputs, ['sfx/pop_01.mp3', 'm.mp3']);
+});
+
+// ---------- levels (these run ffmpeg on real files) ----------
+const TONFO = 'assets/sfx/caduta_tonfo_01.mp3', GRILLI = 'assets/sfx/amb_notte_grilli_loop.mp3';
+const cache = () => join(mkdtempSync(join(tmpdir(), 'lvl-')), 'cache.json');
+
+test('measures a real file', async () => {
+  const m = await measureFile(TONFO);
+  near(m.lufs, -13.9, .3); near(m.dur, 2, .06);
+});
+
+test('gain per category', async () => {
+  const plan = { sfx: [{ t: 0, file: TONFO, vol: 0, duck: true }], ambience: [{ file: GRILLI, from: 0, to: 5, fadeIn: .5, fadeOut: .8, vol: 0 }], music: null, duration: 5 };
+  const { gains, durs } = await levelGains(plan, { cachePath: cache() });
+  assert.deepEqual(TARGETS, { sfx: -18, ambience: -30, music: -20 });
+  near(gains[TONFO], -4.1, .3); near(gains[GRILLI], 18.2, .3); near(durs[GRILLI], 10, .06);
+});
+
+test('cache is reused', async () => {
+  const c = cache(), plan = { sfx: [{ t: 0, file: TONFO, vol: 0, duck: true }], ambience: [], music: null, duration: 5 };
+  let n = 0; const measure = f => { n++; return measureFile(f); };
+  await levelGains(plan, { cachePath: c, measure }); await levelGains(plan, { cachePath: c, measure });
+  assert.equal(n, 1);
+});
+
+test('cache notices a changed file', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'chg-')), f = join(dir, 'x.mp3'), c = cache();
+  const plan = { sfx: [{ t: 0, file: f, vol: 0, duck: true }], ambience: [], music: null, duration: 5 };
+  copyFileSync('assets/sfx/pop_01.mp3', f);
+  const a = (await levelGains(plan, { cachePath: c })).gains[f];
+  copyFileSync(TONFO, f);
+  const b = (await levelGains(plan, { cachePath: c })).gains[f];
+  near(b, -4.1, .3); assert.ok(Math.abs(a - b) > .5);
 });

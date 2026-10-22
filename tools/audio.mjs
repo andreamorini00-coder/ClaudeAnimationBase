@@ -1,6 +1,9 @@
 // audio.mjs: the sound side of render.mjs. A scene declares its sounds (sounds() in src/audio.js, or LOOPS.x.sounds);
 // these functions turn that plan into files and times, a music ducking curve and one ffmpeg mix graph.
 // Everything here except the measuring is a pure function, tested in audio.test.mjs.
+import { spawn } from 'node:child_process';
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 // ---------- plan ----------
 const NUMBERED = /^(.*)_(\d\d)\.mp3$/;
@@ -81,4 +84,37 @@ export function mixGraph(plan, { gains, durs }) {
   }
   parts.push(`${mixIn.join('')}amix=inputs=${mixIn.length}:normalize=0:duration=longest,apad,atrim=duration=${num(plan.duration)}[mix]`);
   return { inputs, filter: parts.join(';'), out: '[mix]' };
+}
+
+// ---------- levels ----------
+// Every file is brought to its category's loudness before the mix (the files range from about -14 to -48 LUFS), then
+// each sound's vol is added on top. Measures are cached by path, size and modification time.
+export const TARGETS = { sfx: -18, ambience: -30, music: -20 };
+const MAX_GAIN = 30;   // a near-silent file isn't pushed into noise
+
+const ffmpegOut = args => new Promise((ok, bad) => {
+  const p = spawn('ffmpeg', args); let err = '';
+  p.stderr.on('data', d => err += d); p.on('close', c => c ? bad(new Error('ffmpeg: ' + err.slice(-400))) : ok(err));
+});
+// { lufs, dur } of one file: integrated loudness (ebur128) and length in seconds.
+export async function measureFile(file) {
+  const log = await ffmpegOut(['-hide_banner', '-nostats', '-i', file, '-af', 'ebur128', '-f', 'null', '-']);
+  const lufs = +log.match(/Integrated loudness:\s*\n\s*I:\s*(-?[\d.]+|-inf)/)[1].replace('-inf', '-70');
+  const t = [...log.matchAll(/time=(\d+):(\d+):([\d.]+)/g)].pop(), d = log.match(/Duration: (\d+):(\d+):([\d.]+)/);
+  const [, h, m, sec] = d || t;
+  return { lufs, dur: +h * 3600 + +m * 60 + +sec };
+}
+// { gains: { file: dB }, durs: { file: s } } for every file in a resolved plan.
+export async function levelGains(plan, { cachePath = 'out/audio-cache.json', measure = measureFile } = {}) {
+  const cache = existsSync(cachePath) ? JSON.parse(readFileSync(cachePath, 'utf8')) : {};
+  const cat = {}; plan.sfx.forEach(s => cat[s.file] = 'sfx'); plan.ambience.forEach(m => cat[m.file] = 'ambience'); if (plan.music) cat[plan.music.file] = 'music';
+  const gains = {}, durs = {};
+  for (const [file, c] of Object.entries(cat)) {
+    const st = statSync(file), hit = cache[file];
+    const m = hit && hit.size === st.size && hit.mtimeMs === st.mtimeMs ? hit : { ...(await measure(file)), size: st.size, mtimeMs: st.mtimeMs };
+    cache[file] = m;
+    gains[file] = Math.min(MAX_GAIN, TARGETS[c] - m.lufs); durs[file] = m.dur;
+  }
+  mkdirSync(dirname(cachePath), { recursive: true }); writeFileSync(cachePath, JSON.stringify(cache, null, 1));
+  return { gains, durs };
 }
