@@ -180,3 +180,23 @@ Misure, ognuna su `node render.mjs --clip --range=4:7` (la parte più costosa de
 - [ ] **Step 5: Render finale:** `node render.mjs --clip --style=acquerello-leggero --out=out/leggero.mp4` (in background, ~10 min previsti), tempo annotato nella spec.
 - [ ] **Step 6:** `npm test` → PASS; `npm run check` → `OK 5/5 identici` (classic invariato).
 - [ ] **Step 7: Commit** `src/styles/acquerello-leggero.js studio.html docs/superpowers/specs/…-design.md` — "Stile acquerello leggero e misure finali".
+
+---
+
+## Fasi future (non in esecuzione)
+
+### Fase 2 — Social
+
+Segnata il 2026-10-22 da Andrea. Si apre solo dopo la chiusura della Fase 1, con il suo brainstorming, la sua spec e
+il suo piano.
+
+1. **Formato verticale** — `--format=vertical`: 1080×1920 (9:16) per reel e storie. Le scene si compongono per il
+   verticale (inquadratura, posizione del personaggio, camera), non si ritaglia il 16:9. Oggi `W`/`H` sono costanti
+   1920×1080 in `core.js` e le scene usano coordinate fisse: va deciso come una scena dichiara le due composizioni.
+   Riferimento: le regole 9:16 di html-anime (`skills/html-anime-camera`: testa nella metà alta, testo nel quinto basso).
+2. **Tracce audio** — musica e voce unite al video in `render.mjs` con ffmpeg. Oggi c'è una sola traccia
+   (`--audio` / `PROJECT.audio`, unita in `--clip` e `--encode`): servono più tracce, volumi e ducking della musica
+   sotto la voce.
+3. **Testi e sottotitoli** — un livello opzionale sopra il video, separato dalla scena dipinta (la regola "No text"
+   dell'ANIMATION_GUIDE resta valida per la scena). Da decidere: sottotitoli bruciati in ffmpeg da un file `.srt`
+   oppure un livello di composizione dopo la grana; in ogni caso spento per default.
