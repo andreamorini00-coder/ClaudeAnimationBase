@@ -23,7 +23,7 @@
 //   It's refused with --clip, --frames, --png and --encode, so it can never end up in a video.
 import puppeteer from 'puppeteer-core';
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync, unlinkSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
@@ -55,17 +55,6 @@ const span = s => String(s).split(':').map(Number);
 // comma-separated fields, keeping commas inside parentheses ('PLK.MX(1.38),PLK.WL,500,300'); numbers stay numbers
 const fields = s => { const out = []; let d = 0, cur = ''; for (const ch of String(s)) { if (ch === ',' && !d) { out.push(cur); cur = ''; continue; } d += ch === '(' ? 1 : ch === ')' ? -1 : 0; cur += ch; } out.push(cur); return out.map(v => isNaN(+v) ? v : +v); };
 
-if (args.encode) {
-  // the frames' own fps (stamped by --frames) wins over the default, so a draft doesn't play at double speed
-  const out = args.out || 'out/video.mp4', n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length, audio = args.audio;
-  const efps = args.fps ? fps : readStamp(FRAMES_DIR)?.fps ?? fps;
-  console.log(`encoding ${n} frames at ${efps} fps → ${out}${audio ? ' with ' + audio : ''}`);
-  await run('ffmpeg', ['-y', '-loglevel', 'error', '-stats', '-framerate', String(efps), '-i', `${FRAMES_DIR}/f%05d.jpg`,
-    ...(audio ? ['-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
-    ...TO_TV, '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-movflags', '+faststart', out]);
-  console.log('wrote ' + out);
-  process.exit(0);
-}
 
 // --soft-gl: no GPU on this machine; render WebGL in software (SwiftShader), which Chrome only allows when asked.
 // --gpu-angle=vulkan|gl-egl: headless Linux on an NVIDIA GPU (e.g. a cloud or cluster node); plain --use-gl=angle gets
@@ -133,7 +122,20 @@ const frameOf = async (page, t, type, q) => {
 // the length of whatever is being rendered: a loop's .len, or the video's duration
 const lengthOf = page => page.evaluate(() => window.LOOP ? window.LOOP.len : DUR);
 
-if (args.sheet || args.strip) {
+if (args.encode) {
+  // The frames' own settings (stamped by --frames) win over the defaults: their fps, so a draft doesn't play at double
+  // speed, and their style, format and loop, so the sound is the plan of what was rendered.
+  const stamp = readStamp(FRAMES_DIR) || {}, out = args.out || 'out/video.mp4', n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length;
+  const efps = args.fps ? fps : stamp.fps ?? fps;
+  for (const k of ['style', 'format', 'loop']) if (!args[k] && stamp[k]) args[k] = stamp[k];
+  const mixFile = 'out/tmp-mix.m4a', mixed = await mixFor(await openPage(), [0, n / efps], mixFile);
+  console.log(`encoding ${n} frames at ${efps} fps → ${out}${mixed ? ` with sound (${mixed.lufs} LUFS)` : ''}`);
+  await run('ffmpeg', ['-y', '-loglevel', 'error', '-stats', '-framerate', String(efps), '-i', `${FRAMES_DIR}/f%05d.jpg`,
+    ...(mixed ? ['-i', mixFile, '-map', '0:v', '-map', '1:a', '-c:a', 'copy', '-shortest'] : []),
+    ...TO_TV, '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-movflags', '+faststart', out]);
+  if (mixed) unlinkSync(mixFile);
+  console.log('wrote ' + out);
+} else if (args.sheet || args.strip) {
   const page = await openPage(), out = args.out || 'out/sheet.jpg'; mkdirSync(dirname(out), { recursive: true });
   let ts;
   if (args.strip) { const [a, b] = span(args.strip); ts = []; for (let i = Math.round(a * fps); i <= Math.round(b * fps); i++) ts.push(i / fps); }
@@ -165,7 +167,7 @@ if (args.sheet || args.strip) {
   // Parallel and resumable: each worker pulls the next missing frame; files are written atomically.
   const probe = await openPage(), len = await lengthOf(probe);
   // Resuming only makes sense with the same settings: refuse to mix draft and final frames, or two styles.
-  const stamp = { ...await probe.evaluate(() => ({ style: STYLE_NAME, draft: DRAFT.on ? DRAFT_OPTS : '', format: FORMAT_NAME })), fps };
+  const stamp = { ...await probe.evaluate(() => ({ style: STYLE_NAME, draft: DRAFT.on ? DRAFT_OPTS : '', format: FORMAT_NAME })), fps, loop: args.loop || '' };
   await probe.close();
   const clash = checkStamp(FRAMES_DIR, stamp);
   if (clash) { console.error(`${clash}.\nSvuota la cartella e rilancia (CMD: rmdir /s /q out\\frames).`); await browser.close(); process.exit(1); }
@@ -190,10 +192,10 @@ if (args.sheet || args.strip) {
 } else if (args.clip) {
   const page = await openPage(), len = await lengthOf(page);
   const [a, b] = args.range ? span(args.range) : typeof args.clip === 'string' ? span(args.clip) : [0, len];
-  const audio = args.audio || await page.evaluate(() => PROJECT.audio || '');
   const out = args.out || 'out/clip.mp4'; mkdirSync(dirname(out), { recursive: true });
+  const mixFile = 'out/tmp-mix.m4a', mixed = await mixFor(page, [a, b], mixFile);   // the sound first: it takes seconds
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
-    ...(audio ? ['-ss', String(a), '-t', String(b - a), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
+    ...(mixed ? ['-i', mixFile, '-map', '0:v', '-map', '1:a', '-c:a', 'copy', '-shortest'] : []),
     ...TO_TV, '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-movflags', '+faststart', out],
     { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round((b - a) * fps), start = Date.now(), st = { page, n: 0 };
@@ -203,7 +205,8 @@ if (args.sheet || args.strip) {
     if (i % 24 === 0 || i === n - 1) console.log(`frame ${i + 1}/${n}  ${((Date.now() - start) / (i + 1)).toFixed(0)} ms/frame`);
   }
   ff.stdin.end(); await new Promise(r => ff.on('close', r));
-  console.log(`wrote ${out}`);
+  if (mixed) unlinkSync(mixFile);
+  console.log(`wrote ${out}${mixed ? `  (sound ${mixed.lufs} LUFS, peak ${mixed.tp} dBTP)` : ''}`);
 } else if (args.mix) {
   // Only the sound, nothing drawn: the quick way to listen to a scene's effects, ambience and music.
   const page = await openPage(), len = await lengthOf(page), [a, b] = args.range ? span(args.range) : [0, len];
