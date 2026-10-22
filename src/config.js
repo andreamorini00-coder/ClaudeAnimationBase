@@ -6,4 +6,5 @@
 //   format:   the frame, picked before anything is drawn: 'landscape' 1920×1080, 'vertical' 1080×1920 (reels, stories),
 //             'feed' 1080×1350 (Instagram posts). ?format=name / --format=name override it. See "Social formats" in
 //             ANIMATION_GUIDE.md.
-const PROJECT = { duration: 11, bpm: 120, offset: 0, style: 'classic', format: 'landscape' };
+//   music:    an optional music file for the whole video (a scene's sounds({ music }) or --music=file override it).
+const PROJECT = { duration: 11, bpm: 120, offset: 0, style: 'classic', format: 'landscape', music: '' };

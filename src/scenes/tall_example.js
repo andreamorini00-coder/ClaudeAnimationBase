@@ -47,4 +47,9 @@
   };
   LOOPS.tall.len = LEN;
   LOOPS.tall.format = ['vertical', 'feed'];
+  // Its sound, on the same times as the animation above: surprise, jump (2.8–3.3), landing, the wipe, crickets under all.
+  LOOPS.tall.sounds = {
+    sfx: [[1.3, 'oh_sorpresa'], [2.8, 'salto_boing'], [3.3, 'atterraggio_morbido'], [LEN - .3, 'transizione_whoosh', { duck: false }]],
+    ambience: [{ name: 'amb_notte_grilli_loop', from: 0, to: LEN, fadeIn: .5, fadeOut: .6 }],
+  };
 })();

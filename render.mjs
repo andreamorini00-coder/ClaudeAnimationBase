@@ -13,7 +13,9 @@
 //     node render.mjs --encode --out=out/video.mp4                                           out/frames → MP4
 //   Standalone loops (LOOPS in the page): add --loop=<name> to any of the above (times are then loop times), or
 //     node render.mjs --loop=emotions --png --out=out/loop_emotions                          one cycle as PNGs (for GIFs)
-//   Music: --audio=assets/song.mp3 (or PROJECT.audio) is muxed into --clip and --encode. Other flags: --fps=24,
+//   Sound: the scene's sounds() (or LOOPS.x.sounds) are mixed into --clip and --encode at -14 LUFS, AAC 48 kHz.
+//     node render.mjs --mix [--loop=tall] [--range=a:b] --out=out/mix.wav                    only the sound, nothing drawn
+//     --music=assets/x.mp3 (or the older --audio=…) sets the music; PROJECT.music is the default. Other flags: --fps=24,
 //   --chrome=<path to Chrome/Chromium>, --style=<name in src/styles/>, --format=landscape|vertical|feed, --recycle=N (see below).
 //   Draft preview: add --draft to any of the above (to --encode too, after --frames --draft): 12 fps and flat colour
 //   instead of watercolour fills. --draft=flat,half also paints at half resolution. Never for the final video.
@@ -26,6 +28,7 @@ import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 import { checkStamp, writeStamp, readStamp } from './tools/stamp.mjs';
+import { resolvePlan, levelGains, renderMix } from './tools/audio.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 const CHROMES = [args.chrome, process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -109,6 +112,20 @@ async function pageFor(state, tag = '') {
   state.n++;
   return state.page;
 }
+// The sound of [a, b] in the page's plan (sounds() / LOOPS.x.sounds, music from --music, the plan or PROJECT.music),
+// levelled, mixed and normalised into out. null when there is nothing to hear; plan errors stop the render.
+const SFX_DIR = 'assets/sfx';
+async function mixFor(page, [a, b], out) {
+  const { raw, duration, music } = await page.evaluate(() => window.audioPlan());
+  let plan;
+  try {
+    plan = resolvePlan(raw, { files: existsSync(SFX_DIR) ? readdirSync(SFX_DIR) : [], dir: SFX_DIR, duration, range: [a, b],
+      music: args.music || (typeof args.audio === 'string' ? args.audio : '') || music });
+    if (plan.music && !existsSync(plan.music.file)) throw new Error(`Musica "${plan.music.file}" inesistente`);
+  } catch (e) { console.error(e.message); await browser.close(); process.exit(1); }
+  if (!plan.sfx.length && !plan.ambience.length && !plan.music) return null;
+  return renderMix(plan, { out, ...await levelGains(plan) });
+}
 const frameOf = async (page, t, type, q) => {
   const url = await page.evaluate((t, type, q) => window.renderAt(t, type, q), t, type, q);
   return Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
@@ -187,6 +204,13 @@ if (args.sheet || args.strip) {
   }
   ff.stdin.end(); await new Promise(r => ff.on('close', r));
   console.log(`wrote ${out}`);
+} else if (args.mix) {
+  // Only the sound, nothing drawn: the quick way to listen to a scene's effects, ambience and music.
+  const page = await openPage(), len = await lengthOf(page), [a, b] = args.range ? span(args.range) : [0, len];
+  const out = args.out || 'out/mix.wav'; mkdirSync(dirname(out), { recursive: true });
+  const m = await mixFor(page, [a, b], out);
+  if (!m) { console.error('nessun suono da mixare'); await browser.close(); process.exit(1); }
+  console.log(`wrote ${out}  (${m.lufs} LUFS, picco ${m.tp} dBTP)`);
 } else {
   console.log('nothing to do: see the usage notes at the top of render.mjs');
 }

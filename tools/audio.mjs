@@ -118,3 +118,18 @@ export async function levelGains(plan, { cachePath = 'out/audio-cache.json', mea
   mkdirSync(dirname(cachePath), { recursive: true }); writeFileSync(cachePath, JSON.stringify(cache, null, 1));
   return { gains, durs };
 }
+
+// ---------- final mix ----------
+// LOUD: the social target. Two loudnorm passes: the first measures the mix, the second applies a linear gain to it.
+export const LOUD = { I: -14, TP: -1, LRA: 11 };
+const lastJson = log => JSON.parse(log.slice(log.lastIndexOf('{'), log.lastIndexOf('}') + 1));
+// Mixes a resolved plan to out (.wav, or .m4a for AAC 192 kbps), 48 kHz. Returns { lufs, tp } of the result.
+export async function renderMix(plan, { out, gains, durs }) {
+  const g = mixGraph(plan, { gains, durs }), ins = g.inputs.flatMap(f => ['-i', f]), ln = `loudnorm=I=${LOUD.I}:TP=${LOUD.TP}:LRA=${LOUD.LRA}`;
+  const m = lastJson(await ffmpegOut(['-hide_banner', '-nostats', ...ins, '-filter_complex', `${g.filter};${g.out}${ln}:print_format=json[o]`, '-map', '[o]', '-f', 'null', '-']));
+  const second = `${ln}:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true:print_format=json`;
+  const codec = out.endsWith('.m4a') ? ['-c:a', 'aac', '-b:a', '192k'] : [];
+  const r = lastJson(await ffmpegOut(['-hide_banner', '-nostats', '-y', ...ins, '-filter_complex', `${g.filter};${g.out}${second},aresample=48000[o]`,
+    '-map', '[o]', '-ar', '48000', ...codec, out]));
+  return { lufs: +r.output_i, tp: +r.output_tp };
+}
