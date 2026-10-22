@@ -1,13 +1,15 @@
 // core.js: constants, helpers, paper, paint wrapper, compositing and render hooks.
-// Length and rhythm come from PROJECT in config.js.
+// Length and rhythm come from PROJECT in config.js; the look comes from STYLE (src/styles/).
+const STYLE_NAME = new URLSearchParams(location.search).get('style') || PROJECT.style || 'classic';
+const STYLE = STYLES[STYLE_NAME];
+if (!STYLE) {
+  window.loadError = `Stile "${STYLE_NAME}" inesistente. Disponibili: ${Object.keys(STYLES).join(', ')}`;
+  throw new Error(window.loadError);
+}
 const W = 1920, H = 1080;
-const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = 12, DUR = PROJECT.duration;
+const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = STYLE.boil, DUR = PROJECT.duration;
 const TAU = Math.PI * 2;
-const PAL = {
-  paper: '#F3EBDC', ink: '#2B2233', clay: '#D97757', clayDk: '#A84D33', clayLt: '#F2A283',
-  night: '#1F2550', indigo: '#2F3C7A', rose: '#E27A92', ochre: '#E8AA38', sap: '#6E9F58',
-  teal: '#3A9C98', violet: '#7B5CA8', cream: '#FFF5E2', sky: '#8EC3E6'
-};
+const PAL = STYLE.palette;
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const lerp = (a, b, x) => a + (b - a) * x;
@@ -245,36 +247,34 @@ function flushLetters() {
 
 // ---------- paper ----------
 function lcg(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
-function makePaper() {
-  const g = createGraphics(W, H); g.pixelDensity(1); const c = g.drawingContext, rnd = lcg(11);
+function makePaper(p = STYLE.paper) {
+  const g = createGraphics(W, H); g.pixelDensity(1); const c = g.drawingContext, rnd = lcg(p.seed);
   c.fillStyle = PAL.paper; c.fillRect(0, 0, W, H);
-  for (let i = 0; i < 70; i++) { const x = rnd() * W, y = rnd() * H, r = 120 + rnd() * 380, gr = c.createRadialGradient(x, y, 0, x, y, r), a = .045 * rnd(); gr.addColorStop(0, `rgba(160,125,80,${a})`); gr.addColorStop(1, 'rgba(160,125,80,0)'); c.fillStyle = gr; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
+  for (let i = 0; i < p.stains; i++) { const x = rnd() * W, y = rnd() * H, r = p.stainR[0] + rnd() * p.stainR[1], gr = c.createRadialGradient(x, y, 0, x, y, r), a = p.stainAlpha * rnd(); gr.addColorStop(0, `rgba(${p.stainRGB},${a})`); gr.addColorStop(1, `rgba(${p.stainRGB},0)`); c.fillStyle = gr; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
   c.lineWidth = 1;
-  for (let i = 0; i < 1400; i++) { const x = rnd() * W, y = rnd() * H, l = 6 + rnd() * 26, a = rnd() * TAU; c.strokeStyle = `rgba(110,88,60,${.035 + rnd() * .06})`; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a + .6) * l * .5, y + Math.sin(a + .6) * l * .5, x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); }
+  for (let i = 0; i < p.fibers; i++) { const x = rnd() * W, y = rnd() * H, l = p.fiberLen[0] + rnd() * p.fiberLen[1], a = rnd() * TAU; c.strokeStyle = `rgba(${p.fiberRGB},${p.fiberAlpha[0] + rnd() * p.fiberAlpha[1]})`; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a + .6) * l * .5, y + Math.sin(a + .6) * l * .5, x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); }
   return g;
 }
 // Static grain + vignette, multiplied over the painted frame so pigment sits "in" the paper.
-function makeGrain() {
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), rnd = lcg(5);
+function makeGrain(gs = STYLE.grain) {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), rnd = lcg(gs.seed);
   const id = c.createImageData(W, H), d = id.data;
-  for (let i = 0; i < d.length; i += 4) { const v = 255 - (rnd() < .55 ? rnd() * rnd() * 34 : 0); d[i] = v; d[i + 1] = v - 1; d[i + 2] = v - 3; d[i + 3] = 255; }
+  for (let i = 0; i < d.length; i += 4) { const v = 255 - (rnd() < gs.density ? rnd() * rnd() * gs.depth : 0); d[i] = v; d[i + 1] = v - 1; d[i + 2] = v - 3; d[i + 3] = 255; }
   c.putImageData(id, 0, 0);
-  const g = c.createRadialGradient(W / 2, H / 2, H * .45, W / 2, H / 2, H * 1.05); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(120,95,70,.35)');
+  const g = c.createRadialGradient(W / 2, H / 2, H * gs.vignetteR[0], W / 2, H / 2, H * gs.vignetteR[1]); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(${gs.vignetteRGB},${gs.vignette})`);
   c.fillStyle = g; c.fillRect(0, 0, W, H);
   return cv;
 }
 
 // ---------- custom brushes ----------
 function defineBrushes() {
-  brush.add('ink', { type: 'default', weight: 5, scatter: .25, sharpness: .8, grain: 40, opacity: 235, spacing: .2, pressure: [1.15, .75], rotate: 'natural', noise: .15 });
-  brush.add('inkfine', { type: 'default', weight: 2.6, scatter: .15, sharpness: .85, grain: 40, opacity: 230, spacing: .2, pressure: [1.1, .8], rotate: 'natural', noise: .1 });
-  brush.add('dry', { type: 'default', weight: 14, scatter: 3, sharpness: .3, grain: 6, opacity: 90, spacing: .6, pressure: [1, .6], rotate: 'natural', noise: .4 });
+  for (const [name, def] of Object.entries(STYLE.brushes)) brush.add(name, def);
 }
 
 // ---------- frame ----------
 async function setup() {
   createCanvas(W, H, WEBGL); pixelDensity(1); noLoop();
-  brush.scaleBrushes(5); defineBrushes();
+  brush.scaleBrushes(STYLE.brushScale); defineBrushes();
   paperG = makePaper(); grainC = makeGrain(); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
   outC = document.getElementById('out'); outX = outC.getContext('2d');
   await document.fonts.load('100px "Permanent Marker"');

@@ -207,6 +207,8 @@ node render.mjs --frames --workers=4                            # or: parallel +
 node render.mjs --encode --out=out/video.mp4                    # … then encode them
 ```
 
+If a long render slows down as it goes, `--recycle=N` makes `--clip`, `--frames` and `--png` reopen the page every N frames. It's off by default (on integrated graphics it made renders slower), and the frames are the same either way.
+
 ---
 
 ## Engine
@@ -215,14 +217,23 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
 
 | file | what's in it |
 |---|---|
-| `src/config.js` | `PROJECT = { duration, bpm, offset, audio? }` |
-| `src/core.js` | canvas, palette, timing and motion helpers, `paint()`, camera, full-frame effects, `glow()`, lettering, paper, render hooks |
+| `src/config.js` | `PROJECT = { duration, bpm, offset, style, audio? }` |
+| `src/styles/` | the looks: palette, paper, grain, brushes, boil (see Styles) |
+| `src/core.js` | canvas, timing and motion helpers, `paint()`, camera, full-frame effects, `glow()`, lettering, paper, render hooks |
 | `src/clawd.js` | Clawd: views, emotions, eyes, mouths, hats, emotes, moves |
 | `src/timeline.js` | `shots()`, `LOOPS`, `brushWipe()` |
 | `src/sheets.js` | the model sheets as loops (`?loop=emotions`, `?loop=views`) |
 | `src/scenes/demo.js` | an 11-second example. **Don't copy it** (see the end of this guide) |
 | `studio.html` | open it in Chrome to scrub the video (`?t=2.5` jumps to a time, `?loop=emotions` shows a loop) |
 | `render.mjs` | headless renderer: sheets, strips, crops, stills, PNG loops, MP4 |
+
+### Styles
+
+A style is everything that decides how the film looks but not what happens in it: the colours behind `PAL`, the paper, the grain, the brushes and the boil rate. Each one is a file in `src/styles/` that registers itself in `STYLES`; `classic.js` is the original look and documents every field.
+
+- Pick one with `style` in [src/config.js](src/config.js). `studio.html?style=name` and `render.mjs --style=name` override it, so you can compare looks without editing files.
+- To make one, copy `classic.js`, rename the entry, change the values and add its `<script>` tag in `studio.html`. Keep the `PAL` names: scenes use them.
+- Character proportions are not part of a style.
 
 ### Frames are pure functions of time
 
