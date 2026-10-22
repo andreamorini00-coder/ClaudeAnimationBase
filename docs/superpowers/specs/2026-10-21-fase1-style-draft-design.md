@@ -132,8 +132,8 @@ I valori esatti si fissano guardando uno sheet di confronto `classic` / `acquere
 | demo, `classic`, `--clip` (prima) | 826 s | 264 fotogrammi, senza riapertura |
 | spezzone 0–6 s, `classic`, `--clip`, senza / con riapertura 24 / 48 | 210 / 245 / 241 s | riapertura spenta per default |
 | demo, `classic`, `--clip --draft` | **25,4 s** | 132 fotogrammi a 12 fps, riempimenti piatti |
-| demo, `acquerello-leggero`, `--clip --draft` | — | obiettivo < 120 s |
-| demo, `acquerello-leggero`, `--clip` (finale) | — | richiesto da Andrea |
+| demo, `acquerello-leggero`, `--clip --draft` | **35,1 s** | 132 fotogrammi a 12 fps |
+| demo, `acquerello-leggero`, `--clip` (finale) | **65,3 s** | 264 fotogrammi a 24 fps; lo stile usa già colore piatto, quindi anche il finale è veloce |
 
 ### Tagli del draft misurati (2026-10-22)
 
