@@ -37,21 +37,17 @@ Piano: `2026-10-21-fase1-style-draft.md` · Spec: `../specs/2026-10-21-fase1-sty
 
 Tre sotto-progetti, in quest'ordine (scelta di Andrea): ognuno con spec e piano suoi.
 
-### 2a. Formato verticale 9:16
+### 2a. Formati verticale 9:16 e feed 4:5 · **design approvato, in corso**
 
-- 1080×1920 per reel e storie, composto per il verticale e non ritagliato dal 16:9.
+Branch `fase2a-verticale`. Spec: `../specs/2026-10-22-fase2a-formati-design.md`. Piano: `2026-10-22-fase2a-formati.md`.
+
+- Formati: `landscape` 1920×1080, `vertical` 1080×1920 (reel e storie), `feed` 1080×1350 (post Instagram 4:5).
+  Composti per il loro formato, mai ritagliati dal 16:9.
 - Il formato si sceglie all'inizio di ogni video, prima di generarlo (scelta di Andrea): `PROJECT.format` in
-  `config.js` (`landscape` | `vertical`), forzabile con `--format=` / `?format=`.
-- Design proposto (approccio A, in attesa di approvazione):
-  - `W`/`H` del motore presi dal formato: tela, carta, grana, transizioni, iris e crop si adattano;
-  - ogni scena dichiara il formato per cui è composta (`shots([...], { format })`); formato diverso → errore
-    immediato;
-  - il timbro della cartella fotogrammi registra anche il formato;
-  - da verificare in verticale: `brushWipe`, `iris`, `flash`; gli sheet dei modelli restano orizzontali;
-  - esempio `LOOPS.vertical` (~5 s) composto in altezza, con il quinto basso libero per i sottotitoli;
-  - ANIMATION_GUIDE: "Formato" come primo rigo dello storyboard, regole 9:16 (da html-anime: testa nella metà alta,
-    testo nel quinto basso) e taglie di Clawd per il verticale;
-  - verifica: `npm run check` identico per l'orizzontale, riferimento nuovo per il verticale, sheet da approvare.
+  `config.js`, forzabile con `--format=` / `?format=`.
+- Zone sicure social (Andrea): in 1080×1920 evitare ~220 px in alto, ~420 px in basso, ~140 px a destra. La fascia
+  sottotitoli sta tra ~1150 e ~1500 px, non nel quinto basso (lì c'è la didascalia del social). Opzione per
+  disegnare le zone sugli sheet di controllo, mai nel video finale.
 
 ### 2b. Audio: musica e voce
 
@@ -100,6 +96,9 @@ JSON e i tipi di corpo si progettano su quei personaggi.
 - **Pagina web** per creare e modificare i personaggi e vedere l'anteprima dal vivo.
 - **Libreria** in una cartella del repo, usabile dalle scene con una funzione generica sul modello di `clawd()`.
 - Le proporzioni del personaggio stanno nella scheda, mai in `STYLE`.
+
+Nota di Andrea (2026-10-22): il draghetto in `reference/characters/draghetto/` dimostra che "volante" può essere un
+corpo quadrupede con le ali come parte aggiuntiva, invece di un tipo di corpo a sé. Da valutare nel design.
 
 Da fissare nel design: come Clawd diventa una scheda della libreria, quanta animazione (camminata, emozioni) è
 condivisa tra tipi di corpo diversi, e il formato dei file della libreria.
