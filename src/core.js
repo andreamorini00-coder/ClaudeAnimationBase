@@ -22,7 +22,7 @@ const DRAFT_OPTS = DRAFT_ARG === '' ? DRAFT_DEFAULT : DRAFT_ARG || '';
 const DRAFT = { on: DRAFT_ARG !== null, flatFills: /\bflat\b/.test(DRAFT_OPTS), scale: /\bhalf\b/.test(DRAFT_OPTS) ? .5 : 1 };
 // Formats: the frame size and the social apps' safe zones, in frame pixels. safe = margins the app's interface covers
 // (keep faces and actions out of them) and subs = the band [y0, y1] where subtitles will go (keep it clear of anything
-// important). The vertical numbers are Instagram/TikTok's; feed's are a first guess to check on a --safe sheet.
+// important). The vertical numbers are Instagram/TikTok's; feed's leave room for the profile grid's 3:4 crop.
 const FORMATS = {
   landscape: { w: 1920, h: 1080, safe: { top: 0, bottom: 0, left: 0, right: 0, subs: null } },
   vertical: { w: 1080, h: 1920, safe: { top: 220, bottom: 420, left: 0, right: 140, subs: [1150, 1500] } },

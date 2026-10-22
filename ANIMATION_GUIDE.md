@@ -251,6 +251,7 @@ The format is chosen before anything is drawn, and the scene is composed for it.
 | `feed` | 1080×1350 | Instagram posts (4:5) | 60 / 60 / 100 / 100 | 940–1170 |
 
 - Pick it with `format` in [src/config.js](src/config.js); `?format=name` and `--format=name` override it. `W` and `H` follow the format, and so do paper, grain, transitions, the camera and crops.
+- **A vertical or feed project replaces the demo:** take `demo.js`'s `<script>` tag out of `studio.html` (it is declared `landscape`, so it would stop every other format) and put your scene's in its place.
 - **Declare the format a scene is composed for:** `shots([...], { format: 'vertical' })` (or `['vertical', 'feed']`), and `LOOPS.name.format` for a loop. Leaving it out means `'landscape'`. Rendering a scene in a format it doesn't declare stops with an error instead of a badly framed video.
 - **Safe zones.** The app's interface covers the margins, and in `vertical` its caption sits in the bottom 420 px, so subtitles go in the band above it, not in the bottom fifth. Faces and important actions stay in the safe centre (inside the margins), and nothing important sits in the subtitle band: only background. Scenes read the numbers from `SAFE` (`{ top, bottom, left, right, subs: [y0, y1] | null }`) instead of writing them by hand.
 - **Check the framing** with `--safe` on a sheet, strip or still: red = margins, yellow = subtitle band, red line = safe centre. It's refused for videos, so it never ends up in one.

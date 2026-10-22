@@ -37,7 +37,7 @@ Piano: `2026-10-21-fase1-style-draft.md` · Spec: `../specs/2026-10-21-fase1-sty
 
 Tre sotto-progetti, in quest'ordine (scelta di Andrea): ognuno con spec e piano suoi.
 
-### 2a. Formati verticale 9:16 e feed 4:5 · **design approvato, in corso**
+### 2a. Formati verticale 9:16 e feed 4:5 · **chiusa**
 
 Branch `fase2a-verticale`. Spec: `../specs/2026-10-22-fase2a-formati-design.md`. Piano: `2026-10-22-fase2a-formati.md`.
 

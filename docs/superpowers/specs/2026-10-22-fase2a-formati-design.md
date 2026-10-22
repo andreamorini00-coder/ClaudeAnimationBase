@@ -40,14 +40,14 @@ visi e azioni importanti; "sottotitoli" = la fascia dove andranno i testi della 
 | formato | margini da evitare | fascia sottotitoli (y) | fonte |
 |---|---|---|---|
 | `vertical` | alto 220, basso 420, destra 140, sinistra 0 | 1150–1500 | Andrea |
-| `feed` | alto 60, basso 60, sinistra 100, destra 100 | 940–1170 | proposta da approvare sullo sheet |
+| `feed` | alto 60, basso 60, sinistra 100, destra 100 | 940–1170 | approvata da Andrea sullo sheet (2026-10-22) |
 | `landscape` | nessuno | nessuna | — |
 
 - `vertical`: il quinto basso **non** è per i sottotitoli (c'è la didascalia del social); la fascia sottotitoli sta
   sopra, tra 1150 e 1500. Il centro sicuro è quindi x 0–940, y 220–1500.
 - `feed`: nel feed l'interfaccia di Instagram sta fuori dall'immagine; la griglia del profilo però mostra un ritaglio
   3:4 centrato (circa 34 px tagliati per lato). I margini proposti sommano quel ritaglio e un margine di respiro.
-  La fascia sottotitoli proposta sta nel terzo basso, sopra il margine. Valori da confermare guardando lo sheet.
+  La fascia sottotitoli sta nel terzo basso, sopra il margine. Valori approvati da Andrea sullo sheet (2026-10-22).
 - Le zone sono dati del formato (`FORMATS[nome].safe = { top, bottom, left, right, subs: [y0, y1] }`), leggibili dalle
   scene con `SAFE`, così una scena può piazzare le cose dentro il centro sicuro senza numeri scritti a mano.
 
@@ -134,7 +134,7 @@ verificare i formati; non è una seconda demo da copiare.
 - Il problema noto di p5.brush con i contorni lunghi potrebbe comparire su forme molto alte: si vede negli sheet.
 - Altri calcoli che danno per scontato il 16:9 possono emergere negli sheet; si correggono solo se si vedono e
   sempre senza cambiare l'orizzontale (`npm run check`).
-- I valori di `feed` sono una proposta: si fissano con lo sheet.
+- I valori di `feed` erano una proposta: approvati da Andrea sullo sheet il 2026-10-22.
 
 ## Regole operative
 
