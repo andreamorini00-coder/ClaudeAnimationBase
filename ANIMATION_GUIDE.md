@@ -121,6 +121,7 @@ Format: landscape | vertical | feed   (pick it first: it decides every compositi
 Logline: one sentence. Clawd wants ___, but ___, so ___.
 World: setting, a small palette, light, how the colour changes across the video.
 Motif: the thing that recurs and pays off.
+Sound: the ambience under each shot, the effects on key events, music (optional).
 Clawd's arc: the emotion keys across the whole video.
 Shots:
   A  start–end  [transition in: ___]  what's seen · the EVENT · Clawd's reaction · camera
@@ -228,6 +229,9 @@ If a long render slows down as it goes, `--recycle=N` makes `--clip`, `--frames`
 | `src/timeline.js` | `shots()`, `LOOPS`, `brushWipe()` |
 | `src/sheets.js` | the model sheets as loops (`?loop=emotions`, `?loop=views`) |
 | `src/scenes/demo.js` | an 11-second example. **Don't copy it** (see the end of this guide) |
+| `src/audio.js` | `sounds()`: the effects, ambiences and music a scene declares (see Sound) |
+| `tools/audio.mjs` | the mix: variations, levels, ducking, ffmpeg graph, -14 LUFS |
+| `assets/sfx/` | the sound effects and ambience loops (licences in `licenze.md`) |
 | `src/scenes/tall_example.js` | `LOOPS.tall`, a 5-second check of the tall formats (`--loop=tall --format=vertical`) |
 | `studio.html` | open it in Chrome to scrub the video (`?t=2.5` jumps to a time, `?loop=emotions` shows a loop) |
 | `render.mjs` | headless renderer: sheets, strips, crops, stills, PNG loops, MP4 |
@@ -446,12 +450,31 @@ clawd(x, y, 24, { ...feel('proud', t), aR: 1.2, armR: (u, sw) => paint(starPts(u
 
 ---
 
+## Sound
+
+Frames are drawn in parallel and out of order, so a sound can't start "while drawing". The scene lists its sounds once, **on the same times its animation uses** (the `tLand` that drives `jump()` also places the thud), and `render.mjs` mixes them into `--clip` and `--encode`:
+
+```js
+sounds({
+  sfx: [[tLand, 'caduta_tonfo'], [tJump, 'salto_boing', { vol: -3 }], [4.7, 'transizione_whoosh', { duck: false }]],
+  ambience: [{ name: 'amb_notte_grilli_loop', from: 0, to: 11, fadeIn: .5, fadeOut: .8 }],
+  music: { file: 'assets/music/theme.mp3', vol: 0 },
+});
+```
+
+- A loop declares the same object as `LOOPS.name.sounds`. Effects come from `assets/sfx/`: write the name **without** its number and repeats take `_01`, `_02`, `_03` in turn (a numbered name picks that file).
+- Ambiences loop over `from`–`to` and fade in and out. Music ducks by 6 dB under every effect unless it has `duck: false` (use it for transitions and small ticks).
+- Levels: every file is first brought to its category's level (effects −18, ambiences −30, music −20 LUFS); `vol` in dB adjusts one sound from there. The finished mix is normalised to **−14 LUFS, −1 dBTP, AAC 48 kHz**.
+- Listen without rendering a frame: `node render.mjs --mix --loop=tall --format=vertical --out=out/check/tall.wav`.
+- One sound per event, timed to the frame the viewer sees it; a sound with no visible cause reads as a mistake. Don't stack effects on one moment.
+- `voice` is reserved for a later version and stops the render for now.
+
 ## Music (optional)
 
 The kit doesn't need music, but it's built for it:
 
 1. Set `bpm` to the song's tempo in [src/config.js](src/config.js), and set `offset` to the time of its first downbeat in seconds. Every idle, dance and `pulse()` then locks to the song.
-2. Put the audio in `assets/` and set `PROJECT.audio` (or pass `--audio=`). `--clip` and `--encode` mux it in.
+2. Put the song in `assets/` and set `PROJECT.music` (or a scene's `sounds({ music })`, or `--music=`). It ducks under the effects and is mixed into `--clip` and `--encode` (see Sound).
 3. Land hits, cuts and takes on beats (`beatN`, `pulse`). Cut on bar lines for big changes, and give each musical phrase its own visual.
 4. **Lyrics are not text.** Don't put words on screen. Act the meaning of a line instead.
 

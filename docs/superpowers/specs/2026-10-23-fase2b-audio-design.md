@@ -145,6 +145,19 @@ Per provare il ducking si usa una musica di prova generata da ffmpeg (non va nel
 | orizzontale | `npm run check` → `OK 9/9 identici` |
 | ascolto di Andrea | `out/tall-vertical-audio.mp4` |
 
+## Misure (2026-10-23)
+
+| cosa | risultato |
+|---|---|
+| `--mix --loop=tall --format=vertical` | 3,9 s di comando; wav 48 kHz, 5,0 s, −13,9 LUFS |
+| ducking reale (tono + effetto inudibile) | musica −6,02 dB sotto l'effetto |
+| `out/tall-vertical-audio.mp4` (qualità piena) | 176 s di render; 1080×1920 `yuv420p`/`tv`; AAC 48 kHz; −13,9 LUFS, picco −1,4 dBTP; audio = video = 5,0 s |
+| `out/tall-feed-audio.mp4` (draft) | 13 s di render; 1080×1350; stesse misure audio |
+| colore prima / dopo | PSNR 45 dB su un fotogramma: nessuna differenza visibile |
+
+- Il primo mix arrivava a −0,7 dBTP dopo la codifica AAC (il limite è −1): `loudnorm` ora punta a −1,5 dBTP per lasciare
+  margine, e il file finale misura −1,4.
+
 ## Rischi
 
 - `loudnorm` su clip brevi e con molti silenzi può alzare troppo gli ambienti: si controlla all'ascolto e, se serve,

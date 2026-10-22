@@ -41,6 +41,14 @@ For reels, stories and Instagram posts, pick the format before you start (`forma
 node render.mjs --loop=tall --format=vertical --sheet=1,2,3 --safe --out=out/check/safe.jpg
 ```
 
+Scenes declare their sounds (effects from `assets/sfx/`, ambiences, optional music) and the videos come out mixed at −14 LUFS, AAC 48 kHz. To listen to the sound alone, without drawing:
+
+```bash
+node render.mjs --mix --loop=tall --format=vertical --out=out/check/tall.wav
+```
+
+`--music=assets/music/theme.mp3` adds a music track that ducks under the effects.
+
 That renders the 11-second demo in [src/scenes/demo.js](src/scenes/demo.js). Open [studio.html](studio.html) in Chrome to scrub through it. Add `?loop=emotions` or `?loop=views` to see the model sheets. If Chrome isn't in a standard location, pass `--chrome=<path>` or set `CHROME_PATH`.
 
 On Linux, `render.mjs` starts Chrome with `--no-sandbox` (Ubuntu 23.10+ blocks Chrome's sandbox in headless use) and also finds a Chromium installed by Playwright. With no GPU at all, add `--soft-gl` to render WebGL in software: slow on watercolour fills, but it works. On a headless Linux machine with an NVIDIA GPU (a cloud or cluster node), add `--gpu-angle=gl-egl` (or `vulkan`); `node gpu_probe.mjs <chrome path>` shows which renderer each set of flags gets.

@@ -120,8 +120,9 @@ export async function levelGains(plan, { cachePath = 'out/audio-cache.json', mea
 }
 
 // ---------- final mix ----------
-// LOUD: the social target. Two loudnorm passes: the first measures the mix, the second applies a linear gain to it.
-export const LOUD = { I: -14, TP: -1, LRA: 11 };
+// LOUD: the social target (-14 LUFS, peaks under -1 dBTP). Two loudnorm passes: the first measures the mix, the second
+// applies a linear gain to it. TP aims at -1.5 because AAC encoding lifts true peaks by a few tenths of a dB.
+export const LOUD = { I: -14, TP: -1.5, LRA: 11 };
 const lastJson = log => JSON.parse(log.slice(log.lastIndexOf('{'), log.lastIndexOf('}') + 1));
 // Mixes a resolved plan to out (.wav, or .m4a for AAC 192 kbps), 48 kHz. Returns { lufs, tp } of the result.
 export async function renderMix(plan, { out, gains, durs }) {
