@@ -14,7 +14,7 @@
 //   Standalone loops (LOOPS in the page): add --loop=<name> to any of the above (times are then loop times), or
 //     node render.mjs --loop=emotions --png --out=out/loop_emotions                          one cycle as PNGs (for GIFs)
 //   Music: --audio=assets/song.mp3 (or PROJECT.audio) is muxed into --clip and --encode. Other flags: --fps=24,
-//   --chrome=<path to Chrome/Chromium>, --style=<name in src/styles/>, --recycle=N (see below).
+//   --chrome=<path to Chrome/Chromium>, --style=<name in src/styles/>, --format=landscape|vertical|feed, --recycle=N (see below).
 //   Draft preview: add --draft to any of the above (to --encode too, after --frames --draft): 12 fps and flat colour
 //   instead of watercolour fills. --draft=flat,half also paints at half resolution. Never for the final video.
 import puppeteer from 'puppeteer-core';
@@ -76,6 +76,7 @@ async function openPage(tag = '') {
   page.on('console', m => { if (['error', 'warn'].includes(m.type())) console.log(`[page${tag}]`, m.text()); });
   page.on('pageerror', e => { if (!/inesistente|incompleto/.test(e.message)) console.log(`[page error${tag}]`, e.message); });
   const query = '?render' + (args.style ? '&style=' + encodeURIComponent(args.style) : '')
+    + (args.format ? '&format=' + encodeURIComponent(args.format) : '')
     + (args.draft ? '&draft' + (args.draft === true ? '' : '=' + encodeURIComponent(args.draft)) : '');
   await page.goto(pathToFileURL(resolve('studio.html')).href + query, { waitUntil: 'networkidle0' });
   await page.waitForFunction('window.ready === true || !!window.loadError', { timeout: 60000 });

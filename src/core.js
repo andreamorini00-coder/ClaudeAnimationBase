@@ -15,12 +15,25 @@ if (STYLE_MISSING.length) {
 }
 // Draft preview: studio.html?draft=flat,half or render.mjs --draft (plain ?draft means DRAFT_DEFAULT).
 //   flat: watercolour fills are painted as flat colour (the big saving); half: the frame is painted at half
-//   resolution and scaled up to 1920×1080. Scenes keep drawing in 1920×1080 coordinates either way.
+//   resolution and scaled up to full size. Scenes keep drawing in full-size (W × H) coordinates either way.
 const DRAFT_DEFAULT = 'flat';
 const DRAFT_ARG = new URLSearchParams(location.search).get('draft');
 const DRAFT_OPTS = DRAFT_ARG === '' ? DRAFT_DEFAULT : DRAFT_ARG || '';
 const DRAFT = { on: DRAFT_ARG !== null, flatFills: /\bflat\b/.test(DRAFT_OPTS), scale: /\bhalf\b/.test(DRAFT_OPTS) ? .5 : 1 };
-const W = 1920, H = 1080;
+// Formats: the frame size and the social apps' safe zones, in frame pixels. safe = margins the app's interface covers
+// (keep faces and actions out of them) and subs = the band [y0, y1] where subtitles will go (keep it clear of anything
+// important). The vertical numbers are Instagram/TikTok's; feed's are a first guess to check on a --safe sheet.
+const FORMATS = {
+  landscape: { w: 1920, h: 1080, safe: { top: 0, bottom: 0, left: 0, right: 0, subs: null } },
+  vertical: { w: 1080, h: 1920, safe: { top: 220, bottom: 420, left: 0, right: 140, subs: [1150, 1500] } },
+  feed: { w: 1080, h: 1350, safe: { top: 60, bottom: 60, left: 100, right: 100, subs: [940, 1170] } },
+};
+const FORMAT_NAME = new URLSearchParams(location.search).get('format') || PROJECT.format || 'landscape';
+if (!FORMATS[FORMAT_NAME]) {
+  window.loadError = `Formato "${FORMAT_NAME}" inesistente. Disponibili: ${Object.keys(FORMATS).join(', ')}`;
+  throw new Error(window.loadError);
+}
+const W = FORMATS[FORMAT_NAME].w, H = FORMATS[FORMAT_NAME].h, SAFE = FORMATS[FORMAT_NAME].safe;
 const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = STYLE.boil, DUR = PROJECT.duration;
 const TAU = Math.PI * 2;
 const PAL = STYLE.palette;
@@ -251,7 +264,7 @@ function drawLetters(c) {
 
 // p5.brush defers washes and strokes into a mask layer; a (tiny, off-screen) watercolor fill forces it to composite
 // now, so everything painted before this call really lands under whatever p5 draws next (letters, glow).
-// Screen space: origin top-left, in 1920×1080 units whatever the canvas size (half in a draft).
+// Screen space: origin top-left, in full-size (W × H) units whatever the canvas size (half in a draft).
 function screenSpace() { resetMatrix(); translate(-width / 2, -height / 2); if (DRAFT.scale !== 1) scale(DRAFT.scale); }
 function flushBrush() {
   push(); screenSpace();
@@ -281,7 +294,7 @@ async function setup() {
   createCanvas(W * DRAFT.scale, H * DRAFT.scale, WEBGL); pixelDensity(1); noLoop();
   brush.scaleBrushes(STYLE.brushScale); defineBrushes();
   paperG = TECH.makePaper(STYLE); grainC = TECH.makeGrain(STYLE); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
-  outC = document.getElementById('out'); outX = outC.getContext('2d');
+  outC = document.getElementById('out'); outC.width = W; outC.height = H; outC.style.aspectRatio = `${W} / ${H}`; outX = outC.getContext('2d');
   await document.fonts.load('100px "Permanent Marker"');
   window.ready = true;
   if (!location.search.includes('render')) devUI();

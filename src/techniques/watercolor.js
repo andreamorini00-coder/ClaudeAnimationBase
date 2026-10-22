@@ -34,7 +34,7 @@ TECHNIQUES.watercolor = {
     const id = c.createImageData(W, H), d = id.data;
     for (let i = 0; i < d.length; i += 4) { const v = 255 - (rnd() < gs.density ? rnd() * rnd() * gs.depth : 0); d[i] = v; d[i + 1] = v - 1; d[i + 2] = v - 3; d[i + 3] = 255; }
     c.putImageData(id, 0, 0);
-    const g = c.createRadialGradient(W / 2, H / 2, H * gs.vignetteR[0], W / 2, H / 2, H * gs.vignetteR[1]); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(${gs.vignetteRGB},${gs.vignette})`);
+    const g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * gs.vignetteR[0], W / 2, H / 2, Math.min(W, H) * gs.vignetteR[1]); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(${gs.vignetteRGB},${gs.vignette})`);
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     return cv;
   },

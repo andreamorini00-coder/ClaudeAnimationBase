@@ -7,7 +7,7 @@
 <style>
   html, body { margin: 0; background: #1b1820; color: #eee; font: 13px system-ui, sans-serif; }
   main { padding: 12px; display: grid; gap: 8px; }
-  #out { width: min(100%, 1280px); aspect-ratio: 16 / 9; height: auto; background: #F3EBDC; }
+  #out { width: auto; height: auto; max-width: min(100%, 1280px); max-height: 85vh; background: #F3EBDC; }   /* size and aspect come from the format (core.js) */
   .p5Canvas { display: none !important; }
   .bar { display: flex; gap: 10px; align-items: center; max-width: 1280px; }
   #scrub { flex: 1; }
