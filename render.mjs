@@ -17,6 +17,8 @@
 //   --chrome=<path to Chrome/Chromium>, --style=<name in src/styles/>, --format=landscape|vertical|feed, --recycle=N (see below).
 //   Draft preview: add --draft to any of the above (to --encode too, after --frames --draft): 12 fps and flat colour
 //   instead of watercolour fills. --draft=flat,half also paints at half resolution. Never for the final video.
+//   Safe zones: add --safe to --sheet, --strip or --stills to draw the format's social safe zones over the frames.
+//   It's refused with --clip, --frames, --png and --encode, so it can never end up in a video.
 import puppeteer from 'puppeteer-core';
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync } from 'node:fs';
@@ -38,6 +40,9 @@ function playwrightChromes() {
 }
 const CHROME = CHROMES.find(p => p && existsSync(p));
 if (!CHROME) { console.error('Chrome not found: pass --chrome=<path> or set CHROME_PATH'); process.exit(1); }
+if (args.safe && (args.clip || args.frames || args.png || args.encode)) {
+  console.error('--safe è solo per sheet, strip e stills: non va mai in un video'); process.exit(1);
+}
 const fps = +(args.fps || (args.draft ? 12 : 24)), FRAMES_DIR = 'out/frames';
 const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { stdio: 'inherit' }); p.on('close', c => c ? bad(new Error(cmd + ' exited ' + c)) : ok()); });
 const times = s => String(s).split(',').map(Number);
@@ -78,6 +83,7 @@ async function openPage(tag = '') {
   const query = '?render' + (args.style ? '&style=' + encodeURIComponent(args.style) : '')
     + (args.format ? '&format=' + encodeURIComponent(args.format) : '')
     + (args.loop ? '&loop=' + encodeURIComponent(args.loop) : '')
+    + (args.safe ? '&safe' : '')
     + (args.draft ? '&draft' + (args.draft === true ? '' : '=' + encodeURIComponent(args.draft)) : '');
   await page.goto(pathToFileURL(resolve('studio.html')).href + query, { waitUntil: 'networkidle0' });
   await page.waitForFunction('window.ready === true || !!window.loadError', { timeout: 60000 });

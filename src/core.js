@@ -317,6 +317,20 @@ function composite(t) {
   drawLetters(c);
   c.globalCompositeOperation = 'multiply'; c.drawImage(grainC, 0, 0);
   c.globalCompositeOperation = 'source-over';
+  if (SHOW_SAFE) drawSafeOverlay(c);
+}
+// ?safe (render.mjs --safe, sheets and stills only): the format's safe zones over the finished frame, to check framing.
+// Red = margins the social app's interface covers, yellow = the subtitle band, red line = the safe centre.
+const SHOW_SAFE = new URLSearchParams(location.search).has('safe');
+function drawSafeOverlay(c) {
+  const s = SAFE;
+  c.save();
+  c.fillStyle = 'rgba(255,0,0,.25)';
+  c.fillRect(0, 0, W, s.top); c.fillRect(0, H - s.bottom, W, s.bottom);
+  c.fillRect(0, s.top, s.left, H - s.top - s.bottom); c.fillRect(W - s.right, s.top, s.right, H - s.top - s.bottom);
+  if (s.subs) { c.fillStyle = 'rgba(255,210,0,.3)'; c.fillRect(s.left, s.subs[0], W - s.left - s.right, s.subs[1] - s.subs[0]); }
+  if (s.top || s.bottom || s.left || s.right) { c.strokeStyle = 'rgba(255,0,0,.8)'; c.lineWidth = 3; c.strokeRect(s.left, s.top, W - s.left - s.right, H - s.top - s.bottom); }
+  c.restore();
 }
 window.renderAt = async (t, type = 'image/png', q = .92) => { T = t; await redraw(); composite(t); return outC.toDataURL(type, q); };
 // Contact sheet of several times, for visual checks: returns { url, ms[] }. crop = [x, y, w, h] fills each cell with just
