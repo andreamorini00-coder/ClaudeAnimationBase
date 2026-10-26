@@ -132,10 +132,16 @@ test('gatto spec is valid', () => { assert.deepEqual(lib().call('validateCharact
 test('gatto features per view', () => checkFeatures(lib(), 'gatto'));
 test('gatto uses only its roles', () => checkRoles(lib(), 'gatto'));
 test('gatto has no NaN', () => checkFinite(lib(), 'gatto'));
-test('gatto head is about a third of the length', () => {
+// Andrea, 2026-10-27: the head is much bigger than the note's "1/3": about 0.45 of the length, almost as tall as the body
+test('gatto head is about 0.45 of the length', () => {
   const L = layoutOf(lib(), 'gatto', { view: 'side', pose: 'inPiedi' });
   const head = partBox(L, p => p.id === 'head').w, len = partBox(L, p => !/tail|whisker|shadow/.test(p.id)).w;
-  assert.ok(head / len >= .30 && head / len <= .37, `testa/lunghezza = ${(head / len).toFixed(3)}`);
+  assert.ok(head / len >= .42 && head / len <= .48, `testa/lunghezza = ${(head / len).toFixed(3)}`);
+});
+test('gatto head is almost as tall as the body', () => {
+  const L = layoutOf(lib(), 'gatto', { view: 'side', pose: 'inPiedi' });
+  const k = partBox(L, p => p.id === 'head').h / partBox(L, p => p.id === 'body').h;
+  assert.ok(k >= .85 && k <= 1.1, `altezza testa/corpo = ${k.toFixed(3)}`);
 });
 test('gatto layout is deterministic', () => {
   const c = lib(); assert.deepEqual(layoutOf(c, 'gatto', { pose: 'corsa', t: .41 }), layoutOf(c, 'gatto', { pose: 'corsa', t: .41 }));
@@ -279,4 +285,33 @@ test('a pose can carry its own face', () => {
 test('a pose face with an unknown param is refused', () => {
   const c = lib(), m = JSON.parse(JSON.stringify(c.get('CHARACTERS.mostro'))); m.poses.broncio.expression = { naso: 1 };
   assert.match(c.call('validateCharacter', m).join(' '), /naso/);
+});
+
+const legs = L => L.parts.filter(p => /^leg\d/.test(p.id)), paws = L => L.parts.filter(p => /^paw\d/.test(p.id));
+const centre = p => { const b = box(p.pts), xs = p.pts.map(q => q[0]), ys = p.pts.map(q => q[1]); return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2]; };
+test('gatto: two legs from the front and from the back, one paw per leg', () => {
+  const c = lib();
+  for (const view of ['front', 'back']) { const L = layoutOf(c, 'gatto', { view }); assert.equal(legs(L).length, 2, view); }
+  for (const view of ['front', 'q', 'side', 'back']) { const L = layoutOf(c, 'gatto', { view }); assert.equal(paws(L).length, legs(L).length, view); }
+});
+test('gatto: from the back the tail starts low on the rump', () => {
+  const L = layoutOf(lib(), 'gatto', { view: 'back' }), body = partBox(L, p => p.id === 'body'), tail = partBox(L, p => p.id === 'tail');
+  assert.ok(tail.y1 > body.y1 - body.h * .3, `la coda finisce a ${tail.y1.toFixed(2)}, il corpo a ${body.y1.toFixed(2)}`);
+});
+test('gatto: dark eyes with a highlight', () => {
+  const c = lib(), r = c.call('FACES.eye', 'open', 0, 0, 1, { dark: true });
+  assert.ok(!r.parts.some(p => p.id === 'eyeWhite')); assert.ok(r.parts.some(p => p.id === 'highlight'));
+  const L = layoutOf(c, 'gatto', { view: 'front', expression: 'curioso' });
+  assert.ok(!L.parts.some(p => p.id.endsWith('eyeWhite')), 'il gatto ha occhi scuri senza bianco');
+});
+test('gatto poses read strongly', () => {
+  const c = lib(), side = pose => layoutOf(c, 'gatto', { view: 'side', pose, expression: 'curioso' });
+  const spread = L => { const ps = paws(L).map(centre).map(p => p[0]); return Math.max(...ps) - Math.min(...ps); };
+  assert.ok(spread(side('corsa')) > 1.35 * spread(side('inPiedi')), 'corsa: zampe distese avanti e indietro');
+  const agg = side('agguato'), head = partBox(agg, p => p.id === 'head'), body = agg.parts.find(p => p.id === 'body').pts;
+  const rearTop = Math.min(...body.filter(p => p[0] < 0).map(p => p[1]));
+  assert.ok(head.y1 - head.h / 2 > rearTop, 'agguato: testa bassa, sedere alto');
+  assert.ok(partBox(agg, p => p.id === 'body').y1 > partBox(side('inPiedi'), p => p.id === 'body').y1 - .1, 'agguato: schiacciato a terra');
+  const raised = Math.min(...paws(side('zampata')).map(centre).map(p => p[1]));
+  assert.ok(raised < -1.4, `zampata: la zampa alzata è a ${raised.toFixed(2)}`);
 });

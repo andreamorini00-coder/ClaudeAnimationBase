@@ -9,6 +9,7 @@ const FACES = {
   arc(cx, cy, rx, ry, a0, a1, n = 10) { const p = []; for (let i = 0; i <= n; i++) { const a = CG.lerp(a0, a1, i / n); p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return p; },
 
   // kind: one of EYES. r: eye size. o.look: -1..1, where the pupil looks sideways. o.squint: 0..1 closes it.
+  // o.dark: open, wide, sad and angry eyes drawn as one big dark iris with two highlights, no white (the cat).
   eye(kind, cx, cy, r, o = {}) {
     if (!FACES.EYES.includes(kind)) throw new Error(`Occhio "${kind}" inesistente. Disponibili: ${FACES.EYES.join(', ')}`);
     const R = { white: 'eyeWhite', ink: 'line', ...(o.roles || {}) }, look = CG.clamp(o.look || 0, -1, 1) * r * .25;
@@ -16,6 +17,15 @@ const FACES = {
     const stroke = (id, pts, w = .5) => parts.push({ id, role: R.ink, pts, line: w, stroke: true });
     if (kind === 'happy') { stroke('lid', FACES.arc(cx, cy + r * .2, r * .75, r * .6, P, 2 * P)); return { parts }; }
     if (kind === 'closed' || open < .15) { stroke('lid', FACES.arc(cx, cy, r * .75, r * .35, 0, P)); return { parts }; }
+    if (o.dark && ['open', 'wide', 'sad', 'angry'].includes(kind)) {
+      const k = kind === 'wide' ? 1.18 : 1, ry = r * .78 * k * open, lx = cx + look * .5;
+      parts.push({ id: 'pupil', role: R.ink, pts: CG.ellipse(lx, cy, r * .66 * k, ry, 28), line: .4 });
+      parts.push({ id: 'highlight', role: R.white, pts: CG.ellipse(lx - r * .22 * k, cy - ry * .38, r * .2 * k, r * .2 * k * open, 12), line: 0 });
+      parts.push({ id: 'highlight2', role: R.white, pts: CG.ellipse(lx + r * .2 * k, cy + ry * .35, r * .09 * k, r * .09 * k * open, 8), line: 0 });
+      if (kind === 'sad') stroke('brow', [[cx - r * .8, cy - ry - r * .05], [cx + r * .8, cy - ry - r * .4]]);
+      if (kind === 'angry') stroke('brow', [[cx - r * .85, cy - ry - r * .45], [cx + r * .85, cy - ry + r * .12]], .7);
+      return { parts };
+    }
     const shape = { open: [.72, .9, .6], wide: [.9, 1.15, .36], oval: [.75, 1, .3], sad: [.8, .95, .55], angry: [.8, .9, .55], sleepy: [.8, 1, .55] }[kind];
     const [wx, wy, pr] = shape, ry = r * wy * open;
     if (kind === 'sleepy') {                                   // the upper lid down to the middle: only the lower half shows

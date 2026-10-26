@@ -4,7 +4,10 @@
 // Proportions (spec.proportions): length (nose to rump), head (head width), bodyHeight, legLength, legWidth, tail.
 // Pose params: crouch 0..1 (body lowered, legs bent), pitch (radians, + = nose up), lift (units off the ground),
 //   stretch (body length factor), legSwing (how far legs swing), legPhase, pawRaise 0..1 (near front paw up),
-//   cycle (1 = the legs run with t, a gallop of about 2 strides a second).
+//   headDrop (units the head sinks, e.g. stalking), cycle (1 = the legs run with t: a bounding gallop, front legs
+//   reaching forward while the back legs push back, about 2 strides a second).
+// Parts the spec may declare: ears { size }, tail { width }, eyes { dark: true } (big dark eyes with a highlight),
+//   collar, bell.
 // Expression params: eyes, mouth (FACES kinds), ears -1 (down) .. 0 .. 1 (flat back), tail -1 (drooping) .. 0 (hook)
 //   .. 1 (straight up), tailCurl 0..1 (wrapped round the body), headTilt (radians). act() adds squint and look.
 BODIES.quadruped = {
@@ -12,19 +15,20 @@ BODIES.quadruped = {
   proportions: ['length', 'head', 'bodyHeight', 'legLength', 'legWidth', 'tail'],
   partRoles: { collar: 'collar', bell: 'bell' },          // accessories: drawn only when the spec declares them
   parts: ['body', 'head', 'muzzle', 'blaze', 'ears', 'legs', 'tail', 'tailTip', 'collar', 'bell', 'whiskers', 'eyes', 'mouth', 'shadow'],
-  poseParams: ['crouch', 'pitch', 'lift', 'stretch', 'legSwing', 'legPhase', 'pawRaise', 'cycle'],
+  poseParams: ['crouch', 'pitch', 'lift', 'stretch', 'legSwing', 'legPhase', 'pawRaise', 'headDrop', 'cycle'],
   exprParams: ['eyes', 'mouth', 'ears', 'tail', 'tailCurl', 'headTilt'],
   views: ['front', 'q', 'side', 'back'],
   SHEET: { views: ['side', 'front', 'q', 'back'], poseView: 'side', exprView: 'q' },   // as in the cat's base.png / pose.png
-  POSE0: { crouch: 0, pitch: 0, lift: 0, stretch: 1, legSwing: 0, legPhase: 0, pawRaise: 0, cycle: 0 },
+  POSE0: { crouch: 0, pitch: 0, lift: 0, stretch: 1, legSwing: 0, legPhase: 0, pawRaise: 0, headDrop: 0, cycle: 0 },
   EXPR0: { eyes: 'open', mouth: 'catSmile', ears: 0, tail: 0, tailCurl: 0, headTilt: 0, squint: 0, look: 0 },
   // Per view: body shape and width factor, where the head sits (x as a share of the length), the legs
-  // ([x as a share of the body length, far?, front?]), where the tail starts and how it points, which face shows.
+  // ([x as a share of the body length, far?, front?]; seen end-on only the near pair shows, the body hides the other),
+  // where the tail starts (y as a share of half the body height) and how it points, which face shows.
   VIEW: {
     side:  { body: 'bean', lenK: 1, headX: .5, legs: [[-.34, 1, 0], [.3, 1, 1], [-.4, 0, 0], [.24, 0, 1]], tail: { x: -.5, y: -.6, a: -.62, flipBend: 1, behind: 1 }, face: 'side' },
     q:     { body: 'bean', lenK: .7, headX: .55, legs: [[-.3, 1, 0], [.34, 1, 1], [-.38, 0, 0], [.22, 0, 1]], tail: { x: -.5, y: -.7, a: -.6, flipBend: 1, behind: 1 }, face: 'q' },
-    front: { body: 'round', lenK: .6, headX: 0, legs: [[-.36, 1, 0], [.36, 1, 0], [-.18, 0, 1], [.18, 0, 1]], tail: { x: .42, y: -.55, a: -.4, flipBend: -1, behind: 1 }, face: 'front' },
-    back:  { body: 'round', lenK: .6, headX: 0, legs: [[-.36, 1, 1], [.36, 1, 1], [-.18, 0, 0], [.18, 0, 0]], tail: { x: .05, y: -.45, a: -.5, flipBend: 1, behind: 0 }, face: null },
+    front: { body: 'round', lenK: .6, headX: 0, legs: [[-.2, 0, 1], [.2, 0, 1]], tail: { x: .42, y: -.33, a: -.4, flipBend: -1, behind: 1 }, face: 'front' },
+    back:  { body: 'round', lenK: .6, headX: 0, legs: [[-.2, 0, 0], [.2, 0, 0]], tail: { x: .06, y: .6, a: -.47, flipBend: 1, behind: 0 }, face: null },
   },
 
   layout(spec, state) {
@@ -47,7 +51,7 @@ BODIES.quadruped = {
     add('body', 'fur', 0, pose(bodyPts));
     add('bodyShade', 'shadow', .1, pose(CG.clipY(bodyPts, cy + bodyH * .3, 1)), { line: 0, shade: 1 });
     if (V.face) {                                                  // the cream chest: the lower end of the blaze
-      const chest = V.body === 'bean' ? CG.clipConvex(CG.ellipse(cx + bodyLen * .4, cy + bodyH * .12, bodyLen * .2, bodyH * .42, 32), bodyPts)
+      const chest = V.body === 'bean' ? CG.clipConvex(CG.ellipse(cx + bodyLen * .43, cy + bodyH * .08, bodyLen * .15, bodyH * .36, 32), bodyPts)
         : CG.drop(V.face === 'front' ? 0 : .3, cy + bodyH * .42, bodyH * .5, bodyH * .78);
       add('chest', 'cream', .2, pose(chest), { line: 0, feature: 'blaze' });
     }
@@ -57,29 +61,32 @@ BODIES.quadruped = {
     V.legs.forEach(([lx, far, front], i) => {
       const hip = pose([[cx + lx * (V.body === 'bean' ? bodyLen : halfW * 2), hipY]])[0];
       let a, footUp = 0;
-      if (P.cycle) {                                                // a gallop: diagonal pairs together, feet lift as they swing forward
-        const ph = (t * 2 + P.legPhase + [0, .5, .5, 0][i]) * Math.PI * 2;
-        a = P.legSwing * .6 * Math.sin(ph); footUp = Math.max(0, Math.cos(ph)) * .5 * P.legSwing;
+      if (P.cycle) {                                                // bounding: front pair reaches forward as the back pair pushes back
+        const ph = (t * 2 + P.legPhase + (far ? .06 : 0)) * Math.PI * 2;
+        a = (front ? 1 : -1) * P.legSwing * .75 * Math.sin(ph); footUp = Math.max(0, -Math.sin(ph)) * .45 * P.legSwing;
       } else a = (front ? 1 : -1) * P.legSwing * .7;                // a leap: front legs reach forward, back legs push back
-      if (front && !far && P.pawRaise) { a += P.pawRaise * 1.1; footUp += P.pawRaise * .9; }
+      if (front && !far && P.pawRaise) { a += P.pawRaise * 1.75; footUp += P.pawRaise * .9; }
       if (!V.face || V.face === 'front') { footUp += Math.abs(a) * .3; a *= .15; }   // seen end-on, a swing only lifts the foot
-      const foot = [hip[0] + Math.sin(a) * legV, hip[1] + Math.cos(a) * legV - footUp];
-      if (!P.lift) foot[1] = Math.min(foot[1], 0);                  // standing feet never go through the ground
-      const depth = far ? -1 + i * .01 : (front ? .5 : .4) + i * .01, w = pr.legWidth * (far ? .92 : 1);
+      const w = pr.legWidth * (far ? .92 : 1), pawR = w * .45;
+      const reach = legV * (front && !far ? 1 + .9 * P.pawRaise : 1);   // a paw swipe stretches the leg forward
+      const foot = [hip[0] + Math.sin(a) * reach, hip[1] + Math.cos(a) * reach - footUp - pawR];
+      if (!P.lift) foot[1] = Math.min(foot[1], -pawR);              // standing paws sit on the ground, never through it
+      const depth = far ? -1 + i * .01 : (front ? .5 : .4) + i * .01;
       add('leg' + i, 'fur', depth, CG.tube([hip, foot], w, w * .95), far ? { dim: .3 } : {});
-      add('paw' + i, 'cream', depth + .005, CG.ellipse(foot[0] + (V.face === 'side' || V.face === 'q' ? .12 : 0), foot[1] - .12, w * .62, .3, 16), far ? { dim: .3, line: .8 } : { line: .8 });
+      // one round cream paw; the leg's end is hidden inside it
+      add('paw' + i, 'cream', depth + .005, CG.ellipse(foot[0], foot[1], w * .56, pawR, 18), far ? { dim: .3, line: .8 } : { line: .8 });
     });
 
     // ---- tail: a soft chain from the rump; hooked by default, alive with t ----
     {
-      const T = V.tail, segs = 6, L = pr.tail / segs * (V.face === 'side' ? 1 : .78), dir = T.flipBend;
+      const T = V.tail, segs = 6, L = pr.tail / segs * (V.face === 'side' || !V.face ? 1 : .78), dir = T.flipBend;
       const up = CG.clamp(E.tail, -1, 1), curl = CG.clamp(E.tailCurl);
       let a0 = T.a * Math.PI;
       if (up > 0) a0 = CG.lerp(a0, -Math.PI / 2, up); else a0 = CG.lerp(a0, (V.face === 'front' ? .1 : .85) * Math.PI * (dir < 0 ? 0 : 1) + (dir < 0 ? .15 : 0), -up);
       a0 = CG.lerp(a0, dir < 0 ? .05 : Math.PI * .97, curl);
       const hook = [0, .16, .26, .36, .46, .5].map(b => b * (1 - Math.max(0, up)) * (1 + Math.min(0, up) * .8));
       const bends = hook.map((b, i) => dir * (b * (1 - curl) + curl * -.32) + .09 * Math.sin(Math.PI * 2 * (.45 * t) - i * .7) * (1 + P.cycle));
-      const root = [cx + T.x * (V.body === 'bean' ? bodyLen : halfW * 2), cy + T.y * bodyH / 2 * (V.body === 'bean' ? 1 : .6)];
+      const root = [cx + T.x * (V.body === 'bean' ? bodyLen : halfW * 2), cy + T.y * bodyH / 2];
       const path = pose(CG.chain(root, a0, new Array(segs).fill(L), bends));
       const depth = T.behind ? -.5 : 2.5, w = sp.tail && sp.tail.width || .8;
       add('tail', 'fur', depth, CG.tube(path, w, w * .85));
@@ -88,8 +95,8 @@ BODIES.quadruped = {
     }
 
     // ---- head group: head, ears, face, collar, bell (rotated together by headTilt) ----
-    const hx = V.face === 'side' ? cx + bodyLen / 2 - headW * .15 : V.face === 'q' ? cx + bodyLen * V.headX : 0;
-    const hy = cy - bodyH * .32 - headH * (V.face === 'side' ? .32 : .42), tilt = E.headTilt;
+    const hx = (V.face === 'side' ? cx + bodyLen / 2 - headW * .15 : V.face === 'q' ? cx + bodyLen * V.headX : 0) + P.headDrop * .35 * (V.face === 'side' || V.face === 'q' ? 1 : 0);
+    const hy = cy - bodyH * .32 - headH * (V.face === 'side' ? .32 : .42) + P.headDrop, tilt = E.headTilt;
     const head = pts => pose(CG.rotate(pts, tilt, hx, hy));
     const headPts = CG.ellipse(hx, hy, headW / 2, headH / 2, 40), D = V.face ? 3 : -3;   // head depth band; behind the body from the back
 
@@ -132,12 +139,13 @@ BODIES.quadruped = {
       const muzzle = V.face === 'side' ? CG.clipX(CG.ellipse(hx + headW * .3, hy + headH * .24, headW * .24, headH * .22, 24), hx + headW * .47, -1)
         : CG.drop(fx, hy + headH * .42, headW * (V.face === 'q' ? .38 : .44), headH * .62);
       add('muzzle', 'cream', D + .1, head(muzzle), { line: 0, feature: 'blaze' });
-      const r = headW * .12, eyeY = hy + headH * .02, eo = { look: E.look, squint: E.squint };
+      const r = headW * .13, eyeY = hy + headH * .02, eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark) };
       const eyeAt = V.face === 'front' ? [[fx - headW * .2, 1], [fx + headW * .2, 1]] : V.face === 'q' ? [[fx - headW * .2, .85], [fx + headW * .2, 1]] : [[fx + headW * .1, .9]];
       eyeAt.forEach(([ex, k], i) => FACES.eye(E.eyes, ex, eyeY, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, D + .5, head(p.pts), { line: p.line, stroke: p.stroke })));
       const ny = hy + headH * .24, nx = fx + (V.face === 'side' ? headW * .22 : 0);
-      add('nose', 'line', D + .52, head([[nx - .13, ny - .06], [nx + .13, ny - .06], [nx, ny + .08]]), { line: 0 });
-      FACES.mouth(E.mouth, nx, ny + .22, .55).parts.forEach(p => add('mouth', p.role, D + .51, head(p.pts), { line: p.line, stroke: p.stroke }));
+      const nz = headW * .045;
+      add('nose', 'line', D + .52, head([[nx - nz * 1.4, ny - nz * .7], [nx + nz * 1.4, ny - nz * .7], [nx, ny + nz]]), { line: 0 });
+      FACES.mouth(E.mouth, nx, ny + headW * .07, headW * .2).parts.forEach(p => add('mouth', p.role, D + .51, head(p.pts), { line: p.line * 1.6, stroke: p.stroke }));
       const wh = (sx, x0) => [0, 1, 2].forEach(k => add('whisker', 'line', D + .53, head([[x0, ny + .02 + k * .13], [x0 + sx * .95, ny - .18 + k * .2]]), { stroke: 1, line: .35, feature: 'whiskers' }));
       if (V.face !== 'side') wh(-1, fx - headW * .3);
       wh(1, V.face === 'side' ? hx + headW * .5 : fx + headW * .3);

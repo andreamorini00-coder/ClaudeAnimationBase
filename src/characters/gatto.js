@@ -1,9 +1,10 @@
 // gatto.js: the cat (reference/characters/gatto/). Data only: the body draws it (bodies/quadruped.js).
 CHARACTERS.gatto = {
   id: 'gatto', version: 1, body: 'quadruped',
-  // in units: nose to rump, head width, body height, leg length and width, tail length
-  proportions: { length: 10.4, head: 3.5, bodyHeight: 4.8, legLength: .9, legWidth: 1.1, tail: 4.4 },
-  parts: { ears: { size: 1 }, tail: { width: .85 }, collar: {}, bell: {} },
+  // in units: nose to rump, head width, body height, leg length and width, tail length. Andrea (2026-10-27): the head
+  // about 0.45 of the length and almost as tall as the body; a short round body; short legs.
+  proportions: { length: 11, head: 4.5, bodyHeight: 4.3, legLength: .95, legWidth: 1.2, tail: 4.2 },
+  parts: { ears: { size: 1.15 }, tail: { width: .85 }, eyes: { dark: true }, collar: {}, bell: {} },
   roles: {
     fur: '#D9956C', cream: '#F6EBD8', earInner: '#C99595', collar: '#B8674F', bell: '#E8BF78',
     line: '#59463B', shadow: '#8C8074', eyeWhite: '#F6EBD8',
@@ -28,10 +29,10 @@ CHARACTERS.gatto = {
   // reference/characters/gatto/pose.png, left to right
   poses: {
     inPiedi: {},
-    corsa: { cycle: 1, legSwing: .9, stretch: 1.06, pitch: .04 },
+    corsa: { cycle: 1, legSwing: 1.1, legPhase: .25, stretch: 1.16, lift: .35, pitch: .03 },   // stretched out at t = 0
     salto: { lift: 2.4, pitch: .3, legSwing: .45 },
     balzo: { lift: 1.5, stretch: 1.18, legSwing: 1.1 },
-    zampata: { pawRaise: 1, pitch: .06 },
-    agguato: { crouch: 1, pitch: -.1 },
+    zampata: { pawRaise: 1, pitch: .08 },
+    agguato: { crouch: 1, pitch: -.2, headDrop: 1.3, stretch: 1.08 },   // flat to the ground, head low, rump high
   },
 };
