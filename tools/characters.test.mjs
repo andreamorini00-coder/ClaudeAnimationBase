@@ -267,3 +267,16 @@ test('a declared part needs its colour role', () => {
   const c = lib(), g = JSON.parse(JSON.stringify(c.get('CHARACTERS.gatto'))); delete g.roles.bell;
   assert.match(c.call('validateCharacter', g).join(' '), /bell/);
 });
+
+// ---------- Andrea's review of the sheets (2026-10-27) ----------
+test('a pose can carry its own face', () => {
+  const c = lib(), m = c.get('CHARACTERS.mostro');
+  const s = c.call('resolveState', m, { pose: 'broncio' });
+  assert.equal(s.expression.mouth, 'frown'); assert.ok(s.expression.lid > .3, 'palpebra abbassata');
+  const own = c.call('resolveState', m, { pose: 'broncio', expression: 'felice' });
+  assert.equal(own.expression.mouth, 'open', "un'espressione esplicita vince su quella della posa");
+});
+test('a pose face with an unknown param is refused', () => {
+  const c = lib(), m = JSON.parse(JSON.stringify(c.get('CHARACTERS.mostro'))); m.poses.broncio.expression = { naso: 1 };
+  assert.match(c.call('validateCharacter', m).join(' '), /naso/);
+});

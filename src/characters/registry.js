@@ -4,7 +4,8 @@
 // roles: colour roles every character of this body must give; proportions: the measures its layout reads (numbers);
 // partRoles: optional parts drawn only when the spec declares them, with the colour role each then needs; parts: the
 // part names a spec may configure and a feature may point at; poseParams / exprParams: the parameters a pose or an
-// expression may set (numbers, or names like an eye shape); views: the drawn key views.
+// expression may set (numbers, or names like an eye shape); a pose may also carry its own face, expression: { params },
+// used when the scene gives none; views: the drawn key views.
 // Pure: no p5, no DOM, no style. Loaded by studio.html and, the same file, by the tests (tools/pagecode.mjs).
 const CHARACTERS = {};
 const BODIES = {};
@@ -37,6 +38,7 @@ function validateCharacter(spec) {
   const params = (what, table, allowed) => {
     for (const [name, set] of Object.entries(table || {}))
       for (const [k, v] of Object.entries(set)) {
+        if (what === 'posa' && k === 'expression' && v && typeof v === 'object') { params(`posa "${name}", espressione`, { '': v }, body.exprParams); continue; }
         if (!allowed.includes(k)) errs.push(`${what} "${name}": parametro "${k}" sconosciuto`);
         else if (!(typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v)))) errs.push(`${what} "${name}": parametro "${k}" non valido`);
       }

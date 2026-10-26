@@ -1,6 +1,6 @@
 // mostro.js: the little monster (reference/characters/mostro/). Data only: the body draws it (bodies/blob.js).
 CHARACTERS.mostro = {
-  id: 'mostro', version: 1, body: 'blob',
+  id: 'mostro', version: 2, body: 'blob',
   // in units, at rest: the drop is 3/4 as wide as it is tall (antennae excluded)
   proportions: { height: 6, width: 4.5, antenna: 1.8, eyeH: 2.3 },
   parts: {},
@@ -28,7 +28,7 @@ CHARACTERS.mostro = {
     rotolamento: { cycle: 1, squash: 1.1 },
     salto: { hop: 1.6, squash: .85 },
     slancio: { squash: .8, lean: .35 },
-    broncio: { squash: 1.15, lean: -.1 },
+    broncio: { squash: 1.15, lean: -.1, expression: { lid: .45, lidTilt: -.4, mouth: 'frown' } },   // sulking, as in pose.png
     schiacciato: { squash: 1.4 },
   },
 };

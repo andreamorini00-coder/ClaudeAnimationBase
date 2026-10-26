@@ -38,9 +38,10 @@ function resolveState(spec, o = {}) {
     return table[name];
   };
   const poseIn = o.pose ?? Object.keys(spec.poses)[0];
-  const pose = { ...body.POSE0, ...(typeof poseIn === 'string' ? named('Posa', spec.poses, poseIn) : poseIn) };
+  const { expression: poseFace, ...poseParams } = typeof poseIn === 'string' ? named('Posa', spec.poses, poseIn) : poseIn;
+  const pose = { ...body.POSE0, ...poseParams };
   let expression = { ...body.EXPR0 }, take = 0;
-  const e = o.expression;
+  const e = o.expression ?? poseFace;                      // a pose's own face, unless the scene gives one
   if (typeof e === 'string') expression = { ...expression, ...named('Espressione', spec.expressions, e) };
   else if (e && e.expression) { expression = { ...expression, ...e.expression }; take = e.take || 0; }
   else if (e) expression = { ...expression, ...e };
