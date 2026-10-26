@@ -3,7 +3,7 @@
 - Stile principale: visual novel
 - Tipo di corpo: bipede adulto
 - Proporzioni: circa 7,5 teste
-- File: `base.png` (quattro viste, otto espressioni a mezzo busto con gesti, sagoma frontale), `viso.png` (13 varianti frontali di occhi, bocca e sopracciglia), `pose-abito-ufficio.png` (6 pose con un abito diverso, vedi sotto)
+- File: `base.png` (quattro viste, otto espressioni a mezzo busto con gesti, sagoma frontale), `viso.png` (13 varianti frontali di occhi, bocca e sopracciglia), `pose.png` (6 pose a figura intera con il look principale: appoggiata al muro con mano tra i capelli, seduta su sgabello a gambe accavallate, voltata guardando indietro, distesa sul divano su un gomito, in piedi con mano sul fianco, che si toglie una scarpa appoggiata al muro), `pose-abito-ufficio.png` (6 pose con un abito diverso, vedi sotto)
 
 ## Abito alternativo "ufficio" (pose-abito-ufficio.png)
 - In questo foglio Vale ha pantaloni classici neri con la piega (#292A34) al posto dei leggings lucidi, e un fisico meno accentuato rispetto a base.png.
