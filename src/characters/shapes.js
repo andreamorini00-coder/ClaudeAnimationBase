@@ -29,6 +29,24 @@ const CG = {
     }
     return out;
   },
+  // The part of a shape inside a CONVEX shape (Sutherland–Hodgman against each of its edges).
+  clipConvex(pts, hull) {
+    const sgn = Math.sign(hull.reduce((s, a, i) => { const b = hull[(i + 1) % hull.length]; return s + a[0] * b[1] - b[0] * a[1]; }, 0)) || 1;
+    let out = pts;
+    for (let i = 0; i < hull.length && out.length; i++) {
+      const a = hull[i], b = hull[(i + 1) % hull.length], side = p => sgn * ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) >= 0, inp = out;
+      out = [];
+      for (let j = 0; j < inp.length; j++) {
+        const p = inp[j], q = inp[(j + 1) % inp.length], ip = side(p), iq = side(q);
+        if (ip) out.push(p);
+        if (ip !== iq) {
+          const d1 = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]), d2 = (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]), k = d1 / (d1 - d2);
+          out.push([CG.lerp(p[0], q[0], k), CG.lerp(p[1], q[1], k)]);
+        }
+      }
+    }
+    return out;
+  },
   clipX: (pts, at, keep) => CG.clip(pts, 0, at, keep),
   clipY: (pts, at, keep) => CG.clip(pts, 1, at, keep),
   ellipse(cx, cy, rx, ry, n = 32, rot = 0) {

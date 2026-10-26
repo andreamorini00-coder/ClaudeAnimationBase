@@ -150,3 +150,48 @@ test('gatto run cycle moves the legs', () => {
   const c = lib(), legs = t => JSON.stringify(layoutOf(c, 'gatto', { view: 'side', pose: 'corsa', t }).parts.filter(p => p.id.startsWith('leg')).map(p => p.pts));
   assert.notEqual(legs(0), legs(.25));
 });
+
+// ---------- the monster ----------
+// A blob layout from explicit pose/expression params (not a named pose), for the shape checks.
+const blobOf = (c, pose = {}, expression = {}, more = {}) =>
+  c.call('(s => BODIES.blob.layout(CHARACTERS.mostro, s))', { view: 'front', flip: false, t: 0, pose, expression, ...more });
+const bodyArea = L => { const c = lib(); return c.call('CG.area', L.parts.find(p => p.id === 'body').pts); };
+
+test('mostro spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.mostro')), []); });
+test('mostro features per view and counts', () => checkFeatures(lib(), 'mostro'));
+test('mostro uses only its roles', () => checkRoles(lib(), 'mostro'));
+test('mostro has no NaN', () => checkFinite(lib(), 'mostro'));
+test('mostro layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'mostro', { pose: 'rotolamento', t: .41 }), layoutOf(c, 'mostro', { pose: 'rotolamento', t: .41 }));
+});
+test('mostro flip mirrors exactly', () => checkFlip(lib(), 'mostro'));
+test('blob volume is constant', () => {
+  const c = lib(), a0 = bodyArea(blobOf(c));
+  for (const s of [.6, .8, 1, 1.4, 1.6]) assert.ok(near(bodyArea(blobOf(c, { squash: s })), a0, .01), `squash ${s}`);
+  assert.ok(near(bodyArea(blobOf(c, {}, { shiver: 1 }, { t: .3 })), a0, .01), 'shiver');
+  assert.ok(near(bodyArea(blobOf(c, { squash: 1.2, lean: .4 })), a0, .01), 'lean');
+});
+test('squash limits match the note', () => {
+  // the squash alone: slancio also leans, which widens its box but not its area (checked above)
+  const c = lib(), poses = c.get('CHARACTERS.mostro.poses');
+  const b = name => partBox(blobOf(c, { ...poses[name], lean: 0 }), p => p.id === 'body'), f = b('fermo');
+  const s = b('schiacciato'), l = b('slancio');
+  assert.ok(near(s.w / f.w, 1.4, .01) && near(s.h / f.h, 1 / 1.4, .01), `schiacciato ${s.w / f.w} × ${s.h / f.h}`);
+  assert.ok(near(l.w / f.w, .8, .01) && near(l.h / f.h, 1.25, .01), `slancio ${l.w / f.w} × ${l.h / f.h}`);
+});
+test('squash is clamped', () => {
+  const c = lib();
+  assert.deepEqual(blobOf(c, { squash: 5 }), blobOf(c, { squash: 1.6 }));
+  assert.deepEqual(blobOf(c, { squash: .05 }), blobOf(c, { squash: .6 }));
+});
+test('antennae lag after a jump', () => {
+  const c = lib(), tips = more => blobOf(c, { hop: 1.5 }, {}, more).parts.filter(p => p.id.startsWith('antennaTip')).flatMap(p => p.pts);
+  const rest = tips({ t: 2 }), d = more => Math.max(...tips(more).map((p, i) => Math.hypot(p[0] - rest[i][0], p[1] - rest[i][1])));
+  assert.ok(d({ t: 2, since: .06, kick: 1 }) > .05, 'subito dopo il salto le antenne restano indietro');
+  assert.ok(d({ t: 2, since: 1, kick: 1 }) < .05, 'dopo un secondo sono a posto');
+});
+test('clipConvex keeps a shape inside a convex one', () => {
+  const c = lib(), sq = [[0, 0], [2, 0], [2, 2], [0, 2]], r = c.call('CG.clipConvex', c.call('CG.ellipse', 2, 1, 1, 1, 32), sq);
+  assert.ok(r.every(([x, y]) => x <= 2 + 1e-9 && x >= 0 && y >= -1e-9 && y <= 2 + 1e-9));
+  assert.ok(near(c.call('CG.area', r), Math.PI / 2, .02));
+});
