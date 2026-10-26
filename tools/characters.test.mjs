@@ -84,3 +84,69 @@ test('squint closes an eye', () => {
   const c = lib(), h = sq => box(c.call('FACES.eye', 'open', 0, 0, 1, { squint: sq }).parts[0].pts).h;
   assert.ok(h(.5) < h(0) * .6);
 });
+
+// ---------- shared checks for every character ----------
+// The layout of a character, with the pose and expression taken straight from its spec (resolveState comes later).
+const layoutOf = (c, id, { view = 'q', pose, expression, t = 0, flip = false } = {}) => {
+  const spec = c.get(`CHARACTERS[${JSON.stringify(id)}]`);
+  const p = pose ?? Object.keys(spec.poses)[0], e = expression ?? Object.keys(spec.expressions)[0];
+  c.run(`globalThis.__state = { view: ${JSON.stringify(view)}, flip: ${flip}, t: ${t},
+    pose: CHARACTERS[${JSON.stringify(id)}].poses[${JSON.stringify(p)}], expression: CHARACTERS[${JSON.stringify(id)}].expressions[${JSON.stringify(e)}] };`);
+  return c.call(`(s => BODIES[CHARACTERS[${JSON.stringify(id)}].body].layout(CHARACTERS[${JSON.stringify(id)}], s))`, c.get('__state'));
+};
+const everyState = (c, id, f) => {
+  const spec = c.get(`CHARACTERS[${JSON.stringify(id)}]`), views = c.get(`BODIES[${JSON.stringify(spec.body)}].views`);
+  for (const view of views) for (const pose of Object.keys(spec.poses)) for (const expression of Object.keys(spec.expressions))
+    for (const t of [0, .37]) f({ view, pose, expression, t }, layoutOf(c, id, { view, pose, expression, t }));
+};
+const featureCounts = L => { const n = {}; for (const p of L.parts) if (p.feature) n[p.feature] = (n[p.feature] || 0) + 1; return n; };
+const checkFeatures = (c, id) => {
+  const spec = c.get(`CHARACTERS[${JSON.stringify(id)}]`);
+  everyState(c, id, (s, L) => {
+    const n = featureCounts(L), where = JSON.stringify(s);
+    for (const f of spec.features) {
+      const want = f.views.includes(s.view);
+      assert.equal(!!n[f.id], want, `${id} ${f.id} ${want ? 'manca' : 'non dovrebbe esserci'} in ${where}`);
+      const cnt = typeof f.count === 'number' ? f.count : f.count && f.count[s.view];
+      if (want && cnt) assert.equal(n[f.id], cnt, `${id} ${f.id}: ${n[f.id]} invece di ${cnt} in ${where}`);
+    }
+    for (const k of Object.keys(n)) assert.ok(spec.features.some(f => f.id === k), `${id}: tratto non dichiarato ${k}`);
+  });
+};
+const checkRoles = (c, id) => {
+  const roles = Object.keys(c.get(`CHARACTERS[${JSON.stringify(id)}].roles`));
+  everyState(c, id, (s, L) => { for (const p of L.parts) assert.ok(roles.includes(p.role), `${id} ${p.id}: ruolo ${p.role} in ${JSON.stringify(s)}`); });
+};
+const checkFinite = (c, id) => everyState(c, id, (s, L) => { for (const p of L.parts) assert.ok(finite(p.pts) && p.pts.length > 1, `${id} ${p.id} in ${JSON.stringify(s)}`); });
+const partBox = (L, pred) => box(L.parts.filter(pred).flatMap(p => p.pts));
+const checkFlip = (c, id) => {
+  for (const view of ['front', 'q', 'side', 'back']) {
+    const a = layoutOf(c, id, { view, t: .3 }), b = layoutOf(c, id, { view, t: .3, flip: true });
+    assert.equal(a.parts.length, b.parts.length);
+    a.parts.forEach((p, i) => p.pts.forEach(([x, y], j) => { assert.ok(Math.abs(b.parts[i].pts[j][0] + x) < 1e-9 && Math.abs(b.parts[i].pts[j][1] - y) < 1e-9, `${id} ${view} ${p.id}`); }));
+  }
+};
+
+// ---------- the cat ----------
+test('gatto spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.gatto')), []); });
+test('gatto features per view', () => checkFeatures(lib(), 'gatto'));
+test('gatto uses only its roles', () => checkRoles(lib(), 'gatto'));
+test('gatto has no NaN', () => checkFinite(lib(), 'gatto'));
+test('gatto head is about a third of the length', () => {
+  const L = layoutOf(lib(), 'gatto', { view: 'side', pose: 'inPiedi' });
+  const head = partBox(L, p => p.id === 'head').w, len = partBox(L, p => !/tail|whisker|shadow/.test(p.id)).w;
+  assert.ok(head / len >= .30 && head / len <= .37, `testa/lunghezza = ${(head / len).toFixed(3)}`);
+});
+test('gatto layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'gatto', { pose: 'corsa', t: .41 }), layoutOf(c, 'gatto', { pose: 'corsa', t: .41 }));
+});
+test('gatto flip mirrors exactly', () => checkFlip(lib(), 'gatto'));
+test('gatto tail moves at rest', () => {
+  const c = lib(), pts = t => layoutOf(c, 'gatto', { view: 'side', pose: 'inPiedi', t }).parts.find(q => q.id === 'tailTip').pts;
+  const d = Math.max(...pts(0).map((p, i) => Math.hypot(p[0] - pts(.5)[i][0], p[1] - pts(.5)[i][1])));
+  assert.ok(d >= .1, `la punta della coda si sposta di ${d.toFixed(3)} u`);
+});
+test('gatto run cycle moves the legs', () => {
+  const c = lib(), legs = t => JSON.stringify(layoutOf(c, 'gatto', { view: 'side', pose: 'corsa', t }).parts.filter(p => p.id.startsWith('leg')).map(p => p.pts));
+  assert.notEqual(legs(0), legs(.25));
+});

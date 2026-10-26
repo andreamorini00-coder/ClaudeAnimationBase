@@ -18,6 +18,19 @@ const CG = {
     const sx = w / ((x1 - x0) || 1), sy = h / ((yb - y0) || 1), mx = (x0 + x1) / 2;
     return pts.map(([x, y]) => [cx + (x - mx) * sx, y1 - (yb - y) * sy]);
   },
+  // The part of a closed shape on one side of a line (Sutherland–Hodgman): clipX keeps x > at (keep = 1) or x < at
+  // (keep = -1); clipY the same in y. Patches cut this way (a cream chest, a belly shade) stay inside their body.
+  clip(pts, axis, at, keep) {
+    const inside = p => keep * (p[axis] - at) >= 0, out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length], ia = inside(a), ib = inside(b);
+      if (ia) out.push(a);
+      if (ia !== ib) { const k = (at - a[axis]) / (b[axis] - a[axis]); out.push([CG.lerp(a[0], b[0], k), CG.lerp(a[1], b[1], k)]); }
+    }
+    return out;
+  },
+  clipX: (pts, at, keep) => CG.clip(pts, 0, at, keep),
+  clipY: (pts, at, keep) => CG.clip(pts, 1, at, keep),
   ellipse(cx, cy, rx, ry, n = 32, rot = 0) {
     const p = []; for (let i = 0; i < n; i++) { const a = rot + i / n * Math.PI * 2; p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return p;
   },

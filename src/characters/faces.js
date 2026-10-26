@@ -16,7 +16,7 @@ const FACES = {
     const stroke = (id, pts, w = .5) => parts.push({ id, role: R.ink, pts, line: w, stroke: true });
     if (kind === 'happy') { stroke('lid', FACES.arc(cx, cy + r * .2, r * .75, r * .6, P, 2 * P)); return { parts }; }
     if (kind === 'closed' || open < .15) { stroke('lid', FACES.arc(cx, cy, r * .75, r * .35, 0, P)); return { parts }; }
-    const shape = { open: [.8, 1, .55], wide: [.9, 1.15, .36], oval: [.75, 1, .3], sad: [.8, .95, .55], angry: [.8, .9, .55], sleepy: [.8, 1, .55] }[kind];
+    const shape = { open: [.72, .9, .6], wide: [.9, 1.15, .36], oval: [.75, 1, .3], sad: [.8, .95, .55], angry: [.8, .9, .55], sleepy: [.8, 1, .55] }[kind];
     const [wx, wy, pr] = shape, ry = r * wy * open;
     if (kind === 'sleepy') {                                   // the upper lid down to the middle: only the lower half shows
       parts.push({ id: 'eyeWhite', role: R.white, pts: FACES.arc(cx, cy, r * wx, ry, 0, P, 14), line: .5 });
