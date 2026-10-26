@@ -18,7 +18,7 @@ la **Fase 3** (stili `cozy` e `anime`), poi la **2c** (testi e sottotitoli).
 
 ## Stili previsti
 
-Quattro, e nessun altro:
+Sei, e nessun altro (i quattro nuovi decisi da Andrea il 2026-10-27):
 
 | stile | stato | fase |
 |---|---|---|
@@ -26,6 +26,8 @@ Quattro, e nessun altro:
 | `acquerello-leggero` | fatto | 1 |
 | `cozy` | da fare | 3 |
 | `anime` | da fare | 3 |
+| `marker-comic` | da fare | 3 |
+| `visual-novel` | da fare | 3 |
 
 ## Fase 1 — STYLE, anteprima, acquerello leggero · **chiusa**
 
@@ -74,55 +76,60 @@ unita in `main` (21aca5c), push fatto da Andrea.
 ## Fase 3 — Stili · **da fare, dopo la Fase 4**
 
 **Si parte dai riferimenti di Andrea in `reference/styles/`** (mood board, palette e codici colore): il design di
-ogni stile li legge prima di proporre valori.
+ogni stile li legge prima di proporre valori. Per `marker-comic` e `visual-novel` i riferimenti arriveranno lì.
 
-Due stili nuovi, ciascuno con uno sheet di confronto (stessi istanti della demo, accanto a `classic`) da approvare
-prima di chiuderlo. Se uno stile chiede un modo di disegnare diverso dall'acquerello, si aggiunge una tecnica in
-`src/techniques/`, come previsto dalla Fase 1.
+Quattro stili nuovi, ciascuno con uno sheet di confronto (stessi istanti della demo, accanto a `classic`) e con i
+model sheet dei personaggi da approvare prima di chiuderlo. Se uno stile chiede un modo di disegnare diverso
+dall'acquerello, si aggiunge una tecnica in `src/techniques/`, come previsto dalla Fase 1.
 
 - **`cozy`:** palette calda e morbida, luce soffusa, forme tonde.
 - **`anime`:** tratto pulito, ombra netta, colori vivi. Riferimento: le regole cel di html-anime (colore piatto,
   una sola ombra dura, linea esterna più spessa di quelle interne).
+- **`marker-comic`:** campiture piatte, ombra netta, contorno che si ispessisce sul lato in ombra. Tecnica presa
+  come idea da anidoodle (solo idee, niente codice).
+- **`visual-novel`:** anime con proporzioni adulte, ombre a due toni morbide, fondali dipinti; l'animazione passa
+  soprattutto dalle espressioni.
 
 Da fissare nel design: quanto ciascuno può cambiare oltre a palette, pennelli e carta (per esempio forme più tonde
-in `cozy` passano dalla tecnica, non dalle scene) e i tempi di render in finale e in draft.
+in `cozy` passano dalla tecnica, non dalle scene), il blocco `character` con cui ogni stile traduce i ruoli colore
+dei personaggi, e i tempi di render in finale e in draft.
 
-## Fase 4 — Creatore di personaggi · **in design** (branch `fase4-personaggi`)
+## Fase 4 — Creatore di personaggi · **in corso** (branch `fase4-personaggi`)
 
-Una libreria di personaggi riusabile in tutti e quattro gli stili e in entrambi i formati.
+Una libreria di personaggi riusabile in tutti gli stili e in tutti i formati. Design approvato da Andrea il
+2026-10-27: **viste chiave 2D parametriche** (fronte, 3/4, profilo, retro, come il model sheet di Clawd), niente
+scheletro 3D proiettato. Clawd resta solo come demo: i nuovi personaggi non dipendono da lui.
 
-**Si parte dai riferimenti di Andrea in `reference/characters/`** (model sheet, viste, espressioni, colori): la scheda
-JSON e i tipi di corpo si progettano su quei personaggi.
+**Si parte dai riferimenti di Andrea in `reference/characters/`** (model sheet, viste, espressioni, colori).
 
-- **Scheda JSON** per personaggio:
-  - colori per ruolo (pelle o pelliccia, capelli, vestiti, linea, ombra…), che ogni stile traduce nella sua palette;
-  - tipo di corpo: bipede, quadrupede, blob, volante, strisciante;
-  - parti aggiungibili: coda, corna, ali, orecchie;
-  - espressioni e viste (fronte, 3/4, profilo, retro, come il model sheet di Clawd).
-- Deve coprire persone, animali, dinosauri e mostriciattoli.
-- **Model sheet automatico** per ogni personaggio, in ogni stile, per controllare che resti "on model".
-- **Pagina web** per creare e modificare i personaggi e vedere l'anteprima dal vivo.
-- **Libreria** in una cartella del repo, usabile dalle scene con una funzione generica sul modello di `clawd()`.
-- Le proporzioni del personaggio stanno nella scheda, mai in `STYLE`.
+Principi comuni (dalle idee di anidoodle, solo idee, niente codice):
 
-Nota di Andrea (2026-10-22): il draghetto in `reference/characters/draghetto/` dimostra che "volante" può essere un
-corpo quadrupede con le ali come parte aggiuntiva, invece di un tipo di corpo a sé. Da valutare nel design.
+- **Scheda** per personaggio, solo dati: tipo di corpo, proporzioni in unità, parti con i loro parametri, colori per
+  ruolo, tratti distintivi con le viste in cui compaiono, espressioni e pose dei riferimenti, versione. Le
+  proporzioni stanno nella scheda, mai in `STYLE`.
+- **Layout separato dal disegno:** una funzione pura dà le parti di una posa in una vista; il disegno le dipinge con
+  la tecnica e lo stile attivi. I controlli automatici girano sul layout con `npm test`.
+- **Palette a ruoli** che ogni stile traduce; **tratti distintivi** verificati in ogni vista, posa ed espressione;
+  **model sheet automatico** da approvare una volta per personaggio e stile.
 
-Requisiti aggiunti da Andrea (2026-10-27):
+### 4a. Nucleo, quadrupede e blob: gatto e mostro · **in corso**
 
-- tipi di corpo bipede, quadrupede, blob, strisciante; le ali sono una parte aggiuntiva (il draghetto è un
-  quadrupede con le ali);
-- espressioni e pose prese dai riferimenti;
-- blob: deformazione schiaccia/allunga a volume costante; strisciante: corpo a segmenti;
-- dalle idee di anidoodle (solo idee, niente codice): palette a ruoli tradotta da ogni stile, tratti distintivi
-  dichiarati nella scheda con un controllo automatico che compaiano in ogni vista, model sheet automatico da
-  approvare una volta per personaggio;
-- primo obiettivo: gatto e mostro funzionanti negli stili esistenti, con model sheet approvati da Andrea; gli
-  altri quattro (supereroe, ragazza, draghetto, bruco) dopo;
-- Clawd resta solo come demo: i nuovi personaggi non dipendono da lui.
+- Libreria, scheda, layout, disegno, transizioni di espressione, controlli, model sheet e approvazione.
+- Corpo **quadrupede** (gatto) e **blob** (mostro: deformazione a volume costante, larghezza × altezza = 1).
+- Gatto e mostro negli stili esistenti (`classic`, `acquerello-leggero`), con model sheet approvati da Andrea.
 
-Da fissare nel design: quanta animazione (camminata, emozioni) è
-condivisa tra tipi di corpo diversi, e il formato dei file della libreria.
+### 4b. Bipede, strisciante e ali · **da fare**
+
+- Corpo **bipede**, con proporzioni da chibi (ragazza, circa 3 teste) fino ad adulte (circa **7 teste**, per i
+  personaggi di `visual-novel`); il supereroe è a circa 5,5 teste.
+- Corpo **strisciante** a segmenti (bruco: testa + 8 segmenti, avanzamento a onda).
+- **Ali** come parte aggiuntiva del quadrupede (draghetto).
+- Supereroe, ragazza, draghetto e bruco, con model sheet approvati.
+
+### 4c. Pagina web dei personaggi · **da fare**
+
+- Una pagina per creare e modificare le schede e vedere l'anteprima dal vivo, che salva lo stesso formato di scheda
+  della libreria.
 
 ## Piccolezze rimandate
 

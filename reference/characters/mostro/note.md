@@ -23,13 +23,13 @@
 - Pancia a mezzaluna crema, guance corallo tonde.
 
 ## Deformazione
-- Schiacciato: largo circa 1,4 volte, alto circa 0,6 volte.
-- Allungato: largo circa 0,8 volte, alto circa 1,3 volte.
-- Il volume resta uguale: se si allarga si abbassa.
+- Il volume resta uguale: larghezza × altezza = 1, quindi se si allarga si abbassa.
+- Schiacciato: largo 1,4 volte, alto 0,71 volte.
+- Allungato: largo 0,8 volte, alto 1,25 volte.
 - Le antenne seguono il movimento con un leggero ritardo.
 
 ## Note per il codice
 - Il corpo lavanda coincide con l'ombra delle nuvole dello stile anime: evitare di metterlo davanti a nuvole, preferire cielo blu o fondali scuri. Il contorno inchiostro deve restare sempre visibile.
 - Le emozioni passano da occhio (palpebra), bocca e forma del corpo.
 
-Fonte: model sheet generati con ChatGPT (22/10/2026); numero dei dentini fissato a due in revisione.
+Fonte: model sheet generati con ChatGPT (22/10/2026); numero dei dentini fissato a due in revisione; deformazione corretta a volume costante (27/10/2026).
