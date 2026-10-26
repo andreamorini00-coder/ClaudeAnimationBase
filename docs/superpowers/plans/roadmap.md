@@ -168,3 +168,6 @@ Dalla Fase 4a:
   esce con uno stack trace invece di un messaggio.
 - `act` e `character` sono nomi globali generici: una scena con `const act = …` di primo livello andrebbe in errore.
 - In `studio.html` aperto a mano, un errore a metà fotogramma lascia un `push()` senza `pop()` (già così prima).
+- `render.mjs` aspetta la pagina con `networkidle0`, che include il font di Google: due volte il 27/10 il caricamento è
+  andato in timeout (30 s) e il comando è caduto; rilanciato, passa. Un font locale o un'attesa più tollerante lo
+  eviterebbero.
