@@ -7,3 +7,7 @@ test('never approved', () => { assert.equal(approvalStatus({ version: 1, approve
 test('approved an older version', () => { assert.equal(approvalStatus({ version: 2, approvedVersion: 1, sameBytes: true }), 'da approvare'); });
 test('approved and unchanged', () => { assert.equal(approvalStatus({ version: 1, approvedVersion: 1, sameBytes: true }), 'ok'); });
 test('approved but the drawing changed', () => { assert.equal(approvalStatus({ version: 1, approvedVersion: 1, sameBytes: false }), 'deriva'); });
+test('approved on another GPU is not drift', () => {
+  assert.equal(approvalStatus({ version: 1, approvedVersion: 1, sameBytes: false, sameGpu: false }), 'altra GPU');
+  assert.equal(approvalStatus({ version: 1, approvedVersion: 1, sameBytes: false, sameGpu: true }), 'deriva');
+});

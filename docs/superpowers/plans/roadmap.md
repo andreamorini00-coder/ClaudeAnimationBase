@@ -155,3 +155,16 @@ Dalla Fase 2b:
   numerazione dei fotogrammi).
 - L'espressione del ducking cresce di ~70 caratteri per effetto: con centinaia di effetti si rischia il limite di
   lunghezza della riga di comando di Windows.
+
+Dalla Fase 4a:
+
+- `character()` senza `t` usa 0: coda, antenne e cicli di corsa restano fermi senza avviso (la guida dice di passare
+  sempre `t`).
+- Il ritardo delle antenne chiede `since` (secondi dal cambio) e `kick` a mano: un tempo assoluto o un `kick`
+  dimenticato non fanno nulla; il quadrupede li ignora. `act()` conosce già i tempi e potrebbe restituirli.
+- `act(t, [], …)` o `act(t, keys, 'gatto')` (l'id invece della scheda) danno un errore poco chiaro.
+- Forme di occhi e bocche nella scheda (`mouth: 'smille'`) si controllano solo al disegno, non alla validazione.
+- `tools/approve.mjs`: se un render fallisce resta una cartella temporanea; con `approvati.json` ma un PNG mancante
+  esce con uno stack trace invece di un messaggio.
+- `act` e `character` sono nomi globali generici: una scena con `const act = …` di primo livello andrebbe in errore.
+- In `studio.html` aperto a mano, un errore a metà fotogramma lascia un `push()` senza `pop()` (già così prima).

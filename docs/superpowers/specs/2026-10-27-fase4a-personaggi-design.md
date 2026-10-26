@@ -186,8 +186,9 @@ Quello che i test non vedono, cioè se il personaggio somiglia a sé, lo giudica
 - Comando: `node render.mjs --loop=sheet_gatto --stills=0 --style=classic --out=out/sheets/gatto-classic`.
 - **Approvazione:** quando Andrea approva un personaggio in uno stile, `node tools/approve.mjs gatto classic` salva
   i due PNG in `reference/characters/gatto/approvati/` (`sheet-classic.png`, `pose-classic.png`) e aggiorna
-  `reference/characters/gatto/approvati/approvati.json` (`{ "classic": <version> }`). La scheda non viene mai
-  riscritta da uno strumento.
+  `reference/characters/gatto/approvati/approvati.json` (`{ "classic": { "version": 1, "gpu": "<scheda grafica>" } }`).
+  La scheda non viene mai riscritta da uno strumento. I byte di un PNG dipendono dalla scheda grafica e dal suo
+  driver: su un'altra GPU il controllo dice "altra GPU" invece di "deriva" e non fallisce (revisione finale).
 - **Deriva:** `node tools/approve.mjs --check` rifà i PNG di ogni coppia approvata e li confronta byte per byte;
   fallisce se un cambio di codice altera un personaggio approvato senza che la sua `version` sia cresciuta, e
   segnala le coppie "da approvare" (versione nuova o stile nuovo). Uno script `npm run check-characters`.
