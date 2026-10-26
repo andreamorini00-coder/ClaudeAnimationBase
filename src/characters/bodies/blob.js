@@ -10,6 +10,7 @@
 // The antennae trail a change: state.since (s since the pose changed) and state.kick (how big it was, + = upwards).
 BODIES.blob = {
   roles: ['body', 'belly', 'tip', 'cheek', 'line', 'shadow'],
+  proportions: ['height', 'width', 'antenna', 'eyeH'],
   parts: ['body', 'belly', 'eye', 'lid', 'teeth', 'mouth', 'cheeks', 'antennae', 'antennaTips', 'shadow'],
   poseParams: ['squash', 'lean', 'roll', 'hop', 'cycle'],
   exprParams: ['eye', 'lid', 'lidTilt', 'mouth', 'shiver', 'squash'],

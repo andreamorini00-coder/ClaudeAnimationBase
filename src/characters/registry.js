@@ -1,8 +1,10 @@
 // registry.js: the character library's registries. Each character file registers a SPEC (data only: strings, numbers,
 // arrays, objects) in CHARACTERS; each body type registers itself in BODIES:
-//   BODIES.<type> = { roles, parts, poseParams, exprParams, views, layout(spec, state) }
-// roles: colour roles every character of this body must give; parts: the part names a spec may configure and a feature
-// may point at; poseParams / exprParams: the parameters a pose or an expression may set; views: the drawn key views.
+//   BODIES.<type> = { roles, proportions, partRoles, parts, poseParams, exprParams, views, layout(spec, state) }
+// roles: colour roles every character of this body must give; proportions: the measures its layout reads (numbers);
+// partRoles: optional parts drawn only when the spec declares them, with the colour role each then needs; parts: the
+// part names a spec may configure and a feature may point at; poseParams / exprParams: the parameters a pose or an
+// expression may set (numbers, or names like an eye shape); views: the drawn key views.
 // Pure: no p5, no DOM, no style. Loaded by studio.html and, the same file, by the tests (tools/pagecode.mjs).
 const CHARACTERS = {};
 const BODIES = {};
@@ -20,6 +22,12 @@ function validateCharacter(spec) {
   if (!body) return errs;
   const roles = spec.roles || {};
   for (const r of body.roles) if (!(r in roles)) errs.push(`manca il ruolo colore "${r}"`);
+  for (const [part, r] of Object.entries(body.partRoles || {}))
+    if (spec.parts && part in spec.parts && !(r in roles)) errs.push(`la parte "${part}" vuole il ruolo colore "${r}"`);
+  for (const k of body.proportions || []) {
+    const v = (spec.proportions || {})[k];
+    if (typeof v !== 'number' || !Number.isFinite(v)) errs.push(`proporzione "${k}" mancante o non numerica`);
+  }
   for (const [r, hex] of Object.entries(roles)) if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) errs.push(`ruolo "${r}": colore "${hex}" non valido (serve #RRGGBB)`);
   for (const p of Object.keys(spec.parts || {})) if (!body.parts.includes(p)) errs.push(`parte "${p}" sconosciuta per il corpo ${spec.body}`);
   for (const f of spec.features || []) {
@@ -28,7 +36,10 @@ function validateCharacter(spec) {
   }
   const params = (what, table, allowed) => {
     for (const [name, set] of Object.entries(table || {}))
-      for (const k of Object.keys(set)) if (!allowed.includes(k)) errs.push(`${what} "${name}": parametro "${k}" sconosciuto`);
+      for (const [k, v] of Object.entries(set)) {
+        if (!allowed.includes(k)) errs.push(`${what} "${name}": parametro "${k}" sconosciuto`);
+        else if (!(typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v)))) errs.push(`${what} "${name}": parametro "${k}" non valido`);
+      }
   };
   params('posa', spec.poses, body.poseParams);
   params('espressione', spec.expressions, body.exprParams);

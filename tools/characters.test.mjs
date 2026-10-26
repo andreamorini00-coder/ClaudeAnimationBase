@@ -242,3 +242,28 @@ test('resolveState takes an act() result and passes the lag through', () => {
   assert.equal(s.expression.mouth, 'o'); assert.equal(s.since, .1); assert.equal(s.kick, 1);
   assert.notEqual(s.pose.squash, m.poses.salto.squash, 'il sobbalzo cambia la forma');
 });
+
+// ---------- review fixes ----------
+test('missing proportion is refused', () => {
+  const c = lib(), g = JSON.parse(JSON.stringify(c.get('CHARACTERS.gatto')));
+  delete g.proportions.tail;
+  assert.match(c.call('validateCharacter', g).join(' '), /tail/);
+  const m = JSON.parse(JSON.stringify(c.get('CHARACTERS.mostro'))); m.proportions.height = 'alto';
+  assert.match(c.call('validateCharacter', m).join(' '), /height/);
+});
+test('non-numeric pose value is refused', () => {
+  const c = lib(), m = JSON.parse(JSON.stringify(c.get('CHARACTERS.mostro'))); m.poses.fermo = { squash: null };
+  assert.match(c.call('validateCharacter', m).join(' '), /squash/);
+});
+test('a quadruped without collar and bell draws neither', () => {
+  const c = lib(), g = JSON.parse(JSON.stringify(c.get('CHARACTERS.gatto')));
+  for (const k of ['collar', 'bell']) { delete g.parts[k]; delete g.roles[k]; }
+  g.features = g.features.filter(f => f.part !== 'collar' && f.part !== 'bell');
+  assert.deepEqual(c.call('validateCharacter', g), []);
+  const L = c.call('(s => BODIES.quadruped.layout(s, { view: "front", t: 0 }))', g);
+  assert.ok(!L.parts.some(p => /collar|bell/.test(p.id)));
+});
+test('a declared part needs its colour role', () => {
+  const c = lib(), g = JSON.parse(JSON.stringify(c.get('CHARACTERS.gatto'))); delete g.roles.bell;
+  assert.match(c.call('validateCharacter', g).join(' '), /bell/);
+});

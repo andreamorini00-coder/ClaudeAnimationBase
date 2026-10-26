@@ -3,7 +3,7 @@ CHARACTERS.gatto = {
   id: 'gatto', version: 1, body: 'quadruped',
   // in units: nose to rump, head width, body height, leg length and width, tail length
   proportions: { length: 10.4, head: 3.5, bodyHeight: 4.8, legLength: .9, legWidth: 1.1, tail: 4.4 },
-  parts: { ears: { size: 1 }, tail: { width: .85 } },
+  parts: { ears: { size: 1 }, tail: { width: .85 }, collar: {}, bell: {} },
   roles: {
     fur: '#D9956C', cream: '#F6EBD8', earInner: '#C99595', collar: '#B8674F', bell: '#E8BF78',
     line: '#59463B', shadow: '#8C8074', eyeWhite: '#F6EBD8',

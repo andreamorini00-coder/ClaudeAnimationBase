@@ -9,6 +9,8 @@
 //   .. 1 (straight up), tailCurl 0..1 (wrapped round the body), headTilt (radians). act() adds squint and look.
 BODIES.quadruped = {
   roles: ['fur', 'cream', 'earInner', 'line', 'shadow', 'eyeWhite'],
+  proportions: ['length', 'head', 'bodyHeight', 'legLength', 'legWidth', 'tail'],
+  partRoles: { collar: 'collar', bell: 'bell' },          // accessories: drawn only when the spec declares them
   parts: ['body', 'head', 'muzzle', 'blaze', 'ears', 'legs', 'tail', 'tailTip', 'collar', 'bell', 'whiskers', 'eyes', 'mouth', 'shadow'],
   poseParams: ['crouch', 'pitch', 'lift', 'stretch', 'legSwing', 'legPhase', 'pawRaise', 'cycle'],
   exprParams: ['eyes', 'mouth', 'ears', 'tail', 'tailCurl', 'headTilt'],
@@ -97,8 +99,8 @@ BODIES.quadruped = {
       : V.face === 'q' ? [[hx - headW * .38, hy + headH * .3], [hx - headW * .05, hy + headH * .6], [hx + headW * .33, hy + headH * .36]]
       : V.face === 'front' ? [[-headW * .36, hy + headH * .32], [0, hy + headH * .6], [headW * .36, hy + headH * .32]]
       : [[-headW * .4, cy - bodyH * .43], [0, cy - bodyH * .37], [headW * .4, cy - bodyH * .43]];
-    add('collar', 'collar', V.face ? D - .05 : .3, (V.face ? head : pose)(CG.tube(collarPath, .3, .3, 3)), { feature: 'collar', line: .7 });
-    if (V.face) {
+    if (sp.collar) add('collar', 'collar', V.face ? D - .05 : .3, (V.face ? head : pose)(CG.tube(collarPath, .3, .3, 3)), { feature: 'collar', line: .7 });
+    if (V.face && sp.bell) {
       const bi = V.face === 'side' ? 2 : 1, bx = collarPath[bi][0] + (V.face === 'q' ? headW * .1 : 0), by = collarPath[bi][1] + .3;
       add('bell', 'bell', D + 2, head(CG.ellipse(bx, by, .34, .34, 18)), { feature: 'bell', line: .7 });
       add('bellSlit', 'line', D + 2.01, head([[bx - .15, by + .08], [bx + .15, by + .08]]), { feature: 'bell', stroke: 1, line: .4 });
