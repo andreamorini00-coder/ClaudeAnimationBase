@@ -21,4 +21,6 @@ STYLES['acquerello-leggero'] = {
   brushScale: 5,
   boil: 12,
   paint: { fillOp: .5, bleed: .7, tex: .6, washOp: 1, sw: .9, fillAs: 'wash' },
+  // characters' colours, lightened towards the paper like the rest of this palette
+  character: { toPaper: .3 },
 };

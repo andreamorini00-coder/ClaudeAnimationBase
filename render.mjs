@@ -73,7 +73,7 @@ const browser = await puppeteer.launch({
 async function openPage(tag = '') {
   const page = await browser.newPage();
   page.on('console', m => { if (['error', 'warn'].includes(m.type())) console.log(`[page${tag}]`, m.text()); });
-  page.on('pageerror', e => { if (!/inesistente|incompleto/.test(e.message)) console.log(`[page error${tag}]`, e.message); });
+  page.on('pageerror', e => { if (!/inesistente|incompleto|Personaggio/.test(e.message)) console.log(`[page error${tag}]`, e.message); });
   const query = '?render' + (args.style ? '&style=' + encodeURIComponent(args.style) : '')
     + (args.format ? '&format=' + encodeURIComponent(args.format) : '')
     + (args.loop ? '&loop=' + encodeURIComponent(args.loop) : '')
