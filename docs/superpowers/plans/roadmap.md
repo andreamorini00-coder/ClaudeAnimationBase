@@ -1,6 +1,6 @@
 # Progetto anime — roadmap
 
-Aggiornata il 2026-10-22. È il piano d'insieme: ogni fase, quando parte, ha il suo brainstorming, la sua spec in
+Aggiornata il 2026-10-26. È il piano d'insieme: ogni fase, quando parte, ha il suo brainstorming, la sua spec in
 `docs/superpowers/specs/` e il suo piano eseguibile in `docs/superpowers/plans/`.
 
 Motore unico: ClaudeAnimationBase (p5.js + p5.brush). Da html-anime si prendono solo le regole di regia (shot sheet,
@@ -49,10 +49,11 @@ Branch `fase2a-verticale`. Spec: `../specs/2026-10-22-fase2a-formati-design.md`.
   sottotitoli sta tra ~1150 e ~1500 px, non nel quinto basso (lì c'è la didascalia del social). Opzione per
   disegnare le zone sugli sheet di controllo, mai nel video finale.
 
-### 2b. Audio: effetti, ambienti, musica · **design approvato, in corso**
+### 2b. Audio: effetti, ambienti, musica · **chiusa**
 
 Branch `fase2b-audio`. Spec: `../specs/2026-10-23-fase2b-audio-design.md`. Piano: `2026-10-23-fase2b-audio.md`.
-Niente voce per ora (solo un campo riservato); effetti da `assets/sfx/`.
+Niente voce per ora (solo un campo riservato); effetti da `assets/sfx/`. Ascolto approvato da Andrea il 2026-10-26;
+unita in `main` in locale, push da fare con GitHub Desktop.
 
 - La scena dichiara i suoni con i tempi dell'animazione: effetti con variazioni automatiche, ambienti in loop con
   dissolvenze, musica opzionale con ducking leggero sotto gli effetti importanti.
@@ -106,3 +107,28 @@ corpo quadrupede con le ali come parte aggiuntiva, invece di un tipo di corpo a 
 
 Da fissare nel design: come Clawd diventa una scheda della libreria, quanta animazione (camminata, emozioni) è
 condivisa tra tipi di corpo diversi, e il formato dei file della libreria.
+
+## Piccolezze rimandate
+
+Trovate nelle revisioni finali e lasciate per dopo (scelta di Andrea). Nessuna rompe un render normale; si
+riprendono quando una fase tocca quel punto o in un giro di pulizia.
+
+Dalla Fase 1:
+
+- `--strip --draft` avanza a 12 fps, quindi mostra un fotogramma sì e uno no, anche se l'uso dice "EVERY frame".
+- `--recycle` senza numero diventa 1 (riapre la pagina a ogni fotogramma); `--draft=` vuoto spegne il draft senza
+  avvisare.
+- In `studio.html` aperto a mano, uno `?style=` sbagliato si vede solo in console, non nella pagina.
+
+Dalla Fase 2b:
+
+- `out/tmp-mix.m4a` ha un nome fisso: due render lanciati insieme si pestano i piedi.
+- `out/audio-cache.json` non è scritto in modo atomico: un file troncato rompe i render successivi finché non lo si
+  cancella.
+- I nomi di suono sbagliati vengono segnalati solo da `--encode`, non già da `--frames`.
+- Un effetto subito prima dell'inizio di `--range` non abbassa la musica che prosegue dentro lo spezzone.
+- Un file usato sia come effetto sia come ambiente riceve un solo livello di categoria.
+- `--encode` dopo `--frames --range` mixa l'intervallo [0, fotogrammi/fps] (vale il limite già noto sulla
+  numerazione dei fotogrammi).
+- L'espressione del ducking cresce di ~70 caratteri per effetto: con centinaia di effetti si rischia il limite di
+  lunghezza della riga di comando di Windows.
