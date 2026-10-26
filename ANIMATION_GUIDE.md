@@ -233,6 +233,8 @@ If a long render slows down as it goes, `--recycle=N` makes `--clip`, `--frames`
 | `tools/audio.mjs` | the mix: variations, levels, ducking, ffmpeg graph, -14 LUFS |
 | `assets/sfx/` | the sound effects and ambience loops (licences in `licenze.md`) |
 | `src/scenes/tall_example.js` | `LOOPS.tall`, a 5-second check of the tall formats (`--loop=tall --format=vertical`) |
+| `src/characters/` | the character library: `character()`, the bodies, one data file per character, model sheets (see Characters) |
+| `tools/characters.test.mjs` | the characters' checks (features in every view, counts, proportions, colours, volume) |
 | `studio.html` | open it in Chrome to scrub the video (`?t=2.5` jumps to a time, `?loop=emotions` shows a loop) |
 | `render.mjs` | headless renderer: sheets, strips, crops, stills, PNG loops, MP4 |
 
@@ -447,6 +449,33 @@ clawd(x, y, 24, { ...feel('proud', t), aR: 1.2, armR: (u, sw) => paint(starPts(u
 ### Dances
 
 `move(style, t, seed)` returns beat-locked pose offsets. The styles are bounce, hop, roof (arms up), sway, spin (a drawn spin through the key views once a bar), wave, walk, run, idle, stomp and shimmy. `mix` changes style every two bars. `dancer(x, y, u, style, t, extra)` is `clawd` + `move`. You can combine a dance with a face: `{ ...move('bounce', t), eyes: 'happy', mouth: 'grin' }`.
+
+---
+
+## Characters
+
+Besides Clawd, the kit has a character library in `src/characters/`, built from the model sheets in `reference/characters/`. Each character is one data file (its proportions, parts, colour roles, distinctive features, expressions and poses); its body type draws it (`bodies/quadruped.js`, `bodies/blob.js`). The characters don't depend on Clawd.
+
+```js
+character('gatto', x, y, u, { view: 'q', pose: 'corsa', expression: 'felice', t: lt });
+character('mostro', x, y, u, { view: 'front', expression: act(lt, [[0, 'felice'], [1.2, 'sorpreso']], CHARACTERS.mostro) });
+```
+
+- `(x, y)` is the ground point under the character, `u` its size unit (the cat is about 10u long, the monster 6u tall).
+- `view`: `front`, `q` (3/4), `side`, `back`; `flip: true` faces left. `pose` and `expression` are names from the character's file (the cat: inPiedi, corsa, salto, balzo, zampata, agguato; felice, triste, arrabbiato, sorpreso, assonnato, curioso. The monster: fermo, rotolamento, salto, slancio, broncio, schiacciato; felice, triste, arrabbiato, sorpreso, assonnato, spaventato). A wrong name stops with the list of valid ones.
+- Pass `t` (shot time) always: tails, antennae and run cycles move with it.
+- **Faces act, they never snap:** change expressions with `act(t, keys, CHARACTERS.<id>)`, which squints through the swap and gives the body a small take, like `emotions()` does for Clawd.
+- The monster's antennae trail a change: pass `since` (seconds since the pose changed) and `kick` (1 for a jump, -1 for a landing).
+- Two of the same character on screen need different `key`s, so they boil apart.
+- Colours come from the character's roles, translated by the style (`STYLE.character`, see `src/characters/draw.js`).
+
+**Model sheets.** Every character has `LOOPS.sheet_<id>` (views, expressions, silhouette, colours) and `LOOPS.pose_<id>` (poses). Render frame 0 and compare it with the reference before using a character in a film:
+
+```bash
+node render.mjs --loop=sheet_gatto --stills=0 --style=classic --out=out/sheets/gatto
+```
+
+`npm test` checks every view, pose and expression of every character (features present where they should be, counts, proportions, colours, the monster's constant volume). Once a sheet is approved, `node tools/approve.mjs <id> <style>` stores it, and `npm run check-characters` tells you if a code change alters an approved character.
 
 ---
 

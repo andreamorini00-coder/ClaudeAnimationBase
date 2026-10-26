@@ -13,6 +13,7 @@ BODIES.quadruped = {
   poseParams: ['crouch', 'pitch', 'lift', 'stretch', 'legSwing', 'legPhase', 'pawRaise', 'cycle'],
   exprParams: ['eyes', 'mouth', 'ears', 'tail', 'tailCurl', 'headTilt'],
   views: ['front', 'q', 'side', 'back'],
+  SHEET: { views: ['side', 'front', 'q', 'back'], poseView: 'side', exprView: 'q' },   // as in the cat's base.png / pose.png
   POSE0: { crouch: 0, pitch: 0, lift: 0, stretch: 1, legSwing: 0, legPhase: 0, pawRaise: 0, cycle: 0 },
   EXPR0: { eyes: 'open', mouth: 'catSmile', ears: 0, tail: 0, tailCurl: 0, headTilt: 0, squint: 0, look: 0 },
   // Per view: body shape and width factor, where the head sits (x as a share of the length), the legs
@@ -44,7 +45,7 @@ BODIES.quadruped = {
     add('body', 'fur', 0, pose(bodyPts));
     add('bodyShade', 'shadow', .1, pose(CG.clipY(bodyPts, cy + bodyH * .3, 1)), { line: 0, shade: 1 });
     if (V.face) {                                                  // the cream chest: the lower end of the blaze
-      const chest = V.body === 'bean' ? CG.clipY(CG.clipX(bodyPts, cx + bodyLen * .28, 1), cy - bodyH * .15, 1)
+      const chest = V.body === 'bean' ? CG.clipConvex(CG.ellipse(cx + bodyLen * .4, cy + bodyH * .12, bodyLen * .2, bodyH * .42, 32), bodyPts)
         : CG.drop(V.face === 'front' ? 0 : .3, cy + bodyH * .42, bodyH * .5, bodyH * .78);
       add('chest', 'cream', .2, pose(chest), { line: 0, feature: 'blaze' });
     }
@@ -125,14 +126,14 @@ BODIES.quadruped = {
 
     // the face
     if (V.face) {
-      const fx = V.face === 'front' ? hx : V.face === 'q' ? hx + headW * .14 : hx + headW * .3;
+      const fx = V.face === 'front' ? hx : V.face === 'q' ? hx + headW * .14 : hx + headW * .2;
       const muzzle = V.face === 'side' ? CG.clipX(CG.ellipse(hx + headW * .3, hy + headH * .24, headW * .24, headH * .22, 24), hx + headW * .47, -1)
         : CG.drop(fx, hy + headH * .42, headW * (V.face === 'q' ? .38 : .44), headH * .62);
       add('muzzle', 'cream', D + .1, head(muzzle), { line: 0, feature: 'blaze' });
       const r = headW * .12, eyeY = hy + headH * .02, eo = { look: E.look, squint: E.squint };
       const eyeAt = V.face === 'front' ? [[fx - headW * .2, 1], [fx + headW * .2, 1]] : V.face === 'q' ? [[fx - headW * .2, .85], [fx + headW * .2, 1]] : [[fx + headW * .1, .9]];
       eyeAt.forEach(([ex, k], i) => FACES.eye(E.eyes, ex, eyeY, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, D + .5, head(p.pts), { line: p.line, stroke: p.stroke })));
-      const ny = hy + headH * .24, nx = fx + (V.face === 'side' ? headW * .17 : 0);
+      const ny = hy + headH * .24, nx = fx + (V.face === 'side' ? headW * .22 : 0);
       add('nose', 'line', D + .52, head([[nx - .13, ny - .06], [nx + .13, ny - .06], [nx, ny + .08]]), { line: 0 });
       FACES.mouth(E.mouth, nx, ny + .22, .55).parts.forEach(p => add('mouth', p.role, D + .51, head(p.pts), { line: p.line, stroke: p.stroke }));
       const wh = (sx, x0) => [0, 1, 2].forEach(k => add('whisker', 'line', D + .53, head([[x0, ny + .02 + k * .13], [x0 + sx * .95, ny - .18 + k * .2]]), { stroke: 1, line: .35, feature: 'whiskers' }));

@@ -20,7 +20,7 @@ CHARACTERS.gatto = {
   expressions: {
     felice: { eyes: 'happy', mouth: 'open', ears: 0, tail: .2 },
     triste: { eyes: 'sad', mouth: 'frown', ears: -1, tail: -1 },
-    arrabbiato: { eyes: 'angry', mouth: 'frown', ears: 1, tail: -.4 },
+    arrabbiato: { eyes: 'angry', mouth: 'frown', ears: 1, tail: -.15 },
     sorpreso: { eyes: 'wide', mouth: 'o', ears: .1, tail: 1 },
     assonnato: { eyes: 'closed', mouth: 'flat', ears: -.3, tailCurl: 1 },
     curioso: { eyes: 'open', mouth: 'catSmile', headTilt: .22, ears: 0 },

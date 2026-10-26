@@ -14,6 +14,7 @@ BODIES.blob = {
   poseParams: ['squash', 'lean', 'roll', 'hop', 'cycle'],
   exprParams: ['eye', 'lid', 'lidTilt', 'mouth', 'shiver', 'squash'],
   views: ['front', 'q', 'side', 'back'],
+  SHEET: { views: ['front', 'q', 'side', 'back'], poseView: 'q', exprView: 'front' },   // as in the monster's base.png / pose.png
   POSE0: { squash: 1, lean: 0, roll: 0, hop: 0, cycle: 0 },
   EXPR0: { eye: 'oval', lid: 0, lidTilt: 0, mouth: 'smile', shiver: 0, squash: 1, squint: 0, look: 0 },
   // per view: face centre (share of the width, + = towards the heading), how wide the face reads, which side shows
@@ -58,11 +59,12 @@ BODIES.blob = {
       const base = -h * .045, belly = CG.clipY(CG.ellipse(fx + V.fx * w * .2, base, w * .33 * fw, h * .31, 40), base, -1);
       add('belly', 'belly', .2, place(CG.clipConvex(belly, body)), { feature: 'belly', line: 0 });
       // cheeks
-      const cheeks = state.view === 'side' ? [fx - w * .02] : [fx - w * .29 * fw, fx + w * .29 * fw];
+      const cheeks = state.view === 'side' ? [fx - w * .26] : [fx - w * .29 * fw, fx + w * .29 * fw];
       cheeks.forEach((x, i) => add('cheek' + i, 'cheek', .3, place(CG.ellipse(x, -h * .42, .42 * fw ** .3, .3, 16)), { feature: 'cheeks', line: 0 }));
       // the one eye, its lid, the mouth and the two teeth
       const ex = fx, ey = -h * .62, r = pr.eyeH / 2 / s ** .5, xs = state.view === 'side' ? .6 : fw;
       const squeeze = pts => CG.scale(pts, xs, 1, ex, ey);
+      if (E.eye === 'happy') add('eyeeyeWhite', 'belly', .39, place(squeeze(CG.ellipse(ex, ey, r * .75, r, 28))), { line: .5, feature: 'eye' });
       FACES.eye(E.eye, ex, ey, r, { look: E.look, squint: CG.clamp(E.squint), roles: { white: 'belly', ink: 'line' } }).parts
         .forEach(p => add('eye' + p.id, p.role, .4, place(squeeze(p.pts)), { line: p.line, stroke: p.stroke, feature: 'eye' }));
       if (E.lid > .01 && E.eye === 'oval') {                  // the upper lid: body colour over the top of the eye, tilted

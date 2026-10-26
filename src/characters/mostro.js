@@ -4,6 +4,7 @@ CHARACTERS.mostro = {
   // in units, at rest: the drop is 3/4 as wide as it is tall (antennae excluded)
   proportions: { height: 6, width: 4.5, antenna: 1.8, eyeH: 2.3 },
   parts: {},
+  inferred: ['back'],      // views the reference doesn't show: drawn by deduction, labelled on the model sheet
   roles: { body: '#ADA2E8', belly: '#F7F2E8', tip: '#FFD166', cheek: '#FF5D73', line: '#1C2440', shadow: '#555B91' },
   features: [
     { id: 'eye', part: 'eye', views: ['front', 'q', 'side'] },

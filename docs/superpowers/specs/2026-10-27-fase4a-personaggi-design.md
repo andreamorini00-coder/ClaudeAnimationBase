@@ -203,9 +203,12 @@ Quello che i test non vedono, cioè se il personaggio somiglia a sé, lo giudica
 
 | render | tempo |
 |---|---|
-| `sheet_gatto` e `sheet_mostro`, `--stills=0`, classic | — |
-| gli stessi in `acquerello-leggero` | — |
-| `pose_gatto` in `--clip --draft` (4 s) | — |
+| `sheet_gatto` / `pose_gatto`, `--stills=0`, classic | 14,0 s / 10,3 s (fotogramma 5,1 s / 2,8 s) |
+| `sheet_mostro` / `pose_mostro`, `--stills=0`, classic | 9,6 s / 9,0 s (fotogramma 2,4 s / 1,9 s) |
+| gli stessi in `acquerello-leggero` | gatto 10,4 s / 8,5 s; mostro 8,4 s / 8,0 s |
+| loop verticale di prova (gatto + mostro, 4 s) in `--clip --draft --format=vertical` | 22,2 s (48 fotogrammi) |
+
+Misurati il 2026-10-27; il tempo totale comprende l'avvio di Chrome (circa 7 s).
 
 ## Rischi
 
