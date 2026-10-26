@@ -47,7 +47,7 @@ src/characters/
   bodies/quadruped.js layout del quadrupede (puro)
   bodies/blob.js      layout del blob (puro)
   draw.js             character(): layout → paint()/inkLine() con lo stile attivo; boil per parte
-  sheets.js           model sheet automatici: LOOPS.sheet_<id> e LOOPS.pose_<id>
+  modelsheets.js      model sheet automatici: LOOPS.sheet_<id> e LOOPS.pose_<id>
   gatto.js            scheda del gatto (solo dati)
   mostro.js           scheda del mostro (solo dati)
 tools/
@@ -56,7 +56,7 @@ tools/
   approve.mjs         salva e verifica i model sheet approvati
 ```
 
-Tutti i file tranne `draw.js` e `sheets.js` sono **puri**: solo matematica, nessuna chiamata a p5, al DOM o allo
+Tutti i file tranne `draw.js` e `modelsheets.js` sono **puri**: solo matematica, nessuna chiamata a p5, al DOM o allo
 stile. Sono script classici come il resto della pagina (caricati da `studio.html` dopo `core.js`) e, negli stessi
 byte, caricabili da `tools/pagecode.mjs` nei test.
 
@@ -178,7 +178,7 @@ Quello che i test non vedono, cioè se il personaggio somiglia a sé, lo giudica
 
 ### 7. Model sheet e approvazione
 
-- `sheets.js` crea per ogni personaggio registrato due loop in formato `landscape`, lunghi 4 s:
+- `modelsheets.js` crea per ogni personaggio registrato due loop in formato `landscape`, lunghi 4 s:
   - `LOOPS.sheet_<id>`: le viste in fila, le sei espressioni, la sagoma nera, i campioni dei ruoli colore (come
     `base.png`); le viste inventate hanno una piccola etichetta "dedotta";
   - `LOOPS.pose_<id>`: le sei pose (come `pose.png`).
