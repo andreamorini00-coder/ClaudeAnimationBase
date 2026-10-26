@@ -10,6 +10,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The character library's pure files, in the order studio.html loads them.
 export const CHAR_SCRIPTS = [
   'src/characters/registry.js',
+  'src/characters/shapes.js',
+  'src/characters/faces.js',
 ];
 
 // get(expr): the value of an expression in the page context. run(code): runs more code there.

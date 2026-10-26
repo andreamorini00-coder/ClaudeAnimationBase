@@ -38,3 +38,49 @@ test('function in spec is refused', () => {
 });
 test('bad hex', () => { assert.match(errorsOf({ ...minimal(), roles: { line: '#12345' } }).join(' '), /line/); });
 test('missing field', () => { const s = minimal(); delete s.poses; assert.match(errorsOf(s).join(' '), /poses/); });
+
+// ---------- geometry and faces ----------
+const finite = pts => pts.every(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), y1: Math.max(...ys) }; };
+const near = (a, b, rel) => Math.abs(a - b) <= rel * Math.abs(b);
+
+test('ellipse area', () => {
+  const c = lib(); assert.ok(near(c.call('CG.area', c.call('CG.ellipse', 0, 0, 3, 2, 64)), Math.PI * 6, .01));
+});
+test('drop keeps its box', () => {
+  const c = lib(), b = box(c.call('CG.drop', 0, 10, 4.5, 6));
+  assert.ok(near(b.w, 4.5, .01)); assert.ok(near(b.h, 6, .01)); assert.ok(near(b.y1, 10, .001));
+});
+test('drop area scales with w*h', () => {
+  const c = lib(), a = (w, h) => c.call('CG.area', c.call('CG.drop', 0, 0, w, h));
+  assert.ok(near(a(4.5 * 1.4, 6 / 1.4), a(4.5, 6), .005)); assert.ok(near(a(4.5 * .8, 6 / .8), a(4.5, 6), .005));
+});
+test('mirror twice is identity', () => {
+  const c = lib(), p = c.call('CG.ellipse', 1, 2, 3, 1, 12);
+  assert.deepEqual(c.call('CG.mirror', c.call('CG.mirror', p)), p);
+});
+test('no NaN at extremes', () => {
+  const c = lib();
+  for (const s of [.01, 1000]) {
+    assert.ok(finite(c.call('CG.ellipse', 0, 0, s, s)));
+    assert.ok(finite(c.call('CG.drop', 0, 0, s, s)));
+    assert.ok(finite(c.call('CG.bean', 0, 0, s, s, .3)));
+    const ch = c.call('CG.chain', [0, 0], 0, [s, s, s], [.2, .2, .2]);
+    assert.ok(finite(ch)); assert.ok(finite(c.call('CG.tube', ch, s / 3, s / 5)));
+  }
+});
+test('every eye and mouth kind', () => {
+  const c = lib();
+  for (const k of c.get('FACES.EYES')) { const r = c.call('FACES.eye', k, 0, 0, 1); assert.ok(r.parts.length > 0, k); assert.ok(r.parts.every(p => finite(p.pts)), k); }
+  for (const k of c.get('FACES.MOUTHS')) { const r = c.call('FACES.mouth', k, 0, 0, 1); assert.ok(r.parts.length > 0, k); assert.ok(r.parts.every(p => finite(p.pts)), k); }
+  assert.throws(() => c.call('FACES.eye', 'stellina', 0, 0, 1), /stellina.*open/);
+  assert.throws(() => c.call('FACES.mouth', 'baffo', 0, 0, 1), /baffo.*smile/);
+});
+test('eye roles can be renamed', () => {
+  const c = lib(), r = c.call('FACES.eye', 'oval', 0, 0, 1, { roles: { white: 'belly', ink: 'line' } });
+  assert.ok(r.parts.some(p => p.role === 'belly')); assert.ok(!r.parts.some(p => p.role === 'eyeWhite'));
+});
+test('squint closes an eye', () => {
+  const c = lib(), h = sq => box(c.call('FACES.eye', 'open', 0, 0, 1, { squint: sq }).parts[0].pts).h;
+  assert.ok(h(.5) < h(0) * .6);
+});
