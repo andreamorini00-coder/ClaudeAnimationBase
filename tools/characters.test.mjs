@@ -195,3 +195,50 @@ test('clipConvex keeps a shape inside a convex one', () => {
   assert.ok(r.every(([x, y]) => x <= 2 + 1e-9 && x >= 0 && y >= -1e-9 && y <= 2 + 1e-9));
   assert.ok(near(c.call('CG.area', r), Math.PI / 2, .02));
 });
+
+// ---------- acting: expressions over time, poses, resolving a scene's options ----------
+const KEYS = [[1, 'felice'], [2, 'sorpreso']];
+test('act holds the first key before it', () => {
+  const c = lib(), r = c.call('act', .5, KEYS, c.get('CHARACTERS.gatto'));
+  assert.equal(r.expression.eyes, 'happy'); assert.equal(r.expression.squint, 0);
+});
+test('act swaps discrete params at the midpoint', () => {
+  const c = lib(), g = c.get('CHARACTERS.gatto'), at = t => c.call('act', t, KEYS, g).expression;
+  assert.equal(at(2.05).eyes, 'happy'); assert.equal(at(2.25).eyes, 'wide');
+  assert.ok(Math.abs(at(2.15).squint - 1) < 1e-9, 'a metà della transizione gli occhi sono strizzati');
+  assert.equal(at(3).squint, 0);
+});
+test('act blends numbers', () => {
+  const c = lib(), e = c.call('act', 2.15, KEYS, c.get('CHARACTERS.gatto')).expression;   // tail .2 → 1
+  assert.ok(Math.abs(e.tail - .6) < .01, `coda ${e.tail}`);
+});
+test('take settles', () => {
+  const c = lib(), g = c.get('CHARACTERS.gatto');
+  assert.ok(Math.abs(c.call('act', 2.3, KEYS, g).take) > .05, 'subito dopo il cambio il corpo sobbalza');
+  assert.ok(Math.abs(c.call('act', 3.3, KEYS, g).take) < .02, 'dopo un secondo è fermo');
+});
+test('blendPose', () => {
+  const c = lib(), r = c.call('blendPose', { squash: 1, eye: 'oval' }, { squash: 1.4, eye: 'happy' }, .25);
+  assert.ok(Math.abs(r.squash - 1.1) < 1e-9); assert.equal(r.eye, 'oval');
+  assert.equal(c.call('blendPose', { eye: 'oval' }, { eye: 'happy' }, .5).eye, 'happy');
+});
+test('unknown names throw with the list', () => {
+  const c = lib(), g = c.get('CHARACTERS.gatto');
+  assert.throws(() => c.call('resolveState', g, { view: 'left' }), /left.*front/);
+  assert.throws(() => c.call('resolveState', g, { pose: 'corri' }), /corri.*inPiedi/);
+  assert.throws(() => c.call('resolveState', g, { expression: 'contento' }), /contento.*felice/);
+});
+test('act with an unknown expression throws', () => {
+  const c = lib(); assert.throws(() => c.call('act', 0, [[0, 'contento']], c.get('CHARACTERS.mostro')), /contento.*felice/);
+});
+test('resolveState fills in a neutral character', () => {
+  const c = lib(), s = c.call('resolveState', c.get('CHARACTERS.mostro'), {});
+  assert.equal(s.view, 'q'); assert.equal(s.pose.squash, 1); assert.equal(s.expression.eye, 'oval'); assert.equal(s.t, 0);
+});
+test('resolveState takes an act() result and passes the lag through', () => {
+  const c = lib(), m = c.get('CHARACTERS.mostro');
+  c.run(`globalThis.__r = resolveState(CHARACTERS.mostro, { pose: 'salto', expression: act(2.3, [[1, 'felice'], [2, 'sorpreso']], CHARACTERS.mostro), since: .1, kick: 1 });`);
+  const s = c.call('(() => __r)');
+  assert.equal(s.expression.mouth, 'o'); assert.equal(s.since, .1); assert.equal(s.kick, 1);
+  assert.notEqual(s.pose.squash, m.poses.salto.squash, 'il sobbalzo cambia la forma');
+});

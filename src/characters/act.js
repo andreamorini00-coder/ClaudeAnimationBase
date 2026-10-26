@@ -1,0 +1,50 @@
+// act.js: a character's acting, as pure functions of time. act() plays expression changes the way a drawn character
+// makes them (a squint while the face swaps, then a small take of the body); blendPose() mixes two poses;
+// resolveState() turns a scene's options into the state a body's layout() draws.
+
+// keys: [[t0, 'felice'], [t1, 'sorpreso'], ...] (expression names of the spec). Each change lasts D = 0.3 s:
+// numbers ease from the old value to the new one, names (eye and mouth shapes) swap halfway, where the eyes are
+// squinted shut (squint = 1); take is a damped bounce kicked halfway through, for the body.
+function act(t, keys, spec) {
+  const D = .3, body = BODIES[spec.body], full = name => {
+    if (!spec.expressions[name]) throw new Error(`Espressione "${name}" inesistente per ${spec.id}. Disponibili: ${Object.keys(spec.expressions).join(', ')}`);
+    return { ...body.EXPR0, ...spec.expressions[name] };
+  };
+  const K = keys.map(([t0, name]) => [t0, full(name)]).sort((a, b) => a[0] - b[0]);
+  let i = 0; while (i + 1 < K.length && t >= K[i + 1][0]) i++;
+  const [t0, cur] = K[i];
+  if (i === 0 || t >= t0 + D) return { expression: { ...cur, squint: 0 }, take: i === 0 ? 0 : CG.spring(t, t0 + D / 2, 6, 14) };
+  const from = K[i - 1][1], k = (t - t0) / D;
+  return { expression: { ...blendPose(from, cur, CG.smooth(k)), squint: Math.sin(Math.PI * k) }, take: CG.spring(t, t0 + D / 2, 6, 14) };
+}
+
+// Numbers interpolated, names (and anything else) taken from b from halfway on.
+function blendPose(a, b, k) {
+  const out = {};
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const x = a[key] ?? b[key], y = b[key] ?? a[key];
+    out[key] = typeof x === 'number' && typeof y === 'number' ? CG.lerp(x, y, k) : (k >= .5 ? y : x);
+  }
+  return out;
+}
+
+// o: { view = 'q', flip, pose = <the spec's first pose> | {params}, expression = neutral | 'name' | {params} | act(...),
+//      t = 0, since, kick } → { view, flip, pose, expression, t, since, kick }, every name checked against the spec.
+function resolveState(spec, o = {}) {
+  const body = BODIES[spec.body], view = o.view ?? 'q';
+  if (!body.views.includes(view)) throw new Error(`Vista "${view}" inesistente. Disponibili: ${body.views.join(', ')}`);
+  const named = (what, table, name) => {
+    if (!table[name]) throw new Error(`${what} "${name}" inesistente per ${spec.id}. Disponibili: ${Object.keys(table).join(', ')}`);
+    return table[name];
+  };
+  const poseIn = o.pose ?? Object.keys(spec.poses)[0];
+  const pose = { ...body.POSE0, ...(typeof poseIn === 'string' ? named('Posa', spec.poses, poseIn) : poseIn) };
+  let expression = { ...body.EXPR0 }, take = 0;
+  const e = o.expression;
+  if (typeof e === 'string') expression = { ...expression, ...named('Espressione', spec.expressions, e) };
+  else if (e && e.expression) { expression = { ...expression, ...e.expression }; take = e.take || 0; }
+  else if (e) expression = { ...expression, ...e };
+  // the take after a change of face: a blob squashes a little (keeping its volume), a legged body hops a little
+  if (take) { if ('squash' in pose) pose.squash *= 1 - .12 * take; else if ('lift' in pose) pose.lift += .25 * Math.max(0, take); }
+  return { view, flip: !!o.flip, pose, expression, t: o.t ?? 0, since: o.since, kick: o.kick };
+}

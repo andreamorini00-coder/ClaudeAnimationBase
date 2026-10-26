@@ -12,6 +12,7 @@ export const CHAR_SCRIPTS = [
   'src/characters/registry.js',
   'src/characters/shapes.js',
   'src/characters/faces.js',
+  'src/characters/act.js',
   'src/characters/bodies/quadruped.js',
   'src/characters/bodies/blob.js',
   'src/characters/gatto.js',
