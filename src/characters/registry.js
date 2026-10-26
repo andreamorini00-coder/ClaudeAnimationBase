@@ -1,0 +1,36 @@
+// registry.js: the character library's registries. Each character file registers a SPEC (data only: strings, numbers,
+// arrays, objects) in CHARACTERS; each body type registers itself in BODIES:
+//   BODIES.<type> = { roles, parts, poseParams, exprParams, views, layout(spec, state) }
+// roles: colour roles every character of this body must give; parts: the part names a spec may configure and a feature
+// may point at; poseParams / exprParams: the parameters a pose or an expression may set; views: the drawn key views.
+// Pure: no p5, no DOM, no style. Loaded by studio.html and, the same file, by the tests (tools/pagecode.mjs).
+const CHARACTERS = {};
+const BODIES = {};
+
+// The problems with a spec, in Italian, one string each; [] when it is valid.
+function validateCharacter(spec) {
+  const errs = [], id = spec && spec.id ? `"${spec.id}"` : '';
+  const hasFn = v => typeof v === 'function' || (v && typeof v === 'object' && Object.values(v).some(hasFn));
+  if (!spec || typeof spec !== 'object') return ['la scheda non è un oggetto'];
+  if (hasFn(spec)) errs.push(`la scheda ${id} deve contenere solo dati (niente funzioni)`);
+  for (const k of ['id', 'version', 'body', 'proportions', 'parts', 'roles', 'features', 'expressions', 'poses'])
+    if (spec[k] == null) errs.push(`manca il campo "${k}"`);
+  const body = BODIES[spec.body];
+  if (spec.body != null && !body) errs.push(`corpo "${spec.body}" sconosciuto. Disponibili: ${Object.keys(BODIES).join(', ')}`);
+  if (!body) return errs;
+  const roles = spec.roles || {};
+  for (const r of body.roles) if (!(r in roles)) errs.push(`manca il ruolo colore "${r}"`);
+  for (const [r, hex] of Object.entries(roles)) if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) errs.push(`ruolo "${r}": colore "${hex}" non valido (serve #RRGGBB)`);
+  for (const p of Object.keys(spec.parts || {})) if (!body.parts.includes(p)) errs.push(`parte "${p}" sconosciuta per il corpo ${spec.body}`);
+  for (const f of spec.features || []) {
+    if (!body.parts.includes(f.part)) errs.push(`tratto "${f.id}": parte "${f.part}" sconosciuta`);
+    for (const v of f.views || []) if (!body.views.includes(v)) errs.push(`tratto "${f.id}": vista "${v}" sconosciuta`);
+  }
+  const params = (what, table, allowed) => {
+    for (const [name, set] of Object.entries(table || {}))
+      for (const k of Object.keys(set)) if (!allowed.includes(k)) errs.push(`${what} "${name}": parametro "${k}" sconosciuto`);
+  };
+  params('posa', spec.poses, body.poseParams);
+  params('espressione', spec.expressions, body.exprParams);
+  return errs;
+}
