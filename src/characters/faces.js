@@ -53,6 +53,26 @@ const FACES = {
     return { parts };
   },
 
+  // One eyebrow: a soft arc w wide centred on (cx, cy). The sign of w says which end is the inner one (w > 0: the right
+  // end, as for the eye on screen-left). k: -1 (sad, the inner end up) .. 0 .. 1 (angry, the inner end down).
+  // kind: 'line' (thin) or 'thick'.
+  brows(kind, cx, cy, w, k = 0) {
+    const s = Math.sign(w) || 1, h = Math.abs(w) / 2, tilt = CG.clamp(k, -1, 1) * h * .55, n = 8, pts = [];
+    for (let i = 0; i <= n; i++) {
+      const u = i / n * 2 - 1;                                           // -1 outer end .. 1 inner end
+      pts.push([cx + s * u * h, cy - h * .28 * (1 - u * u) + tilt * (u + 1) / 2 - tilt / 2]);
+    }
+    return { parts: [{ id: 'brow', role: 'line', pts, line: kind === 'thick' ? .9 : .55, stroke: true }] };
+  },
+
+  // A pink cheek of radius r at (cx, cy). blush 0..1: embarrassment makes it bigger and deeper, with three little strokes.
+  cheek(cx, cy, r, blush = 0) {
+    const b = CG.clamp(blush), k = 1 + .55 * b, parts = [{ id: 'cheek', role: 'cheek', pts: CG.ellipse(cx, cy, r * k, r * .7 * k, 20), line: 0, ...(b ? { dim: .22 * b } : {}) }];
+    if (b) for (let i = -1; i <= 1; i++)
+      parts.push({ id: 'blush', role: 'line', pts: [[cx + i * r * .55 - r * .12, cy + r * .28], [cx + i * r * .55 + r * .12, cy - r * .28]], line: .3, stroke: true });
+    return { parts };
+  },
+
   // kind: one of MOUTHS. w: mouth width.
   mouth(kind, cx, cy, w, o = {}) {
     if (!FACES.MOUTHS.includes(kind)) throw new Error(`Bocca "${kind}" inesistente. Disponibili: ${FACES.MOUTHS.join(', ')}`);

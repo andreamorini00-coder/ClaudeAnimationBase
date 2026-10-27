@@ -47,10 +47,26 @@ const CG = {
     }
     return out;
   },
+  // The part of a shape on the left of the line a → b (as seen walking from a to b, y down: the side x grows towards
+  // when the line points down).
+  clipLine(pts, a, b) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1, ux = dx / d * 1e3, uy = dy / d * 1e3, nx = dy / d * 1e3, ny = -dx / d * 1e3;
+    return CG.clipConvex(pts, [[a[0] - ux, a[1] - uy], [a[0] + ux, a[1] + uy], [a[0] + ux + nx, a[1] + uy + ny], [a[0] - ux + nx, a[1] - uy + ny]]);
+  },
   clipX: (pts, at, keep) => CG.clip(pts, 0, at, keep),
   clipY: (pts, at, keep) => CG.clip(pts, 1, at, keep),
   ellipse(cx, cy, rx, ry, n = 32, rot = 0) {
     const p = []; for (let i = 0; i < n; i++) { const a = rot + i / n * Math.PI * 2; p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return p;
+  },
+  // A soft block: a box yTop..yBot whose width goes from wTop to wBot, with rounded corners (round 0..1: 1 = an
+  // ellipse). Sweaters, torsos, boots.
+  block(cx, yTop, yBot, wTop, wBot, round = .35, n = 48) {
+    const p = [], cy = (yTop + yBot) / 2, h = (yBot - yTop) / 2, e = CG.clamp(round, .05, 1);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2, c = Math.cos(a), s = Math.sin(a), y = cy + Math.sign(s) * Math.pow(Math.abs(s), e) * h;
+      p.push([cx + Math.sign(c) * Math.pow(Math.abs(c), e) * CG.lerp(wTop, wBot, (y - yTop) / (yBot - yTop)) / 2, y]);
+    }
+    return p;
   },
   // The monster's drop: a rounded top a little narrower than the full, slightly flattened bottom.
   drop(cx, baseY, w, h, n = 48) {

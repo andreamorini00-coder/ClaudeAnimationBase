@@ -466,3 +466,68 @@ test('each wing has three membranes', () => {
     for (const w of ['N', 'F']) assert.equal(L.parts.filter(q => q.id.startsWith('membrane' + w)).length, 3, `${view} ${name} ala ${w}`);
   }
 });
+
+// ---------- 4b1: the biped (in heads) and the girl ----------
+test('ragazza spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.ragazza')), []); });
+test('ragazza features per view and counts', () => checkFeatures(lib(), 'ragazza'));
+test('ragazza uses only its roles', () => checkRoles(lib(), 'ragazza'));
+test('ragazza has no NaN', () => checkFinite(lib(), 'ragazza'));
+test('ragazza flip mirrors exactly', () => checkFlip(lib(), 'ragazza'));
+test('ragazza layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'ragazza', { pose: 'corsa', t: .41 }), layoutOf(c, 'ragazza', { pose: 'corsa', t: .41 }));
+});
+const headsTall = (c, id) => {
+  const L = layoutOf(c, id, { view: 'front', pose: Object.keys(c.get(`CHARACTERS.${id}.poses`))[0] });
+  return partBox(L, q => q.id !== 'shadow').h / partBox(L, q => q.id === 'head').h;
+};
+test('biped is heads tall', () => {
+  const c = lib(), want = c.get('CHARACTERS.ragazza.proportions.heads'), got = headsTall(c, 'ragazza');
+  assert.ok(near(got, want, .05), `${got.toFixed(2)} teste invece di ${want}`);
+});
+const limbs = J => ['L', 'R'].flatMap(s => [['shoulder' + s, 'elbow' + s, 'wrist' + s, 'arm'], ['hip' + s, 'knee' + s, 'ankle' + s, 'leg']]);
+const bend = (a, b, c) => {                 // the angle a limb turns at its middle joint, and which way
+  const u = [b[0] - a[0], b[1] - a[1]], v = [c[0] - b[0], c[1] - b[1]];
+  return { angle: Math.acos(CGclamp((u[0] * v[0] + u[1] * v[1]) / Math.hypot(...u) / Math.hypot(...v))), cross: u[0] * v[1] - u[1] * v[0] };
+};
+const CGclamp = x => Math.max(-1, Math.min(1, x));
+const checkLimbs = (c, id) => {
+  const spec = c.get(`CHARACTERS.${id}`), HU = c.get('BODIES.biped.HU');
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) for (const t of [0, .37]) {
+    const J = layoutOf(c, id, { view, pose, t }).joints;
+    for (const [a, b, d, kind] of limbs(J)) {
+      const len = Math.hypot(J[b][0] - J[a][0], J[b][1] - J[a][1]) + Math.hypot(J[d][0] - J[b][0], J[d][1] - J[b][1]);
+      assert.ok(near(len, spec.proportions[kind] * HU, .01), `${id} ${view} ${pose}: ${a}→${d} lungo ${len.toFixed(3)}`);
+      const { angle, cross } = bend(J[a], J[b], J[d]);
+      assert.ok(angle >= -1e-9 && angle <= 2.6 + 1e-6, `${id} ${view} ${pose}: ${b} piegato di ${angle.toFixed(2)}`);
+      // in profile (facing right) elbows bend forward and knees backward, never the other way
+      if (view === 'side' && angle > 1e-6) assert.ok(kind === 'arm' ? cross < 0 : cross > 0, `${id} ${pose}: ${b} piegato al contrario`);
+    }
+  }
+};
+test('biped limbs keep their length', () => checkLimbs(lib(), 'ragazza'));
+const bareGirl = c => {
+  const spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.ragazza')));
+  delete spec.parts.skirt; delete spec.parts.shoes; delete spec.parts.sleeves; delete spec.roles.skirt; delete spec.roles.shoes;
+  spec.features = spec.features.filter(f => f.part !== 'skirt'); spec.id = 'nuda';
+  return spec;
+};
+test('biped without extras', () => {
+  const c = lib(), spec = bareGirl(c);
+  assert.deepEqual(c.call('validateCharacter', spec), []);
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) {
+    const L = c.call('((sp, s) => BODIES.biped.layout(sp, s))', spec, { view, t: 0, pose: spec.poses[pose], expression: {} });
+    const extra = L.parts.filter(q => /skirt|shoe|cuff/.test(q.id)).map(q => q.id);
+    assert.deepEqual(extra, [], `${view} ${pose}: parti non dichiarate ${extra}`);
+  }
+  const s2 = bareGirl(c); s2.parts.skirt = {};
+  assert.match(c.call('validateCharacter', s2).join(' '), /skirt/);
+});
+test('brows tilt with k', () => {
+  const c = lib(), inner = k => { const p = c.call('FACES.brows', 'line', 0, 0, 1, k).parts[0].pts; return p[p.length - 1][1] - p[0][1]; };
+  assert.ok(inner(1) > 0 && inner(-1) < 0, 'arrabbiate: l\'estremo interno scende; tristi: sale');
+});
+test('blush grows the cheek and adds three strokes', () => {
+  const c = lib(), a = c.call('FACES.cheek', 0, 0, 1, 0).parts, b = c.call('FACES.cheek', 0, 0, 1, 1).parts;
+  assert.equal(a.length, 1); assert.equal(b.filter(q => q.stroke).length, 3);
+  assert.ok(c.call('CG.area', b[0].pts) > c.call('CG.area', a[0].pts) * 1.3);
+});
