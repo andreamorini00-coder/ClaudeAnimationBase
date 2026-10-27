@@ -454,15 +454,19 @@ clawd(x, y, 24, { ...feel('proud', t), aR: 1.2, armR: (u, sw) => paint(starPts(u
 
 ## Characters
 
-Besides Clawd, the kit has a character library in `src/characters/`, built from the model sheets in `reference/characters/`. Each character is one data file (its proportions, parts, colour roles, distinctive features, expressions and poses); its body type draws it (`bodies/quadruped.js`, `bodies/blob.js`). The characters don't depend on Clawd.
+Besides Clawd, the kit has a character library in `src/characters/`, built from the model sheets in `reference/characters/`. Each character is one data file (its proportions, parts, colour roles, distinctive features, expressions and poses); its body type draws it (`bodies/quadruped.js`: the cat and the little dragon; `bodies/blob.js`: the monster; `bodies/crawler.js`: the caterpillar; `bodies/biped.js`: the girl and the hero). The characters don't depend on Clawd.
 
 ```js
 character('gatto', x, y, u, { view: 'q', pose: 'corsa', expression: 'felice', t: lt });
 character('mostro', x, y, u, { view: 'front', expression: act(lt, [[0, 'felice'], [1.2, 'sorpreso']], CHARACTERS.mostro) });
+character('draghetto', x, y, u, { view: 'side', pose: 'volo', t: lt });
+character('supereroe', x, y, u, { view: 'q', pose: { flight: 1, lift: 3, shoulderR: 3, fistR: 1, capeFlow: 1 }, t: lt });
 ```
 
-- `(x, y)` is the ground point under the character, `u` its size unit (the cat is about 10u long, the monster 6u tall).
-- `view`: `front`, `q` (3/4), `side`, `back`; `flip: true` faces left. `pose` and `expression` are names from the character's file (the cat: inPiedi, corsa, salto, balzo, zampata, agguato; felice, triste, arrabbiato, sorpreso, assonnato, curioso. The monster: fermo, rotolamento, salto, slancio, broncio, schiacciato; felice, triste, arrabbiato, sorpreso, assonnato, spaventato). A wrong name stops with the list of valid ones.
+- `(x, y)` is the ground point under the character, `u` its size unit (the cat is about 10u long, the monster 6u tall, the caterpillar about 14u long, the dragon 9u without its tail, the girl 9u tall, the hero 16.5u).
+- `view`: `front`, `q` (3/4), `side`, `back`; `flip: true` faces left. `pose` and `expression` are names from the character's file (the cat: inPiedi, corsa, salto, balzo, zampata, agguato; felice, triste, arrabbiato, sorpreso, assonnato, curioso. The monster: fermo, rotolamento, salto, slancio, broncio, schiacciato; felice, triste, arrabbiato, sorpreso, assonnato, spaventato. The caterpillar: testaAlzata, onda, salto, disteso, testaAlta, arrotolato. The dragon: fermo, corsa, saltoAli, volo, zampata, prontoDecollo. The girl: inPiedi, corsa, salto, volo, pugno, accovacciata; the hero: inPiediEroico, corsa, salto, voloOrizzontale, pugno, atterraggio. Their expressions are the cat's set, with the girl's and the hero's sixth one imbarazzata/imbarazzato instead of curioso). A wrong name stops with the list of valid ones.
+- A pose can also be an object of the body's parameters, to tween between poses or make a new one: the dragon's wings take `wingOpen` (0 folded … 1 spread) and `flap` (1 = they beat with `t`); the caterpillar's `wave` and `cycle` make the arch travel from tail to head; the biped's limbs take angles in radians (`shoulderL/R`, `elbowL/R`, `hipL/R`, `kneeL/R`; 0 = hanging, + = forward), `fistL/R`, `lean`, `lift`, `crouch`, `flight` (horizontal, head first), `capeFlow` and `cycle` (a run). Elbows and knees bend one way only, 0 … 2.6.
+- The biped is measured in heads: `heads` is the total height, everything else is in heads too, so the same body draws the 3-head girl and the 5.5-head hero (and the 7-head adults of 4b2). Its layout also returns `joints` (shoulder, elbow, wrist, hip, knee, ankle per side), handy to put a prop in a hand.
 - Pass `t` (shot time) always: tails, antennae and run cycles move with it.
 - **Faces act, they never snap:** change expressions with `act(t, keys, CHARACTERS.<id>)`, which squints through the swap and gives the body a small take, like `emotions()` does for Clawd.
 - The monster's antennae trail a change: pass `since` (seconds since the pose changed) and `kick` (1 for a jump, -1 for a landing).
@@ -475,7 +479,7 @@ character('mostro', x, y, u, { view: 'front', expression: act(lt, [[0, 'felice']
 node render.mjs --loop=sheet_gatto --stills=0 --style=classic --out=out/sheets/gatto
 ```
 
-`npm test` checks every view, pose and expression of every character (features present where they should be, counts, proportions, colours, the monster's constant volume). Once a sheet is approved, `node tools/approve.mjs <id> <style>` stores it, and `npm run check-characters` tells you if a code change alters an approved character.
+`npm test` checks every view, pose and expression of every character (features present where they should be, counts, proportions, colours, the monster's constant volume, the caterpillar's fixed segment spacing, the dragon's wings, the biped's height in heads and limb lengths). Once a sheet is approved, `node tools/approve.mjs <id> <style>` stores it, and `npm run check-characters` tells you if a code change alters an approved character.
 
 ---
 
