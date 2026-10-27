@@ -101,7 +101,7 @@ Da fissare nel design: quanto ciascuno può cambiare oltre a palette, pennelli e
 in `cozy` passano dalla tecnica, non dalle scene), il blocco `character` con cui ogni stile traduce i ruoli colore
 dei personaggi, e i tempi di render in finale e in draft.
 
-## Fase 4 — Creatore di personaggi · **4a chiusa, 4b1 in design** (branch `fase4b1-personaggi`)
+## Fase 4 — Creatore di personaggi · **4a e 4b1 chiuse, 4b2 da fare**
 
 Una libreria di personaggi riusabile in tutti gli stili e in tutti i formati. Design approvato da Andrea il
 2026-10-27: **viste chiave 2D parametriche** (fronte, 3/4, profilo, retro, come il model sheet di Clawd), niente
@@ -131,14 +131,14 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
 
 ### 4b. Bipede, strisciante e ali · divisa in due (scelta di Andrea, 2026-10-27)
 
-#### 4b1. Bipede bambino, ali, strisciante · **in approvazione** (branch `fase4b1-personaggi`)
+#### 4b1. Bipede bambino, ali, strisciante · **chiusa** (2026-10-27, merge in main)
 
 - Corpo **bipede** per bambini e ragazzi: ragazza (circa 3 teste, chibi morbido) e supereroe (circa 5,5 teste).
 - **Ali** come parte aggiuntiva del quadrupede (draghetto: cammina a quattro zampe, vola con le ali).
 - Corpo **strisciante** a segmenti (bruco: testa + 8 segmenti, avanzamento a onda).
 - Supereroe, ragazza, draghetto e bruco, con model sheet approvati.
 - Fatto (gatto v2): dalla vista dal retro la coda parte in basso al centro e fa l'uncino sopra la schiena.
-- Approvati (2026-10-27): bruco, gatto v2, draghetto. Nota di Andrea sul draghetto: ali aperte più a pipistrello,
+- Approvati (2026-10-27): bruco, gatto v2, draghetto, ragazza, supereroe. Nota di Andrea sul draghetto: ali aperte più a pipistrello,
   con il bordo della membrana a festoni (archi tra le dita) invece che piatto.
 - Piccolezze dalla revisione finale (2026-10-27), da fare quando servono:
   - ali del draghetto: con `wingOpen` intermedio e `flap`, di profilo la punta dell'ala vicina passa per un istante
@@ -157,6 +157,10 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
 - Bipede adulto a **7–7,5 teste**, con le parti del viso separate (occhi, bocca, sopracciglia) da combinare nelle
   espressioni, come in `viso.png`.
 - Vale e Mara (`reference/characters/vale/`, `mara/`), con model sheet approvati.
+- Insieme al bipede adulto, perché migliora tutti i bipedi (note di Andrea, 2026-10-27):
+  - arti morbidi e affusolati invece di tubi con giunture tonde; guanti e stivali più snelli e proporzionati;
+  - frangia della ragazza: 3 ciocche vere invece della fila di smerli; la testa dal retro meno "a fungo";
+  - capelli del supereroe da davanti più simili a un ciuffo che a una corona.
 
 ### 4c. Pagina web dei personaggi · **da fare**
 

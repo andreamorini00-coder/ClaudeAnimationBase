@@ -1,0 +1,10 @@
+{
+  "classic": {
+    "version": 1,
+    "gpu": "ANGLE (Intel, Intel(R) UHD Graphics (0x0000A721) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "acquerello-leggero": {
+    "version": 1,
+    "gpu": "ANGLE (Intel, Intel(R) UHD Graphics (0x0000A721) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  }
+}
