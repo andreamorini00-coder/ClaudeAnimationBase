@@ -365,3 +365,30 @@ test('bruco wave travels from tail to head', () => {
   }
   assert.notDeepEqual(ys(0), ys(.4), "l'onda si muove");
 });
+
+// ---------- 4b1: optional quadruped parts ----------
+const bareQuadruped = c => ({
+  id: 'nudo', version: 1, body: 'quadruped', proportions: { ...c.get('CHARACTERS.gatto.proportions') }, parts: {},
+  roles: { fur: '#D9956C', cream: '#F6EBD8', line: '#59463B', shadow: '#8C8074' },
+  features: [], expressions: { neutro: {} }, poses: { fermo: {} },
+});
+test('a quadruped declares its own extras', () => {
+  const c = lib(), spec = bareQuadruped(c);
+  assert.deepEqual(c.call('validateCharacter', spec), []);
+  for (const view of ['front', 'q', 'side', 'back']) {
+    const L = c.call('(s => BODIES.quadruped.layout(s, { view: ' + JSON.stringify(view) + ', t: 0 }))', spec);
+    const extra = L.parts.filter(q => /^ear|muzzle|whisker|collar|bell|chest/.test(q.id)).map(q => q.id);
+    assert.deepEqual(extra, [], `${view}: parti non dichiarate ${extra}`);
+  }
+});
+test('a declared ear needs earInner', () => {
+  const c = lib(), spec = bareQuadruped(c); spec.parts.ears = {};
+  assert.match(c.call('validateCharacter', spec).join(' '), /earInner/);
+});
+test('iris eye', () => {
+  const c = lib(), r = c.call('FACES.eye', 'iris', 0, 0, 1).parts;
+  assert.ok(r.some(q => q.role === 'iris')); assert.ok(r.some(q => q.id === 'pupil' && q.role === 'line'));
+  assert.ok(!r.some(q => q.role === 'eyeWhite' && q.id === 'eyeWhite'));
+  const sad = c.call('FACES.eye', 'sad', 0, 0, 1, { iris: true }).parts;
+  assert.ok(sad.some(q => q.role === 'iris') && sad.some(q => q.id === 'brow'), 'un occhio triste con iride ha anche il sopracciglio');
+});

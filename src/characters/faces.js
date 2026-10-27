@@ -4,19 +4,29 @@
 // Roles default to eyeWhite (whites, highlights), line (pupils, strokes) and line again for a mouth's inside; a body
 // whose whites are another role passes o.roles = { white, ink, inside }.
 const FACES = {
-  EYES: ['open', 'wide', 'oval', 'happy', 'closed', 'sad', 'angry', 'sleepy'],
+  EYES: ['open', 'wide', 'oval', 'happy', 'closed', 'sad', 'angry', 'sleepy', 'iris'],
   MOUTHS: ['smile', 'open', 'frown', 'o', 'flat', 'pout', 'catSmile'],
   arc(cx, cy, rx, ry, a0, a1, n = 10) { const p = []; for (let i = 0; i <= n; i++) { const a = CG.lerp(a0, a1, i / n); p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return p; },
 
   // kind: one of EYES. r: eye size. o.look: -1..1, where the pupil looks sideways. o.squint: 0..1 closes it.
   // o.dark: open, wide, sad and angry eyes drawn as one big dark iris with two highlights, no white (the cat).
+  // o.iris (or kind 'iris'): the same eyes as a coloured iris (role o.roles.iris, default iris) round a dark pupil.
   eye(kind, cx, cy, r, o = {}) {
     if (!FACES.EYES.includes(kind)) throw new Error(`Occhio "${kind}" inesistente. Disponibili: ${FACES.EYES.join(', ')}`);
-    const R = { white: 'eyeWhite', ink: 'line', ...(o.roles || {}) }, look = CG.clamp(o.look || 0, -1, 1) * r * .25;
+    const R = { white: 'eyeWhite', ink: 'line', iris: 'iris', ...(o.roles || {}) }, look = CG.clamp(o.look || 0, -1, 1) * r * .25;
     const open = 1 - CG.clamp(o.squint || 0), P = Math.PI, parts = [];
     const stroke = (id, pts, w = .5) => parts.push({ id, role: R.ink, pts, line: w, stroke: true });
     if (kind === 'happy') { stroke('lid', FACES.arc(cx, cy + r * .2, r * .75, r * .6, P, 2 * P)); return { parts }; }
     if (kind === 'closed' || open < .15) { stroke('lid', FACES.arc(cx, cy, r * .75, r * .35, 0, P)); return { parts }; }
+    if (kind === 'iris' || (o.iris && ['open', 'wide', 'sad', 'angry'].includes(kind))) {
+      const k = kind === 'wide' ? 1.15 : 1, ry = r * .8 * k * open, lx = cx + look * .5;
+      parts.push({ id: 'iris', role: R.iris, pts: CG.ellipse(lx, cy, r * .68 * k, ry, 28), line: .45 });
+      parts.push({ id: 'pupil', role: R.ink, pts: CG.ellipse(lx + r * .05, cy + ry * .05, r * .34 * k, r * .42 * k * open, 20), line: 0 });
+      parts.push({ id: 'highlight', role: R.white, pts: CG.ellipse(lx - r * .2 * k, cy - ry * .35, r * .14 * k, r * .14 * k * open, 12), line: 0 });
+      if (kind === 'sad') stroke('brow', [[cx - r * .8, cy - ry - r * .05], [cx + r * .8, cy - ry - r * .4]]);
+      if (kind === 'angry') stroke('brow', [[cx - r * .85, cy - ry - r * .45], [cx + r * .85, cy - ry + r * .12]], .7);
+      return { parts };
+    }
     if (o.dark && ['open', 'wide', 'sad', 'angry'].includes(kind)) {
       const k = kind === 'wide' ? 1.18 : 1, ry = r * .78 * k * open, lx = cx + look * .5;
       parts.push({ id: 'pupil', role: R.ink, pts: CG.ellipse(lx, cy, r * .66 * k, ry, 28), line: .4 });

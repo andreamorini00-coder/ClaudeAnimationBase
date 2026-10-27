@@ -5,7 +5,7 @@ CHARACTERS.gatto = {
   // about 0.45 of the length and almost as tall as the body; a short round body; short legs. Second round: the body
   // about 20% shorter, a round bean as in base.png.
   proportions: { length: 9.3, head: 4.5, bodyHeight: 4.3, legLength: .95, legWidth: 1.2, tail: 4.2 },
-  parts: { ears: { size: 1.15 }, tail: { width: .85 }, eyes: { dark: true }, collar: {}, bell: {} },
+  parts: { ears: { size: 1.15 }, blaze: {}, whiskers: {}, tail: { width: .85 }, eyes: { dark: true }, collar: {}, bell: {} },
   roles: {
     fur: '#D9956C', cream: '#F6EBD8', earInner: '#C99595', collar: '#B8674F', bell: '#E8BF78',
     line: '#59463B', shadow: '#8C8074', eyeWhite: '#F6EBD8',

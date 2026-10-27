@@ -6,14 +6,15 @@
 //   stretch (body length factor), legSwing (how far legs swing), legPhase, pawRaise 0..1 (near front paw up),
 //   headDrop (units the head sinks, e.g. stalking), cycle (1 = the legs run with t: a bounding gallop, front legs
 //   reaching forward while the back legs push back, about 2 strides a second).
-// Parts the spec may declare: ears { size }, tail { width }, eyes { dark: true } (big dark eyes with a highlight),
-//   collar, bell.
+// Parts the spec may declare (anything not declared is not drawn): ears { size }, blaze (cream muzzle and bib),
+//   whiskers, collar, bell, tail { width }, eyes { dark: true } (big dark eyes with a highlight) or { iris: true }
+//   (a coloured iris with a round pupil, role iris).
 // Expression params: eyes, mouth (FACES kinds), ears -1 (down) .. 0 .. 1 (flat back), tail -1 (drooping) .. 0 (hook)
 //   .. 1 (straight up), tailCurl 0..1 (wrapped round the body), headTilt (radians). act() adds squint and look.
 BODIES.quadruped = {
-  roles: ['fur', 'cream', 'earInner', 'line', 'shadow', 'eyeWhite'],
+  roles: ['fur', 'cream', 'line', 'shadow'],
   proportions: ['length', 'head', 'bodyHeight', 'legLength', 'legWidth', 'tail'],
-  partRoles: { collar: 'collar', bell: 'bell' },          // accessories: drawn only when the spec declares them
+  partRoles: { ears: 'earInner', collar: 'collar', bell: 'bell' },   // optional parts and the colour role each needs
   parts: ['body', 'head', 'muzzle', 'blaze', 'ears', 'legs', 'tail', 'tailTip', 'collar', 'bell', 'whiskers', 'eyes', 'mouth', 'shadow'],
   poseParams: ['crouch', 'pitch', 'lift', 'stretch', 'legSwing', 'legPhase', 'pawRaise', 'headDrop', 'cycle'],
   exprParams: ['eyes', 'mouth', 'ears', 'tail', 'tailCurl', 'headTilt'],
@@ -50,7 +51,7 @@ BODIES.quadruped = {
     add('shadow', 'shadow', -10, CG.ellipse(0, .15, (halfW + .6) * (1 - Math.min(.5, P.lift * .12)), .45, 28), { line: 0, shade: 1 });
     add('body', 'fur', 0, pose(bodyPts));
     add('bodyShade', 'shadow', .1, pose(CG.clipY(bodyPts, cy + bodyH * .3, 1)), { line: 0, shade: 1 });
-    if (V.face) {                                                  // the cream chest: the lower end of the blaze
+    if (V.face && sp.blaze) {                                      // the cream chest: the lower end of the blaze
       const chest = V.body === 'bean' ? CG.clipConvex(CG.ellipse(cx + bodyLen * .43, cy + bodyH * .08, bodyLen * .15, bodyH * .36, 32), bodyPts)
         : CG.drop(V.face === 'front' ? 0 : .3, cy + bodyH * .42, bodyH * .5, bodyH * .78);
       add('chest', 'cream', .2, pose(chest), { line: 0, feature: 'blaze' });
@@ -117,7 +118,7 @@ BODIES.quadruped = {
     const earDefs = V.face === 'side' ? [[hx - headW * .12, 1, 0], [hx + headW * .18, 0, 1]]
       : V.face === 'q' ? [[hx - headW * .18, 0, -1], [hx + headW * .3, 1, 1]] : [[hx - headW * .3, 0, -1], [hx + headW * .3, 0, 1]];
     const es = (sp.ears && sp.ears.size || 1), droop = Math.max(0, -E.ears), back = Math.max(0, E.ears);
-    earDefs.forEach(([ex, far, side], i) => {
+    if (sp.ears) earDefs.forEach(([ex, far, side], i) => {
       const s = side || 1, w = .62 * es, h = 1.05 * es * (1 - .45 * back), by0 = hy - headH * .38 + Math.abs(ex - hx) * .2;
       let tri = [[ex - w, by0 + .1], [ex - w * .25, by0 - h * .9], [ex + w * .1 * s, by0 - h], [ex + w * .35, by0 - h * .75], [ex + w, by0 + .1]];
       tri = CG.rotate(tri, s * (droop * 1.25 + back * .55), ex, by0);
@@ -136,10 +137,13 @@ BODIES.quadruped = {
     // the face
     if (V.face) {
       const fx = V.face === 'front' ? hx : V.face === 'q' ? hx + headW * .14 : hx + headW * .2;
+      if (sp.blaze) {
       const muzzle = V.face === 'side' ? CG.clipX(CG.ellipse(hx + headW * .3, hy + headH * .24, headW * .24, headH * .22, 24), hx + headW * .47, -1)
         : CG.drop(fx, hy + headH * .42, headW * (V.face === 'q' ? .38 : .44), headH * .62);
       add('muzzle', 'cream', D + .1, head(muzzle), { line: 0, feature: 'blaze' });
-      const r = headW * .13, eyeY = hy + headH * .02, eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark) };
+      }
+      const r = headW * .13, eyeY = hy + headH * .02, eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark), iris: !!(sp.eyes && sp.eyes.iris),
+        roles: { white: spec.roles.eyeWhite ? 'eyeWhite' : 'cream' } };
       const eyeAt = V.face === 'front' ? [[fx - headW * .2, 1], [fx + headW * .2, 1]] : V.face === 'q' ? [[fx - headW * .2, .85], [fx + headW * .2, 1]] : [[fx + headW * .1, .9]];
       eyeAt.forEach(([ex, k], i) => FACES.eye(E.eyes, ex, eyeY, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, D + .5, head(p.pts), { line: p.line, stroke: p.stroke })));
       const ny = hy + headH * .24, nx = fx + (V.face === 'side' ? headW * .22 : 0);
@@ -148,8 +152,8 @@ BODIES.quadruped = {
       // the mouth: a thin line (a :3 at rest); open mouths stay filled shapes
       FACES.mouth(E.mouth, nx, ny + headW * .05, headW * .17).parts.forEach(p => add('mouth', p.role, D + .51, head(p.pts), { line: p.stroke ? .45 : p.line, stroke: p.stroke }));
       const wh = (sx, x0) => [0, 1, 2].forEach(k => add('whisker', 'line', D + .53, head([[x0, ny + .02 + k * .13], [x0 + sx * .95, ny - .18 + k * .2]]), { stroke: 1, line: .35, feature: 'whiskers' }));
-      if (V.face !== 'side') wh(-1, fx - headW * .3);
-      wh(1, V.face === 'side' ? hx + headW * .5 : fx + headW * .3);
+      if (sp.whiskers && V.face !== 'side') wh(-1, fx - headW * .3);
+      if (sp.whiskers) wh(1, V.face === 'side' ? hx + headW * .5 : fx + headW * .3);
     }
 
     // order by depth, then mirror for flip
