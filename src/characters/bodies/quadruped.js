@@ -42,7 +42,7 @@ BODIES.quadruped = {
     const headW = pr.head, headH = pr.head * .9, legL = pr.legLength * (1 - .55 * P.crouch), bodyH = pr.bodyHeight;
     const bodyLen = (pr.length - headW * .55) * V.lenK * P.stretch, cx = V.body === 'bean' ? -headW * .3 * V.lenK : 0;
     const cy = -(legL + bodyH / 2 - .45), lift = -P.lift;
-    const bodyPts = V.body === 'bean' ? CG.bean(cx, cy, bodyLen, bodyH, .32) : CG.ellipse(0, cy, bodyH * .72, bodyH / 2, 40);
+    const bodyPts = V.body === 'bean' ? CG.bean(cx, cy, bodyLen, bodyH, .45) : CG.ellipse(0, cy, bodyH * .72, bodyH / 2, 40);   // a round, full-bellied bean
     const halfW = V.body === 'bean' ? bodyLen / 2 : bodyH * .72;
     const pivot = [cx, cy], pitch = -P.pitch;
     const pose = pts => CG.translate(CG.rotate(pts, pitch, pivot[0], pivot[1]), 0, lift);   // body frame → world
@@ -143,9 +143,10 @@ BODIES.quadruped = {
       const eyeAt = V.face === 'front' ? [[fx - headW * .2, 1], [fx + headW * .2, 1]] : V.face === 'q' ? [[fx - headW * .2, .85], [fx + headW * .2, 1]] : [[fx + headW * .1, .9]];
       eyeAt.forEach(([ex, k], i) => FACES.eye(E.eyes, ex, eyeY, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, D + .5, head(p.pts), { line: p.line, stroke: p.stroke })));
       const ny = hy + headH * .24, nx = fx + (V.face === 'side' ? headW * .22 : 0);
-      const nz = headW * .045;
+      const nz = headW * .036;
       add('nose', 'line', D + .52, head([[nx - nz * 1.4, ny - nz * .7], [nx + nz * 1.4, ny - nz * .7], [nx, ny + nz]]), { line: 0 });
-      FACES.mouth(E.mouth, nx, ny + headW * .07, headW * .2).parts.forEach(p => add('mouth', p.role, D + .51, head(p.pts), { line: p.line * 1.6, stroke: p.stroke }));
+      // the mouth: a thin line (a :3 at rest); open mouths stay filled shapes
+      FACES.mouth(E.mouth, nx, ny + headW * .05, headW * .17).parts.forEach(p => add('mouth', p.role, D + .51, head(p.pts), { line: p.stroke ? .45 : p.line, stroke: p.stroke }));
       const wh = (sx, x0) => [0, 1, 2].forEach(k => add('whisker', 'line', D + .53, head([[x0, ny + .02 + k * .13], [x0 + sx * .95, ny - .18 + k * .2]]), { stroke: 1, line: .35, feature: 'whiskers' }));
       if (V.face !== 'side') wh(-1, fx - headW * .3);
       wh(1, V.face === 'side' ? hx + headW * .5 : fx + headW * .3);

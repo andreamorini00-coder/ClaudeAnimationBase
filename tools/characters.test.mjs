@@ -132,11 +132,28 @@ test('gatto spec is valid', () => { assert.deepEqual(lib().call('validateCharact
 test('gatto features per view', () => checkFeatures(lib(), 'gatto'));
 test('gatto uses only its roles', () => checkRoles(lib(), 'gatto'));
 test('gatto has no NaN', () => checkFinite(lib(), 'gatto'));
-// Andrea, 2026-10-27: the head is much bigger than the note's "1/3": about 0.45 of the length, almost as tall as the body
-test('gatto head is about 0.45 of the length', () => {
+// Andrea, 2026-10-27: the head is much bigger than the note's "1/3" (about 0.45 of the length, almost as tall as the
+// body); then, in a second round, the body about 20% shorter, which brings the head to about half the length
+test('gatto head is about half the length', () => {
   const L = layoutOf(lib(), 'gatto', { view: 'side', pose: 'inPiedi' });
   const head = partBox(L, p => p.id === 'head').w, len = partBox(L, p => !/tail|whisker|shadow/.test(p.id)).w;
-  assert.ok(head / len >= .42 && head / len <= .48, `testa/lunghezza = ${(head / len).toFixed(3)}`);
+  assert.ok(head / len >= .48 && head / len <= .58, `testa/lunghezza = ${(head / len).toFixed(3)}`);
+});
+test('gatto profile body is a short round bean', () => {
+  const b = partBox(layoutOf(lib(), 'gatto', { view: 'side', pose: 'inPiedi' }), p => p.id === 'body');
+  assert.ok(b.w / b.h >= 1.4 && b.w / b.h <= 1.7, `corpo lungo/alto = ${(b.w / b.h).toFixed(2)}`);
+});
+test('the cat mouth is a thin :3', () => {
+  const c = lib(), m = c.call('FACES.mouth', 'catSmile', 0, 0, 1).parts;
+  assert.equal(m.length, 1); assert.ok(m[0].stroke);
+  const ys = m[0].pts.map(q => q[1]), mid = m[0].pts.reduce((a, q) => Math.abs(q[0]) < Math.abs(a[0]) ? q : a);
+  assert.ok(mid[1] < Math.max(...ys) - .1, 'una w: il centro sta più in alto delle due curve');
+  for (const view of ['front', 'q', 'side']) {
+    const L = layoutOf(c, 'gatto', { view, expression: 'curioso' }), mouth = L.parts.filter(q => q.id === 'mouth');
+    assert.ok(mouth.every(q => q.stroke && q.line <= .5), `${view}: bocca a linea sottile`);
+    const nose = L.parts.find(q => q.id === 'nose'), head = partBox(L, q => q.id === 'head');
+    assert.ok(c.call('CG.area', nose.pts) < .012 * head.w * head.w, `${view}: naso piccolo`);
+  }
 });
 test('gatto head is almost as tall as the body', () => {
   const L = layoutOf(lib(), 'gatto', { view: 'side', pose: 'inPiedi' });

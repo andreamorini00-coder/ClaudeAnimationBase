@@ -53,7 +53,8 @@ const FACES = {
       case 'frown': return stroke(FACES.arc(cx, cy + h * .3, h * .8, h * .45, 1.15 * P, 1.85 * P));
       case 'flat': return stroke([[cx - h * .6, cy], [cx + h * .6, cy]]);
       case 'pout': return stroke([[cx - h * .6, cy + h * .1], [cx - h * .2, cy - h * .12], [cx + h * .2, cy + h * .05], [cx + h * .6, cy - h * .08]]);
-      case 'catSmile': return stroke([...FACES.arc(cx - h * .35, cy, h * .35, h * .3, P, 0, 6).reverse(), ...FACES.arc(cx + h * .35, cy, h * .35, h * .3, P, 0, 6).reverse()].reverse());
+      // a thin "w" (as in :3): two little cups meeting under the nose, the middle higher than either cup
+      case 'catSmile': return stroke([...FACES.arc(cx - h * .38, cy, h * .38, h * .42, P, 0, 7), ...FACES.arc(cx + h * .38, cy, h * .38, h * .42, P, 0, 7).slice(1)]);
       case 'o': return { parts: [{ id: 'mouth', role: R.inside, pts: CG.ellipse(cx, cy, h * .38, h * .5, 16), line: .5 }] };
       case 'open': return { parts: [{ id: 'mouth', role: R.inside, pts: FACES.arc(cx, cy - h * .15, h * .8, h * .9, 0, P, 14), line: .5 }] };
     }

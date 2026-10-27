@@ -2,7 +2,7 @@
 
 - Stile principale: cozy
 - Tipo di corpo: quadrupede
-- Proporzioni: corpo corto, tondo e basso, testa molto grande (circa 0,45 della lunghezza, alta quasi quanto il corpo; corretto da Andrea il 27/10/2026), zampe corte a cilindro con una zampetta tonda crema ciascuna
+- Proporzioni: corpo corto, tondo e basso, testa molto grande (circa metà della lunghezza, alta quasi quanto il corpo; corretto da Andrea il 27/10/2026), corpo a fagiolo corto, zampe corte a cilindro con una zampetta tonda crema ciascuna
 - File: `base.png` (viste ed espressioni), `pose.png` (in piedi, corsa, salto, balzo, zampata, agguato)
 
 ## Colori
