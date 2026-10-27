@@ -94,7 +94,7 @@ Da fissare nel design: quanto ciascuno può cambiare oltre a palette, pennelli e
 in `cozy` passano dalla tecnica, non dalle scene), il blocco `character` con cui ogni stile traduce i ruoli colore
 dei personaggi, e i tempi di render in finale e in draft.
 
-## Fase 4 — Creatore di personaggi · **in corso** (branch `fase4-personaggi`)
+## Fase 4 — Creatore di personaggi · **4a chiusa, 4b prossima** (branch `fase4-personaggi`)
 
 Una libreria di personaggi riusabile in tutti gli stili e in tutti i formati. Design approvato da Andrea il
 2026-10-27: **viste chiave 2D parametriche** (fronte, 3/4, profilo, retro, come il model sheet di Clawd), niente
@@ -112,19 +112,25 @@ Principi comuni (dalle idee di anidoodle, solo idee, niente codice):
 - **Palette a ruoli** che ogni stile traduce; **tratti distintivi** verificati in ogni vista, posa ed espressione;
   **model sheet automatico** da approvare una volta per personaggio e stile.
 
-### 4a. Nucleo, quadrupede e blob: gatto e mostro · **in corso**
+### 4a. Nucleo, quadrupede e blob: gatto e mostro · **chiusa**
+
+Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase4a-personaggi.md`.
 
 - Libreria, scheda, layout, disegno, transizioni di espressione, controlli, model sheet e approvazione.
 - Corpo **quadrupede** (gatto) e **blob** (mostro: deformazione a volume costante, larghezza × altezza = 1).
-- Gatto e mostro negli stili esistenti (`classic`, `acquerello-leggero`), con model sheet approvati da Andrea.
+- Gatto v1 e mostro v2 approvati da Andrea il 2026-10-27 in `classic` e `acquerello-leggero`
+  (`reference/characters/<id>/approvati/`, `npm run check-characters`). Unita in `main` in locale, push da fare.
 
-### 4b. Bipede, strisciante e ali · **da fare**
+### 4b. Bipede, strisciante e ali · **prossima, dopo il push della 4a**
 
 - Corpo **bipede**, con proporzioni da chibi (ragazza, circa 3 teste) fino ad adulte (circa **7 teste**, per i
   personaggi di `visual-novel`); il supereroe è a circa 5,5 teste.
 - Corpo **strisciante** a segmenti (bruco: testa + 8 segmenti, avanzamento a onda).
 - **Ali** come parte aggiuntiva del quadrupede (draghetto).
-- Supereroe, ragazza, draghetto e bruco, con model sheet approvati.
+- Supereroe, ragazza, draghetto e bruco, più gli adulti Vale e Mara (`reference/characters/vale/`, `mara/`), con
+  model sheet approvati.
+- Da rivedere insieme al draghetto (nota di Andrea, 2026-10-27): nella vista dal retro del gatto la coda sale lungo
+  il fianco e sembra un manico. Accettata per ora.
 
 ### 4c. Pagina web dei personaggi · **da fare**
 
