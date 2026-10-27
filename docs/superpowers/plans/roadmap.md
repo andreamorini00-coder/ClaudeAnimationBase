@@ -138,6 +138,8 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
 - Corpo **strisciante** a segmenti (bruco: testa + 8 segmenti, avanzamento a onda).
 - Supereroe, ragazza, draghetto e bruco, con model sheet approvati.
 - Fatto (gatto v2): dalla vista dal retro la coda parte in basso al centro e fa l'uncino sopra la schiena.
+- Approvati (2026-10-27): bruco, gatto v2, draghetto. Nota di Andrea sul draghetto: ali aperte più a pipistrello,
+  con il bordo della membrana a festoni (archi tra le dita) invece che piatto.
 - Piccolezze dalla revisione finale (2026-10-27), da fare quando servono:
   - ali del draghetto: con `wingOpen` intermedio e `flap`, di profilo la punta dell'ala vicina passa per un istante
     dietro la testa (la testa la copre: si vede la punta sparire);
