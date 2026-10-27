@@ -72,6 +72,10 @@ unita in `main` (21aca5c), push fatto da Andrea.
 - Posizione secondo il formato (nel 9:16, il quinto basso) e tempi allineati alla voce di 2b.
 - Da decidere nel design: sottotitoli impressi da ffmpeg a partire da un `.srt`, oppure un livello di composizione
   sopra la grana.
+- **Tempo di lettura dei testi, con un controllo automatico** (idea da lemo-opuscar, MIT, solo idee): ogni testo resta
+  a schermo almeno 1,8 s e mai meno della battuta parlata + 0,6 s; dopo l'animazione di entrata resta circa
+  lettere ÷ 15 + 1,5 s; un titolo almeno 4 s. Un controllo legge i testi visibili a ogni istante e segnala quelli
+  troppo brevi, come fa il loro `readcheck`.
 
 ## Fase 3 — Stili · **da fare, dopo la Fase 4**
 
@@ -89,12 +93,15 @@ dall'acquerello, si aggiunge una tecnica in `src/techniques/`, come previsto dal
   come idea da anidoodle (solo idee, niente codice).
 - **`visual-novel`:** anime con proporzioni adulte, ombre a due toni morbide, fondali dipinti; l'animazione passa
   soprattutto dalle espressioni.
+- **Set di colori per illuminazione** in `anime` e `visual-novel` (idea da lemo-opuscar, MIT, solo idee): ogni
+  personaggio ha i suoi colori di giorno, di notte e in controluce (con un bordo di luce calda), ricavati dai ruoli e
+  non un filtro sull'immagine; la pelle ha il suo colore in ogni set, così sotto le luci colorate non diventa rosa.
 
 Da fissare nel design: quanto ciascuno può cambiare oltre a palette, pennelli e carta (per esempio forme più tonde
 in `cozy` passano dalla tecnica, non dalle scene), il blocco `character` con cui ogni stile traduce i ruoli colore
 dei personaggi, e i tempi di render in finale e in draft.
 
-## Fase 4 — Creatore di personaggi · **4a chiusa, 4b prossima** (branch `fase4-personaggi`)
+## Fase 4 — Creatore di personaggi · **4a chiusa, 4b1 in design** (branch `fase4b1-personaggi`)
 
 Una libreria di personaggi riusabile in tutti gli stili e in tutti i formati. Design approvato da Andrea il
 2026-10-27: **viste chiave 2D parametriche** (fronte, 3/4, profilo, retro, come il model sheet di Clawd), niente
@@ -119,23 +126,41 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
 - Libreria, scheda, layout, disegno, transizioni di espressione, controlli, model sheet e approvazione.
 - Corpo **quadrupede** (gatto) e **blob** (mostro: deformazione a volume costante, larghezza × altezza = 1).
 - Gatto v1 e mostro v2 approvati da Andrea il 2026-10-27 in `classic` e `acquerello-leggero`
-  (`reference/characters/<id>/approvati/`, `npm run check-characters`). Unita in `main` in locale, push da fare.
+  (`reference/characters/<id>/approvati/`, `npm run check-characters`). Unita in `main` (5833562), push fatto da
+  Andrea.
 
-### 4b. Bipede, strisciante e ali · **prossima, dopo il push della 4a**
+### 4b. Bipede, strisciante e ali · divisa in due (scelta di Andrea, 2026-10-27)
 
-- Corpo **bipede**, con proporzioni da chibi (ragazza, circa 3 teste) fino ad adulte (circa **7 teste**, per i
-  personaggi di `visual-novel`); il supereroe è a circa 5,5 teste.
+#### 4b1. Bipede bambino, ali, strisciante · **in design** (branch `fase4b1-personaggi`)
+
+- Corpo **bipede** per bambini e ragazzi: ragazza (circa 3 teste, chibi morbido) e supereroe (circa 5,5 teste).
+- **Ali** come parte aggiuntiva del quadrupede (draghetto: cammina a quattro zampe, vola con le ali).
 - Corpo **strisciante** a segmenti (bruco: testa + 8 segmenti, avanzamento a onda).
-- **Ali** come parte aggiuntiva del quadrupede (draghetto).
-- Supereroe, ragazza, draghetto e bruco, più gli adulti Vale e Mara (`reference/characters/vale/`, `mara/`), con
-  model sheet approvati.
+- Supereroe, ragazza, draghetto e bruco, con model sheet approvati.
 - Da rivedere insieme al draghetto (nota di Andrea, 2026-10-27): nella vista dal retro del gatto la coda sale lungo
   il fianco e sembra un manico. Accettata per ora.
+
+#### 4b2. Bipede adulto per il visual novel · **dopo la 4b1**
+
+- Bipede adulto a **7–7,5 teste**, con le parti del viso separate (occhi, bocca, sopracciglia) da combinare nelle
+  espressioni, come in `viso.png`.
+- Vale e Mara (`reference/characters/vale/`, `mara/`), con model sheet approvati.
 
 ### 4c. Pagina web dei personaggi · **da fare**
 
 - Una pagina per creare e modificare le schede e vedere l'anteprima dal vivo, che salva lo stesso formato di scheda
   della libreria.
+
+## Idee per la regia (ANIMATION_GUIDE) · **da fare, quando si tocca la guida**
+
+Da lemo-opuscar (https://github.com/lemomo-ai/lemo-opuscar, MIT), solo idee, niente codice:
+
+- **Trattamento scritto prima di disegnare**, oltre allo storyboard: shot list con il *perché* di ogni inquadratura,
+  mappa del suono per sezione (ambiente, rumori, stato della musica), e un **riferimento** da cui imparare (ritmo,
+  composizione, colori, camera) con scritto che cosa *non* prendere.
+- **Silenzi** (veri o quasi) prima del momento chiave: il primo suono dopo il silenzio è uno dei più importanti.
+- **Il suono come transizione**, almeno due volte: il suono della scena dopo entra prima del taglio (J-cut) o quello
+  della scena prima continua oltre il taglio (L-cut).
 
 ## Piccolezze rimandate
 
