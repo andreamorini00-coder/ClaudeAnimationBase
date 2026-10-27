@@ -332,3 +332,36 @@ test('gatto poses read strongly', () => {
   const raised = Math.min(...paws(side('zampata')).map(centre).map(p => p[1]));
   assert.ok(raised < -1.4, `zampata: la zampa alzata è a ${raised.toFixed(2)}`);
 });
+
+// ---------- 4b1: the caterpillar ----------
+test('bruco spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.bruco')), []); });
+test('bruco features per view and counts', () => checkFeatures(lib(), 'bruco'));
+test('bruco uses only its roles', () => checkRoles(lib(), 'bruco'));
+test('bruco has no NaN', () => checkFinite(lib(), 'bruco'));
+test('bruco flip mirrors exactly', () => checkFlip(lib(), 'bruco'));
+test('bruco layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'bruco', { pose: 'onda', t: .41 }), layoutOf(c, 'bruco', { pose: 'onda', t: .41 }));
+});
+const segCentres = L => L.parts.filter(p => /^seg\d+$/.test(p.id)).sort((a, b) => +a.id.slice(3) - +b.id.slice(3)).map(centre);
+test('bruco segments keep their spacing', () => {
+  const c = lib(), spec = c.get('CHARACTERS.bruco'), d = spec.proportions.segR * 1.6;
+  for (const pose of Object.keys(spec.poses)) for (const t of [0, .3, .7]) {
+    const cs = segCentres(layoutOf(c, 'bruco', { view: 'side', pose, t }));
+    assert.equal(cs.length, spec.proportions.segments);
+    for (let i = 1; i < cs.length; i++) {
+      const g = Math.hypot(cs[i][0] - cs[i - 1][0], cs[i][1] - cs[i - 1][1]);
+      assert.ok(Math.abs(g - d) <= .01 * d, `${pose} t=${t}: distanza ${i - 1}-${i} = ${g.toFixed(3)} invece di ${d}`);
+    }
+    for (let i = 0; i < cs.length; i++) for (let j = i + 2; j < cs.length; j++)
+      assert.ok(Math.hypot(cs[i][0] - cs[j][0], cs[i][1] - cs[j][1]) >= spec.proportions.segR, `${pose} t=${t}: ${i} e ${j} si sovrappongono`);
+  }
+});
+test('bruco wave travels from tail to head', () => {
+  const c = lib(), N = c.get('CHARACTERS.bruco.proportions.segments'), dt = c.get('BODIES.crawler.WAVE.period') / N;
+  const ys = t => segCentres(layoutOf(c, 'bruco', { view: 'side', pose: 'onda', t })).map(p => p[1]);
+  for (const t of [.2, .55, 1.1]) {
+    const now = ys(t), before = ys(t - dt);
+    for (let i = 0; i + 1 < N; i++) assert.ok(Math.abs(now[i] - before[i + 1]) <= .02, `t=${t}: segmento ${i} ${now[i].toFixed(3)} vs ${i + 1} prima ${before[i + 1].toFixed(3)}`);
+  }
+  assert.notDeepEqual(ys(0), ys(.4), "l'onda si muove");
+});
