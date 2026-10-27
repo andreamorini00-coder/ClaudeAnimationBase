@@ -19,6 +19,7 @@ export const CHAR_SCRIPTS = [
   'src/characters/gatto.js',
   'src/characters/mostro.js',
   'src/characters/bruco.js',
+  'src/characters/draghetto.js',
 ];
 
 // get(expr): the value of an expression in the page context. run(code): runs more code there.

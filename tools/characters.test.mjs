@@ -392,3 +392,56 @@ test('iris eye', () => {
   const sad = c.call('FACES.eye', 'sad', 0, 0, 1, { iris: true }).parts;
   assert.ok(sad.some(q => q.role === 'iris') && sad.some(q => q.id === 'brow'), 'un occhio triste con iride ha anche il sopracciglio');
 });
+
+// ---------- 4b1: the little dragon ----------
+test('draghetto spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.draghetto')), []); });
+test('draghetto features per view and counts', () => checkFeatures(lib(), 'draghetto'));
+test('draghetto uses only its roles', () => checkRoles(lib(), 'draghetto'));
+test('draghetto has no NaN', () => checkFinite(lib(), 'draghetto'));
+test('draghetto flip mirrors exactly', () => checkFlip(lib(), 'draghetto'));
+test('draghetto layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'draghetto', { pose: 'volo', t: .41 }), layoutOf(c, 'draghetto', { pose: 'volo', t: .41 }));
+});
+const dragonOf = (c, view, pose, t = 0) => c.call('(s => BODIES.quadruped.layout(CHARACTERS.draghetto, s))', { view, flip: false, t, pose, expression: {} });
+const hull = pts => {                           // convex hull (monotone chain)
+  const P = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]), cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const p of P) { while (lo.length > 1 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (const p of P.reverse()) { while (up.length > 1 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+};
+const inside = (pt, poly) => { let r = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) r = !r; } return r; };
+test('wings closed hug the body', () => {
+  const c = lib();
+  for (const view of ['side', 'q']) {
+    const L = dragonOf(c, view, { wingOpen: 0 }), body = hull(L.parts.find(q => q.id === 'body').pts);
+    const mem = L.parts.filter(q => q.id.startsWith('membrane'));
+    const all = mem.reduce((a, q) => a + c.call('CG.area', q.pts), 0), inB = mem.reduce((a, q) => a + c.call('CG.area', c.call('CG.clipConvex', q.pts, body)), 0);
+    assert.ok(all - inB <= .25 * all, `${view}: ${((all - inB) / all * 100).toFixed(0)}% delle membrane fuori dal corpo`);
+  }
+});
+test('wings open span about 2.5 bodies', () => {
+  const c = lib(), L = dragonOf(c, 'front', { wingOpen: 1 });
+  const w = partBox(L, q => q.id.startsWith('membrane') || q.id.startsWith('wingBone')).w, b = partBox(L, q => q.id === 'body').w;
+  assert.ok(w / b >= 2.5 * .85 && w / b <= 2.5 * 1.15, `apertura ${(w / b).toFixed(2)} corpi`);
+});
+test('wings never cross the head in profile', () => {
+  const c = lib(), poses = c.get('CHARACTERS.draghetto.poses');
+  for (const name of Object.keys(poses)) for (const t of [0, .13, .3]) {
+    const L = layoutOf(c, 'draghetto', { view: 'side', pose: name, t }), headPoly = L.parts.find(q => q.id === 'head').pts;
+    const near = L.parts.filter(q => q.id.startsWith('membraneN'));
+    for (const m of near) assert.ok(!m.pts.some(pt => inside(pt, headPoly)), `${name} t=${t}: ${m.id} dentro la testa`);
+  }
+});
+test('wings flap', () => {
+  const c = lib(), tips = t => layoutOf(c, 'draghetto', { view: 'side', pose: 'volo', t }).parts.filter(q => q.id.startsWith('wingBone')).flatMap(q => q.pts);
+  const a = tips(0), b = tips(.25), d = Math.max(...a.map((p, i) => Math.hypot(p[0] - b[i][0], p[1] - b[i][1])));
+  assert.ok(d >= .5, `le ali si muovono di ${d.toFixed(2)} u`);
+});
+test('each wing has three membranes', () => {
+  const c = lib(), poses = c.get('CHARACTERS.draghetto.poses');
+  for (const view of ['front', 'q', 'side', 'back']) for (const name of Object.keys(poses)) {
+    const L = layoutOf(c, 'draghetto', { view, pose: name });
+    for (const w of ['N', 'F']) assert.equal(L.parts.filter(q => q.id.startsWith('membrane' + w)).length, 3, `${view} ${name} ala ${w}`);
+  }
+});
