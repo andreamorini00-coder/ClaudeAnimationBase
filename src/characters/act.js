@@ -47,5 +47,5 @@ function resolveState(spec, o = {}) {
   else if (e) expression = { ...expression, ...e };
   // the take after a change of face: a blob squashes a little (keeping its volume), a legged body hops a little
   if (take) { if ('squash' in pose) pose.squash *= 1 - .12 * take; else if ('lift' in pose) pose.lift += .25 * Math.max(0, take); }
-  return { view, flip: !!o.flip, pose, expression, t: o.t ?? 0, since: o.since, kick: o.kick };
+  return { view, flip: !!o.flip, pose, expression, t: o.t ?? 0, since: o.since, kick: o.kick, bust: !!o.bust };
 }

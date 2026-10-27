@@ -12,11 +12,13 @@
 //   forward), lift (units off the ground), crouch 0..1 (legs fold, the body lowers), flight 0..1 (the body turns
 //   horizontal, head first), capeFlow (how far the cape streams back), cycle (1 = run with t: arms and legs swing in
 //   opposition, about 2 strides a second).
+// state.bust: draw only the head and shoulders (the expression row of the model sheet).
 // Parts the spec may declare (anything not declared is not drawn): hair { style: 'bob' | 'spiky', locks }, skirt (role skirt), shoes (role shoes),
 //   sleeves { wide } (puffy sleeves with a cuff), gloves, boots, cape (role accent), mask (role hair), star (role
 //   emblem), eyes { dark } (big dark eyes with highlights), cheeks (always pink; without, they show only when
-//   blushing), brows { kind: 'thick' }, build { arm, leg } (limb thickness in heads; .21 and .24 by default, the
-//   chibi's).
+//   blushing), brows { kind: 'thick' }, build { arm, leg, taper, round } (limb thickness in heads, .21 and .24 by
+//   default as the chibi's; taper = ankle / thigh width; round = how round the torso's corners are),
+//   eyes.size and mouth { size } (scale the face).
 // Expression params: eyes, mouth (FACES kinds), brows -1 (sad) .. 1 (angry), blush 0..1 (embarrassed), headTilt.
 BODIES.biped = {
   HU: 3,
@@ -27,9 +29,9 @@ BODIES.biped = {
     'skirt', 'sleeves', 'gloves', 'boots', 'mask', 'star', 'cape', 'shadow', 'build'],
   poseParams: ['shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'hipL', 'hipR', 'kneeL', 'kneeR', 'fistL', 'fistR', 'lean', 'lift', 'crouch',
     'flight', 'capeFlow', 'cycle'],
-  exprParams: ['eyes', 'mouth', 'brows', 'blush', 'headTilt'],
+  exprParams: ['eyes', 'mouth', 'brows', 'blush', 'headTilt', 'squint', 'look'],
   views: ['front', 'q', 'side', 'back'],
-  SHEET: { views: ['front', 'q', 'side', 'back'], poseView: 'q', exprView: 'front' },
+  SHEET: { views: ['front', 'q', 'side', 'back'], poseView: 'q', exprView: 'front', exprBust: true },   // faces read big, as in base.png
   POSE0: { shoulderL: .03, shoulderR: .03, elbowL: .12, elbowR: .12, hipL: 0, hipR: 0, kneeL: 0, kneeR: 0, fistL: 0, fistR: 0,
     lean: 0, lift: 0, crouch: 0, flight: 0, capeFlow: 0, cycle: 0 },
   EXPR0: { eyes: 'open', mouth: 'smile', brows: 0, blush: 0, headTilt: 0, squint: 0, look: 0 },
@@ -74,11 +76,11 @@ BODIES.biped = {
       const knee = at(hip, a1, legL / 2), ankle = at(knee, a2, legL / 2);
       // the foot: its sole a foot below the ankle, turned half as much as the shin (a bent knee doesn't stab the
       // ground with the toe); in profile the toe points forward
-      const toe = V.face === 'side' || V.face === 'q' ? .1 * HU : 0, fw = V.face === 'side' ? .4 * HU : .3 * HU;
+      const toe = (V.face === 'side' || V.face === 'q' ? .1 * HU : 0) * (sp.boots ? 1.8 : 1), fw = Math.max(V.face === 'side' ? .4 * HU : .3 * HU, sp.boots ? legW * (V.face === 'side' ? 1.6 : 1.2) : 0);
       const footAt = (y0, w, round) => CG.rotate(CG.block(ankle[0] + toe, ankle[1] + y0, ankle[1] + footH, w, w * 1.05, round), (a2 - Math.PI / 2) * .5, ankle[0], ankle[1]);
-      const shapes = [['leg' + s, 'legs', 0, CG.tube([hip, knee, ankle], legW, legW * .9), {}]];
-      if (sp.boots) shapes.push(['boot' + s, 'accent', .02, CG.tube([[CG.lerp(knee[0], ankle[0], .25), CG.lerp(knee[1], ankle[1], .25)], ankle], legW * 1.2, legW * 1.15), { feature: 'boots' }]);
-      if (sp.shoes || sp.boots) shapes.push(['shoe' + s, sp.boots ? 'accent' : 'shoes', .03, footAt(-.16 * HU, fw, .45), sp.boots ? { feature: 'boots' } : {}]);
+      const shapes = [['leg' + s, 'legs', 0, CG.tube([hip, knee, ankle], legW, legW * (sp.build && sp.build.taper || .9)), {}]];
+      if (sp.boots) shapes.push(['boot' + s, 'accent', .02, CG.tube([[CG.lerp(knee[0], ankle[0], .15), CG.lerp(knee[1], ankle[1], .15)], ankle], legW * 1.4, legW * 1.05), { feature: 'boots' }]);
+      if (sp.shoes || sp.boots) shapes.push(['shoe' + s, sp.boots ? 'accent' : 'shoes', .03, footAt(sp.boots ? -.22 * HU : -.16 * HU, fw, .5), sp.boots ? { feature: 'boots' } : {}]);
       else shapes.push(['foot' + s, 'legs', .03, footAt(-.04 * HU, fw * .85, .7), {}]);
       return { L, hip, knee, ankle, shapes };
     };
@@ -101,7 +103,7 @@ BODIES.biped = {
     }
 
     // ---- torso, neck, skirt ----
-    const top = CG.block(0, shY - .03 * HU, hipY + .06 * HU, shHalf * 2, pr.hips * HU * 1.06 * V.w, .32);
+    const top = CG.block(0, shY - .03 * HU, hipY + .06 * HU, shHalf * 2, pr.hips * HU * 1.06 * V.w, sp.build && sp.build.round || .32);
     add('neck', 'skin', 2.3, upper(CG.block(0, shY - neckH - .06 * HU, shY + .06 * HU, .25 * HU * Math.max(.8, V.w), .27 * HU * Math.max(.8, V.w), .6)));
     add('torso', 'top', 2.5, upper(top));
     if (sp.star && V.face) {                                       // a five-pointed star on the chest (not from the back)
@@ -110,22 +112,19 @@ BODIES.biped = {
       add('star', 'emblem', 2.6, upper(star), { line: .7, feature: 'star' });
     }
     if (sp.cape) {
-      // one shape from the shoulders to the waist; capeFlow swings it back (less so in flight, where "back" is along
-      // the body), and its hem ripples with t
-      const len = (hipY - shY) * .92, flow = P.capeFlow, wave = k => .06 * HU * (1 + flow) * Math.sin(Math.PI * 2 * 1.6 * t + k * 1.3);
-      let cape, dep;
-      if (V.face === 'side' || V.face === 'q') {
-        const a0 = V.face === 'side' ? [-shHalf * .2, shY] : [shHalf * .1, shY], b0 = [-shHalf * (V.face === 'side' ? 1.12 : 1.2), shY + .05 * HU];
-        const hem = [0, 1, 2, 3].map(k => { const f = k / 3; return [CG.lerp(a0[0] - .1 * HU, b0[0] - .3 * HU, f), shY + len * (1 + .04 * f) + wave(k)]; });
-        cape = CG.rotate([a0, ...hem.reverse(), b0], flow * 1.25 * (1 - .8 * P.flight), (a0[0] + b0[0]) / 2, shY);
-        dep = V.face === 'side' ? 1.2 : 1;
-      } else {
-        const k = 1 - .5 * flow, hw = shHalf * .95;
-        const hem = [-1, -.33, .33, 1].map((u, i) => [u * hw * 1.55, shY + len * k + wave(i)]);
-        cape = [[-hw, shY], [hw, shY], ...hem.reverse()];
-        dep = V.face ? 1 : 3;                                       // behind the body from the front, over the back from behind
+      // one sheet from the shoulders to the waist, a little wider at the hem, which waves softly with t. capeFlow
+      // swings it back (in profile and 3/4) or shortens it (seen end-on); in flight "back" is along the body.
+      const len = (hipY - shY) * .95, flow = P.capeFlow, side = V.face === 'side' || V.face === 'q';
+      const [off, hw, hem] = V.face === 'side' ? [-.5, .62, 1] : V.face === 'q' ? [-.35, .9, 1.2] : [0, .92, 1.25];
+      const o = off * shHalf, L = side ? len : len * (1 - .45 * flow), n = 10, edge = [];
+      for (let i = 0; i <= n; i++) {
+        const u = 1 - 2 * i / n;                                    // 1 right … -1 left
+        edge.push([o + u * hem * shHalf, shY + L + .05 * HU * u * u + .06 * HU * (1 + flow) * Math.sin(Math.PI * 1.5 * u + Math.PI * 2 * 1.6 * t)]);
       }
-      add('cape', 'accent', dep, upper(cape), { feature: 'cape' });
+      const bulge = s => [o + s * (hw + hem) / 2 * shHalf * 1.04, shY + L * .5];
+      let cape = [[o - hw * shHalf, shY], [o + hw * shHalf, shY], bulge(1), ...edge, bulge(-1)];
+      if (side) cape = CG.rotate(cape, flow * 1.15 * (1 - .8 * P.flight), o, shY);
+      add('cape', 'accent', V.face ? (V.face === 'side' ? 1.2 : 1) : 3, upper(cape), { feature: 'cape' });
     }
     if (sp.skirt) {
       const flare = 1.5 + .25 * P.cycle * Math.abs(run) + .2 * P.crouch;
@@ -142,9 +141,9 @@ BODIES.biped = {
       const wide = sp.sleeves && sp.sleeves.wide, cuffAt = at(wrist, a2, -.1 * HU);
       add('arm' + s, 'top', dep, upper(CG.tube([sh, elbow, wide ? cuffAt : wrist], armW * (wide ? 1.25 : 1), armW * (wide ? 1.55 : .85))), dim);
       if (sp.sleeves) add('cuff' + s, 'top', dep + .01, upper(CG.tube([cuffAt, at(wrist, a2, -.02 * HU)], armW * 1.2, armW * 1.2, 3)), { ...dim, line: .8 });
-      if (sp.gloves) add('glove' + s, 'accent', dep + .01, upper(CG.tube([at(elbow, a2, armL * .22), wrist], armW * 1.05, armW * 1.1)), { ...dim, feature: 'gloves' });
+      if (sp.gloves) add('glove' + s, 'accent', dep + .01, upper(CG.tube([at(elbow, a2, armL * .2), wrist], armW * 1.4, armW * 1.05)), { ...dim, feature: 'gloves' });
       // the hand: an oval with a thumb, or a round fist
-      const hr = .12 * HU, hc = at(wrist, a2, hr * .7), role = sp.gloves ? 'accent' : 'skin';
+      const hr = Math.max(.12 * HU, armW * .62), hc = at(wrist, a2, hr * .7), role = sp.gloves ? 'accent' : 'skin';
       if (P['fist' + s] > .5) add('hand' + s, role, dep + .02, upper(CG.ellipse(hc[0], hc[1], hr * 1.05, hr * 1.05, 18)), dim);
       else {
         add('thumb' + s, role, dep + .015, upper(CG.ellipse(...at(at(wrist, a2, hr * .5), a2 + L.dir * Math.PI / 2, -hr * .55), hr * .32, hr * .5, 12, a2)), dim);
@@ -162,26 +161,41 @@ BODIES.biped = {
     if (V.face) {
       const F = V.face === 'front' ? { eyes: [[-.21, 1], [.21, 1]], mouth: 0, cheeks: [-.33, .33] }
         : V.face === 'q' ? { eyes: [[-.04, .88], [.27, 1]], mouth: .13, cheeks: [-.17, .4] } : { eyes: [[.3, .85]], mouth: .38, cheeks: [.2] };
-      const ey = hcy + .16 * HU, r = .135 * HU, eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark) };
-      if (sp.mask) {                                              // a band across the eyes, cut to the head's outline
-        const mx0 = hcx + F.eyes[0][0] * HU - .2 * HU, mx1 = hcx + F.eyes[F.eyes.length - 1][0] * HU + .2 * HU;
-        const band = CG.block((mx0 + mx1) / 2 + (V.face === 'side' ? -.1 * HU : 0), ey - .13 * HU, ey + .12 * HU, mx1 - mx0 + (V.face === 'side' ? .3 * HU : 0), mx1 - mx0 - .06 * HU, .55);
-        add('mask', 'hair', 4.78, head(CG.clipConvex(band, CG.ellipse(hcx, hcy, headW / 2 + .01, HU / 2 + .01, 44))), { feature: 'mask' });
+      const ey = hcy + (sp.mask ? .07 : .16) * HU, r = .135 * HU * (sp.eyes && sp.eyes.size || 1),   // a mask lifts the eyes, leaving room for the mouth
+        eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark) };
+      if (sp.mask) {
+        // a domino mask: a lobe round each eye, thinner over the nose, cut to the head's outline
+        const exs = F.eyes.map(([x, k]) => [hcx + x * HU, r * k]), m = r * .2;
+        const x0 = exs[0][0] - exs[0][1] - m * (V.face === 'side' ? 3.2 : 1.6), x1 = exs[exs.length - 1][0] + exs[exs.length - 1][1] + m * 1.4, n = 24;
+        const h = x => { const u = (x - x0) / (x1 - x0) * 2 - 1; return Math.sqrt(Math.max(0, 1 - u ** 8)) * Math.max(r * .45, ...exs.map(([ex, er]) => (er * .9 + m) * Math.exp(-(((x - ex) / (er * 1.2)) ** 4)))); };
+        const xsM = [...Array(n + 1)].map((_, i) => CG.lerp(x0, x1, i / n));
+        const domino = [...xsM.map(x => [x, ey - .05 * r - h(x)]), ...xsM.reverse().map(x => [x, ey + .05 * r + h(x) * .8])];
+        add('mask', 'hair', 4.78, head(CG.clipConvex(domino, CG.ellipse(hcx, hcy, headW / 2 + .01, HU / 2 + .01, 44))), { feature: 'mask' });
       }
       F.eyes.forEach(([x, k], i) => {
         const ex = hcx + x * HU;
         FACES.eye(E.eyes, ex, ey, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, 4.8, head(p.pts), { line: p.line, stroke: p.stroke }));
         // the brow's inner end is the one towards the middle of the face
         const inward = F.eyes.length > 1 ? (i ? -1 : 1) : 1;
-        FACES.brows(sp.brows && sp.brows.kind || 'line', ex, ey - .19 * HU, .2 * HU * k * inward, E.brows).parts
+        FACES.brows(sp.brows && sp.brows.kind || 'line', ex, sp.mask ? ey - r * 1.25 - .07 * HU : ey - .19 * HU, .2 * HU * k * inward, E.brows).parts
           .forEach(p => add('brow' + i, p.role, 5.05, head(p.pts), { line: p.line, stroke: true }));
       });
       if (sp.cheeks || E.blush > 0) F.cheeks.forEach((x, i) => FACES.cheek(hcx + x * HU, hcy + .31 * HU, .09 * HU, E.blush).parts
         .forEach(p => add(p.id === 'cheek' ? 'cheek' + i : 'blush' + i, p.role, 4.75, head(p.pts), { line: p.line, stroke: p.stroke, ...(p.dim ? { dim: p.dim } : {}), ...(p.id === 'cheek' && sp.cheeks ? { feature: 'cheeks' } : {}) })));
-      FACES.mouth(E.mouth, hcx + F.mouth * HU, hcy + .36 * HU, .15 * HU).parts
+      FACES.mouth(E.mouth, hcx + F.mouth * HU, sp.mask ? ey + r * 1.1 + .08 * HU : hcy + .36 * HU, .15 * HU * (sp.mouth && sp.mouth.size || 1)).parts
         .forEach(p => add('mouth', p.role, 4.8, head(p.pts), { line: p.stroke ? .5 : p.line, stroke: p.stroke }));
     }
     if (sp.hair) B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head });
+
+    // ---- state.bust: only head and shoulders, cut below the chest (expression sheets, close-ups) ----
+    if (state.bust) {
+      const cut = shY + .6 * HU, keep = /^(head|hair|face|lock|spike|ear|eye|brow|cheek|blush|mouth|mask|neck|torso|star|cape)/;
+      // the cut rests on the ground line (y = 0), so a sheet row lines the busts up like whole figures
+      const kept = parts.filter(p => keep.test(p.id)).map(p => ({ ...p, pts: CG.translate(p.stroke ? p.pts : CG.clipY(p.pts, cut, -1), 0, -cut) }))
+        .filter(p => p.pts.length > 2 || (p.stroke && p.pts.length > 1));
+      parts.length = 0; parts.push(...kept);
+      for (const k of Object.keys(joints)) joints[k] = [joints[k][0], joints[k][1] - cut];
+    }
 
     // ---- order by depth, then mirror for flip ----
     for (const k of Object.keys(joints)) joints[k] = (/^(hip|knee|ankle)/.test(k) ? whole : upper)([joints[k]])[0];
@@ -189,6 +203,22 @@ BODIES.biped = {
     if (state.flip) { for (const p of parts) p.pts = p.pts.map(([x, y]) => [-x, y]); for (const k of Object.keys(joints)) joints[k] = [-joints[k][0], joints[k][1]]; }
     const all = parts.flatMap(p => p.pts), xs = all.map(p => p[0]), ys = all.map(p => p[1]);
     return { parts, joints, bounds: { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) } };
+  },
+
+  // The bob: a round dome over the skull, straight sides down to the chin ending in round tips that flick a little
+  // outwards; between the tips the edge rises behind the face to the jaw (inner = half the gap there; 0 = from the
+  // back, a straight hem).
+  bob(cx, hcy, W, HU, inner) {
+    const top = .59 * HU, tipY = hcy + .56 * HU, rr = .13 * HU, flick = .04 * HU, pts = [];
+    for (let i = 0; i <= 20; i++) { const a = Math.PI + i / 20 * Math.PI; pts.push([cx + W * Math.cos(a), hcy + top * Math.sin(a)]); }
+    const tip = s => {                                            // s = 1 right, -1 left: down the side, round the end
+      const ox = cx + s * (W + flick - rr), out = [];
+      for (let i = 0; i <= 8; i++) { const a = i / 8 * Math.PI; out.push([ox + s * rr * Math.cos(a), tipY - rr + rr * Math.sin(a)]); }
+      return out;
+    };
+    const right = tip(1), left = tip(-1).reverse();
+    if (inner) return [...pts, ...right, [cx + inner, hcy + .4 * HU], [cx - inner, hcy + .4 * HU], ...left];
+    return [...pts, ...right, ...left];
   },
 
   // The hair: one mass drawn over the head, then the face as a window cut out of it (the head inside straight lines,
@@ -199,9 +229,9 @@ BODIES.biped = {
     const spiky = style === 'spiky';
     // the bob: a long mass down to the jaw; spiky: a short cap over the skull, the spikes standing out of it
     const cap = CG.ellipse(mx, hcy - .06 * HU, headW * .55, .56 * HU, 44);
-    const mass = !spiky ? CG.drop(mx, jaw, mw, jaw - (hcy - HU / 2 - .09 * HU))
+    const mass = !spiky ? BODIES.biped.bob(mx, hcy, headW * (V.face === 'side' ? .6 : .66), HU, V.face ? headW * .34 : 0)
       : V.face === 'side' || V.face === 'q' ? CG.clipLine(CG.clipY(cap, hcy + .22 * HU, -1), [hcx + (V.face === 'side' ? -.12 : -.3) * HU, hcy + .3 * HU], [hcx + (V.face === 'side' ? .32 : .2) * HU, hcy - .3 * HU])
-      : CG.clipY(cap, V.face ? hairline + .04 * HU : hcy + .3 * HU, -1);
+      : CG.clipY(cap, V.face ? hairline - .05 * HU : hcy + .3 * HU, -1);
     add('hair', 'hair', 4.6, head(mass));
     function drawSpikes() {
       const n = h.locks || 5, side = V.face === 'side' || V.face === 'q';
@@ -231,11 +261,12 @@ BODIES.biped = {
     if (style === 'bob') {
       // three locks over the forehead, the middle one longest
       const x0 = V.face === 'front' ? hcx - fw : V.face === 'q' ? hcx - .2 * HU : hcx + .05 * HU, x1 = V.face === 'front' ? hcx + fw : hcx + headW * .5;
-      const lw = (x1 - x0) / 3 * 1.18, lean = V.face === 'front' ? 0 : .05 * HU;
+      const lw = (x1 - x0) / 3 * 1.12, lean = V.face === 'front' ? 0 : .05 * HU;
       [0, 1, 2].forEach(i => {
         const x = CG.lerp(x0, x1, (i + .5) / 3), y0 = hairline - .1 * HU, lh = (i === 1 ? .23 : .19) * HU;
-        add('lock' + i, 'hair', 5, head([[x - lw / 2, y0], [x + lw / 2, y0], [x + lw * .42 + lean, y0 + lh * .55], [x + lw * .08 + lean * 1.4, y0 + lh],
-          [x - lw * .2 + lean, y0 + lh * .8], [x - lw * .45 + lean * .5, y0 + lh * .5]]), { line: .8, feature: 'fringe' });
+        // a soft drop: straight sides from the hairline, a round end
+        const ry = lw * .5, end = FACES.arc(x + lean, y0 + lh - ry, lw / 2, ry, 0, Math.PI, 12);
+        add('lock' + i, 'hair', 5, head([[x - lw / 2, y0], [x + lw / 2, y0], ...end]), { line: .8, feature: 'fringe' });
       });
     }
   },

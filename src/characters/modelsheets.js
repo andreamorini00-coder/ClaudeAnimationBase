@@ -55,7 +55,7 @@
     const spec = CHARACTERS[id], S = BODIES[spec.body].SHEET, inferred = spec.inferred || [];
     LOOPS['sheet_' + id] = t => {
       row(id, S.views.map(v => ({ o: { view: v }, label: VIEW_NAME[v] + (inferred.includes(v) ? ' (dedotta)' : '') })), 60, W - 60, 470, 380, t, 24);
-      row(id, Object.keys(spec.expressions).map(e => ({ o: { view: S.exprView, expression: e }, label: e })), 40, W - 40, 830, 260, t, 22);
+      row(id, Object.keys(spec.expressions).map(e => ({ o: { view: S.exprView, expression: e, bust: S.exprBust }, label: e })), 40, W - 40, 830, 260, t, 22);
       silhouette(id, 190, 1040, 140);
       swatches(id, 470, 975);
     };

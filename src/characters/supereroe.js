@@ -1,10 +1,11 @@
 // supereroe.js: the hero (reference/characters/supereroe/). Data only: the biped body draws him (bodies/biped.js).
 CHARACTERS.supereroe = {
   id: 'supereroe', version: 1, body: 'biped',
-  // about 5.5 heads: foot .1 + leg 2.3 + torso 1.6 + neck .07 + head 1 + spikes .45
-  proportions: { heads: 5.5, shoulders: 1.4, hips: 1, torso: 1.6, arm: 1.95, leg: 2.3, headW: 1 },
+  // about 5.3 heads with the spikes (Andrea, 2026-10-27: a bigger head): foot .1 + leg 2.15 + torso 1.5 + neck .07 + head 1
+  // + spikes .45. A V torso: wide shoulders, a narrow waist.
+  proportions: { heads: 5.3, shoulders: 1.6, hips: .85, torso: 1.5, arm: 1.85, leg: 2.15, headW: 1.05 },
   parts: { hair: { style: 'spiky', locks: 5 }, mask: {}, star: {}, cape: {}, gloves: {}, boots: {}, brows: { kind: 'thick' },
-    build: { arm: .34, leg: .42 } },
+    build: { arm: .32, leg: .44, taper: .7, round: .6 }, eyes: { size: 1.25 }, mouth: { size: 1.4 } },
   roles: {
     top: '#427BEF', legs: '#427BEF', accent: '#FF5D73', emblem: '#FFD166', hair: '#2B3766', skin: '#F5C6A5',
     skinShadow: '#D99A86', cheek: '#FF5D73', line: '#1C2440', shadow: '#555B91', eyeWhite: '#F7F2E8',
@@ -22,10 +23,10 @@ CHARACTERS.supereroe = {
   expressions: {
     felice: { eyes: 'open', mouth: 'open' },
     triste: { eyes: 'open', mouth: 'frown', brows: -1 },
-    arrabbiato: { eyes: 'open', mouth: 'frown', brows: 1 },
-    sorpreso: { eyes: 'wide', mouth: 'o', brows: -.4 },
+    arrabbiato: { eyes: 'open', mouth: 'frown', brows: 1, squint: .35 },
+    sorpreso: { eyes: 'wide', mouth: 'o', brows: -.3 },
     assonnato: { eyes: 'sleepy', mouth: 'flat', brows: -.2 },
-    imbarazzato: { eyes: 'open', mouth: 'smile', brows: -.6, blush: 1 },
+    imbarazzato: { eyes: 'open', mouth: 'smile', brows: -.6, blush: 1, look: -.6 },
   },
   // reference/characters/supereroe/pose.png, left to right
   poses: {
