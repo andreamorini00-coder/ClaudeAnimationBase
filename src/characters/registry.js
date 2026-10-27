@@ -41,6 +41,9 @@ function validateCharacter(spec) {
         if (what === 'posa' && k === 'expression' && v && typeof v === 'object') { params(`posa "${name}", espressione`, { '': v }, body.exprParams); continue; }
         if (!allowed.includes(k)) errs.push(`${what} "${name}": parametro "${k}" sconosciuto`);
         else if (!(typeof v === 'string' || (typeof v === 'number' && Number.isFinite(v)))) errs.push(`${what} "${name}": parametro "${k}" non valido`);
+        // eye and mouth names are checked here, not halfway through a render
+        else if (k === 'eyes' && !FACES.EYES.includes(v)) errs.push(`${what} "${name}": occhi "${v}" inesistenti. Disponibili: ${FACES.EYES.join(', ')}`);
+        else if (k === 'mouth' && !FACES.MOUTHS.includes(v)) errs.push(`${what} "${name}": bocca "${v}" inesistente. Disponibili: ${FACES.MOUTHS.join(', ')}`);
       }
   };
   params('posa', spec.poses, body.poseParams);

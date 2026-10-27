@@ -12,7 +12,7 @@
 //   forward), lift (units off the ground), crouch 0..1 (legs fold, the body lowers), flight 0..1 (the body turns
 //   horizontal, head first), capeFlow (how far the cape streams back), cycle (1 = run with t: arms and legs swing in
 //   opposition, about 2 strides a second).
-// Parts the spec may declare: hair { style: 'bob' | 'spiky', locks }, skirt (role skirt), shoes (role shoes),
+// Parts the spec may declare (anything not declared is not drawn): hair { style: 'bob' | 'spiky', locks }, skirt (role skirt), shoes (role shoes),
 //   sleeves { wide } (puffy sleeves with a cuff), gloves, boots, cape (role accent), mask (role hair), star (role
 //   emblem), eyes { dark } (big dark eyes with highlights), cheeks (always pink; without, they show only when
 //   blushing), brows { kind: 'thick' }, build { arm, leg } (limb thickness in heads; .21 and .24 by default, the
@@ -53,23 +53,39 @@ BODIES.biped = {
 
     // ---- the angles: the pose, plus the run cycle and the crouch ----
     const run = P.cycle * Math.cos(Math.PI * 2 * 2 * t), runB = -run;   // a full stride at t = 0
+    // seen end-on (front, back) a stride can't swing sideways: the limbs stay put and each foot lifts straight up in
+    // turn (the thigh turns out by half the knee's bend, so the ankle stays under the hip)
+    const endOn = !V.face || V.face === 'front', sw = endOn ? 0 : 1;
+    const kL = P.cycle * (.35 + .9 * Math.max(0, -run)), kR = P.cycle * (.35 + .9 * Math.max(0, -runB));
     const A = {
-      shoulderL: P.shoulderL - run * .9, shoulderR: P.shoulderR + run * .9,
+      shoulderL: P.shoulderL - run * .9 * sw, shoulderR: P.shoulderR + run * .9 * sw,
       elbowL: P.elbowL + P.cycle * 1.1, elbowR: P.elbowR + P.cycle * 1.1,
-      hipL: P.hipL + run * .75 + P.crouch * 1.3, hipR: P.hipR + runB * .75 + P.crouch * 1.3,
-      kneeL: P.kneeL + P.crouch * 2.3 + P.cycle * (.35 + .9 * Math.max(0, -run)), kneeR: P.kneeR + P.crouch * 2.3 + P.cycle * (.35 + .9 * Math.max(0, -runB)),
+      hipL: P.hipL + run * .75 * sw + P.crouch * 1.3 + (endOn ? kL / 2 : 0), hipR: P.hipR + runB * .75 * sw + P.crouch * 1.3 + (endOn ? kR / 2 : 0),
+      kneeL: P.kneeL + P.crouch * 2.3 + kL, kneeR: P.kneeR + P.crouch * 2.3 + kR,
     };
     for (const k of ['elbowL', 'elbowR', 'kneeL', 'kneeR']) A[k] = CG.clamp(A[k], 0, 2.6);
 
-    // ---- the vertical stack: the lower ankle stays a foot above the ground ----
+    // ---- legs, with the hip at height hy: joints and shapes (before the whole-body turn) ----
     const footH = .1 * HU, legL = pr.leg * HU, armL = pr.arm * HU, legW = (sp.build && sp.build.leg || .24) * HU, armW = (sp.build && sp.build.arm || .21) * HU;
-    const legChain = (s, hip) => {
-      const L = V.limbs[s], a1 = Math.PI / 2 - L.dir * (A['hip' + s] + V.legOut), a2 = a1 + L.dir * A['knee' + s];
-      const knee = at(hip, a1, legL / 2); return [hip, knee, at(knee, a2, legL / 2), a2];
-    };
-    const drop = Math.max(...['L', 'R'].map(s => legChain(s, [0, 0])[2][1]));
-    const hipY = -(footH + drop) - P.lift, shY = hipY - pr.torso * HU, neckH = .07 * HU, hcy = shY - neckH - HU / 2;
     const hipHalf = pr.hips * HU / 2 * V.w, shHalf = pr.shoulders * HU / 2 * V.w;
+    const legOf = (s, hy) => {
+      const L = V.limbs[s], hip = [L.x * (hipHalf - legW * .55), hy];
+      const a1 = Math.PI / 2 - L.dir * (A['hip' + s] + V.legOut), a2 = a1 + L.dir * A['knee' + s];
+      const knee = at(hip, a1, legL / 2), ankle = at(knee, a2, legL / 2);
+      // the foot: its sole a foot below the ankle, turned half as much as the shin (a bent knee doesn't stab the
+      // ground with the toe); in profile the toe points forward
+      const toe = V.face === 'side' || V.face === 'q' ? .1 * HU : 0, fw = V.face === 'side' ? .4 * HU : .3 * HU;
+      const footAt = (y0, w, round) => CG.rotate(CG.block(ankle[0] + toe, ankle[1] + y0, ankle[1] + footH, w, w * 1.05, round), (a2 - Math.PI / 2) * .5, ankle[0], ankle[1]);
+      const shapes = [['leg' + s, 'legs', 0, CG.tube([hip, knee, ankle], legW, legW * .9), {}]];
+      if (sp.boots) shapes.push(['boot' + s, 'accent', .02, CG.tube([[CG.lerp(knee[0], ankle[0], .25), CG.lerp(knee[1], ankle[1], .25)], ankle], legW * 1.2, legW * 1.15), { feature: 'boots' }]);
+      if (sp.shoes || sp.boots) shapes.push(['shoe' + s, sp.boots ? 'accent' : 'shoes', .03, footAt(-.16 * HU, fw, .45), sp.boots ? { feature: 'boots' } : {}]);
+      else shapes.push(['foot' + s, 'legs', .03, footAt(-.04 * HU, fw * .85, .7), {}]);
+      return { L, hip, knee, ankle, shapes };
+    };
+
+    // ---- the vertical stack: the lowest point of either leg (a sole, a boot) rests on the ground ----
+    const drop = Math.max(...['L', 'R'].flatMap(s => legOf(s, 0).shapes.flatMap(sh => sh[3].map(p => p[1]))));
+    const hipY = -drop - P.lift, shY = hipY - pr.torso * HU, neckH = .07 * HU, hcy = shY - neckH - HU / 2;
 
     // whole body: flight turns it round the hips, head first; lean tips the upper body forward
     const flightA = P.flight * Math.PI / 2 * .9, leanA = P.lean * .35;
@@ -79,16 +95,9 @@ BODIES.biped = {
 
     // ---- legs and feet ----
     for (const s of ['L', 'R']) {
-      const L = V.limbs[s], [hip, knee, ankle, a2] = legChain(s, [L.x * (hipHalf - legW * .55), hipY]);
-      const dep = L.near ? .5 + (s === 'R' ? .01 : 0) : -1, dim = L.near ? {} : { dim: .25 };
-      add('leg' + s, 'legs', dep, whole(CG.tube([hip, knee, ankle], legW, legW * .9)), dim);
+      const { L, hip, knee, ankle, shapes } = legOf(s, hipY), dep = L.near ? .5 + (s === 'R' ? .01 : 0) : -1, dim = L.near ? {} : { dim: .25 };
       Object.assign(joints, { ['hip' + s]: hip, ['knee' + s]: knee, ['ankle' + s]: ankle });
-      // the foot: along the shin, its sole a foot below the ankle; in profile the toe points forward
-      const toe = V.face === 'side' || V.face === 'q' ? .1 * HU : 0, fw = V.face === 'side' ? .4 * HU : .3 * HU;
-      const footAt = (y0, h, w, round) => whole(CG.rotate(CG.block(ankle[0] + toe, ankle[1] + y0, ankle[1] + footH, w, w * 1.05, round), a2 - Math.PI / 2, ankle[0], ankle[1]));
-      if (sp.boots) add('boot' + s, 'accent', dep + .02, whole(CG.tube([[CG.lerp(knee[0], ankle[0], .25), CG.lerp(knee[1], ankle[1], .25)], ankle], legW * 1.2, legW * 1.15)), { ...dim, feature: 'boots' });
-      if (sp.shoes || sp.boots) add('shoe' + s, sp.boots ? 'accent' : 'shoes', dep + .03, footAt(-.16 * HU, 0, fw, .45), { ...dim, ...(sp.boots ? { feature: 'boots' } : {}) });
-      else add('foot' + s, 'legs', dep + .03, footAt(-.04 * HU, 0, fw * .85, .7), dim);
+      for (const [id, role, dd, pts, more] of shapes) add(id, role, dep + dd, whole(pts), { ...dim, ...more });
     }
 
     // ---- torso, neck, skirt ----
@@ -172,7 +181,7 @@ BODIES.biped = {
       FACES.mouth(E.mouth, hcx + F.mouth * HU, hcy + .36 * HU, .15 * HU).parts
         .forEach(p => add('mouth', p.role, 4.8, head(p.pts), { line: p.stroke ? .5 : p.line, stroke: p.stroke }));
     }
-    B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head });
+    if (sp.hair) B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head });
 
     // ---- order by depth, then mirror for flip ----
     for (const k of Object.keys(joints)) joints[k] = (/^(hip|knee|ankle)/.test(k) ? whole : upper)([joints[k]])[0];

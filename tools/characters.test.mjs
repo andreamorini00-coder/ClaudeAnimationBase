@@ -407,7 +407,7 @@ test('a declared ear needs earInner', () => {
   assert.match(c.call('validateCharacter', spec).join(' '), /earInner/);
 });
 test('iris eye', () => {
-  const c = lib(), r = c.call('FACES.eye', 'iris', 0, 0, 1).parts;
+  const c = lib(), r = c.call('FACES.eye', 'open', 0, 0, 1, { iris: true }).parts;
   assert.ok(r.some(q => q.role === 'iris')); assert.ok(r.some(q => q.id === 'pupil' && q.role === 'line'));
   assert.ok(!r.some(q => q.role === 'eyeWhite' && q.id === 'eyeWhite'));
   const sad = c.call('FACES.eye', 'sad', 0, 0, 1, { iris: true }).parts;
@@ -553,4 +553,55 @@ test('cape trails in flight', () => {
     const cape = partBox(L, q => q.id === 'cape'), sx = (J.shoulderL[0] + J.shoulderR[0]) / 2;
     assert.ok((cape.x0 + cape.x1) / 2 < sx - .5, `t=${t}: il mantello non sta dietro le spalle`);
   }
+});
+
+// ---------- 4b1 final review: fixes ----------
+test('caterpillar keeps its spacing while curling', () => {
+  const c = lib(), pr = c.get('CHARACTERS.bruco.proportions'), R = pr.segR, d = 1.6 * R, dh = (R * pr.headK + R) * .72;
+  for (const curl of [.25, .5, .75, 1]) for (const extra of [{}, { raise: 1 }, { arch: .8 }, { raise: 1.35, lift: 1 }]) {
+    const P = { ...c.get('BODIES.crawler.POSE0'), ...extra, curl };
+    const S = c.call('((p) => BODIES.crawler.spine(CHARACTERS.bruco, p, 0))', P), dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const where = JSON.stringify({ curl, ...extra });
+    assert.ok(near(dist(S[0], S[1]), dh, .01), `${where}: testa-segmento 1 a ${dist(S[0], S[1]).toFixed(2)}`);
+    for (let i = 2; i < S.length; i++) assert.ok(near(dist(S[i - 1], S[i]), d, .01), `${where}: passo ${i} ${dist(S[i - 1], S[i]).toFixed(2)}`);
+    for (let i = 1; i < S.length; i++) for (let j = i + 2; j < S.length; j++)
+      assert.ok(dist(S[i], S[j]) >= R, `${where}: segmenti ${i} e ${j} a ${dist(S[i], S[j]).toFixed(2)}`);
+  }
+});
+test('biped runs from the front without crossing its legs', () => {
+  const c = lib();
+  for (const id of ['ragazza', 'supereroe']) for (const view of ['front', 'back']) {
+    const at = t => layoutOf(c, id, { view, pose: 'corsa', t }).joints, side = view === 'front' ? 1 : -1, lift = [];
+    for (const t of [0, .1, .2, .25, .3, .4]) {
+      const J = at(t);
+      assert.ok(side * J.ankleL[0] > 0 && side * J.ankleR[0] < 0, `${id} ${view} t=${t}: le caviglie si incrociano`);
+      lift.push(J.ankleL[1] - J.ankleR[1]);
+    }
+    assert.ok(Math.min(...lift) < -.1 && Math.max(...lift) > .1, `${id} ${view}: i piedi non si alternano`);
+  }
+});
+test('an eye or mouth kind that does not exist is a validation error', () => {
+  const c = lib(), spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.gatto')));
+  spec.expressions.strano = { eyes: 'iris' }; spec.poses.strana = { expression: { mouth: 'ghigno' } };
+  const errs = c.call('validateCharacter', spec).join(' ');
+  assert.match(errs, /iris/); assert.match(errs, /ghigno/);
+});
+test('biped feet stand on the ground', () => {
+  const c = lib();
+  for (const id of ['ragazza', 'supereroe']) {
+    const spec = c.get(`CHARACTERS.${id}`);
+    for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) {
+      if (spec.poses[pose].lift || spec.poses[pose].flight) continue;
+      for (const t of [0, .37]) {
+        const y = partBox(layoutOf(c, id, { view, pose, t }), q => /^(leg|foot|shoe|boot)/.test(q.id)).y1;
+        assert.ok(Math.abs(y) < 1e-6, `${id} ${view} ${pose} t=${t}: il piede è a ${y.toFixed(2)} dal suolo`);
+      }
+    }
+  }
+});
+test('a biped without hair is bald', () => {
+  const c = lib(), spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.ragazza')));
+  delete spec.parts.hair; spec.features = spec.features.filter(f => f.part !== 'fringe');
+  const L = c.call('((sp, s) => BODIES.biped.layout(sp, s))', spec, { view: 'front', t: 0, pose: {}, expression: {} });
+  assert.deepEqual(L.parts.filter(q => /hair|lock|^face$/.test(q.id)).map(q => q.id), []);
 });

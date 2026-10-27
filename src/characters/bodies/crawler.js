@@ -27,15 +27,15 @@ BODIES.crawler = {
   spine(spec, P, t) {
     const B = BODIES.crawler, pr = spec.proportions, N = pr.segments, R = pr.segR, Rh = R * pr.headK;
     const d = R * 1.6, dh = (Rh + R) * .72, L0 = dh + (N - 1) * d, base = i => i ? -(R + .3) : -(Rh + .3);
-    const h = new Array(N + 1).fill(0);
-    h[0] += P.raise * 2.6 * R; h[1] += P.raise * 1.5 * R; h[2] += P.raise * .6 * R;
-    for (let i = 1; i <= N; i++) h[i] += P.arch * 1.2 * R * Math.sin(Math.PI * i / N);
-    h[0] += P.arch * .9 * R;
+    const h = new Array(N + 1).fill(0), up = 1 - CG.clamp(P.curl);   // a coiled body lies on the ground
+    h[0] += up * P.raise * 2.6 * R; h[1] += up * P.raise * 1.5 * R; h[2] += up * P.raise * .6 * R;
+    for (let i = 1; i <= N; i++) h[i] += up * P.arch * 1.2 * R * Math.sin(Math.PI * i / N);
+    h[0] += up * P.arch * .9 * R;
     if (P.cycle) {                                   // a bump of height `wave` that every segment repeats Δ = period / N later
       const { period, width } = B.WAVE;
       for (let i = 0; i <= N; i++) {
         const p = ((t + P.phase + i * period / N) / period) % 1, q = p < 0 ? p + 1 : p;
-        h[i] += P.wave * 1.6 * R * (q < width ? Math.sin(Math.PI * q / width) ** 2 : 0);
+        h[i] += up * P.wave * 1.6 * R * (q < width ? Math.sin(Math.PI * q / width) ** 2 : 0);
       }
     }
     const pts = [[L0 / 2, base(0) - h[0]]];
@@ -43,13 +43,21 @@ BODIES.crawler = {
       const D = i === 1 ? dh : d, y = base(i) - h[i], dy = CG.clamp(y - pts[i - 1][1], -D * .95, D * .95);
       pts.push([pts[i - 1][0] - Math.sqrt(D * D - dy * dy), pts[i - 1][1] + dy]);
     }
-    if (P.curl > 0) {                                // coiled: the segments on a circle behind the head, same spacing
-      const rho = (N + 1) * d / (2 * Math.PI) * 1.05, step = 2 * Math.asin(d / (2 * rho));
-      const c = [pts[0][0] - dh, base(1) - rho];
+    if (P.curl > 0) {
+      // coiled: the segments on a circle behind the head. Each link turns from its straight direction towards the
+      // circle's, and the chain is rebuilt link by link, so the spacing holds at every stage of the curl.
+      const rho = (N + 1) * d / (2 * Math.PI) * 1.05, step = 2 * Math.asin(d / (2 * rho)), c = [pts[0][0] - dh, base(1) - rho];
+      const circle = [pts[0]], dirOf = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]), k = CG.clamp(P.curl);
+      for (let i = 1; i <= N; i++) { const a = Math.PI / 2 + (i - 1) * step; circle.push([c[0] + rho * Math.cos(a), c[1] + rho * Math.sin(a)]); }
+      // both runs of link directions unwrapped (no jumps of 2π), so neighbouring links always turn the same way
+      const unwrap = as => as.reduce((o, a) => { const p = o.length ? o[o.length - 1] : a; o.push(a + 2 * Math.PI * Math.round((p - a) / (2 * Math.PI))); return o; }, []);
+      const aS = unwrap(pts.slice(1).map((p, i) => dirOf(pts[i], p))), aC = unwrap(circle.slice(1).map((p, i) => dirOf(circle[i], p)));
+      const shift = 2 * Math.PI * Math.round((aS[0] - aC[0]) / (2 * Math.PI)), out = [pts[0]];
       for (let i = 1; i <= N; i++) {
-        const a = Math.PI / 2 + (i - 1) * step, q = [c[0] + rho * Math.cos(a), c[1] + rho * Math.sin(a)];
-        pts[i] = [CG.lerp(pts[i][0], q[0], P.curl), CG.lerp(pts[i][1], q[1], P.curl)];
+        const a = CG.lerp(aS[i - 1], aC[i - 1] + shift, k), D = i === 1 ? dh : d;
+        out.push([out[i - 1][0] + Math.cos(a) * D, out[i - 1][1] + Math.sin(a) * D]);
       }
+      pts.splice(0, pts.length, ...out);
     }
     return pts.map(([x, y]) => [x, y - P.lift]);
   },
