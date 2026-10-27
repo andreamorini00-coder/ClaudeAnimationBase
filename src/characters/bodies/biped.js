@@ -14,7 +14,9 @@
 //   opposition, about 2 strides a second).
 // Parts the spec may declare: hair { style: 'bob' | 'spiky', locks }, skirt (role skirt), shoes (role shoes),
 //   sleeves { wide } (puffy sleeves with a cuff), gloves, boots, cape (role accent), mask (role hair), star (role
-//   emblem), eyes { dark } (big dark eyes with highlights).
+//   emblem), eyes { dark } (big dark eyes with highlights), cheeks (always pink; without, they show only when
+//   blushing), brows { kind: 'thick' }, build { arm, leg } (limb thickness in heads; .21 and .24 by default, the
+//   chibi's).
 // Expression params: eyes, mouth (FACES kinds), brows -1 (sad) .. 1 (angry), blush 0..1 (embarrassed), headTilt.
 BODIES.biped = {
   HU: 3,
@@ -22,7 +24,7 @@ BODIES.biped = {
   proportions: ['heads', 'shoulders', 'hips', 'torso', 'arm', 'leg', 'headW'],
   partRoles: { skirt: 'skirt', shoes: 'shoes', gloves: 'accent', cape: 'accent', boots: 'accent', mask: 'hair', star: 'emblem' },
   parts: ['head', 'hair', 'fringe', 'ears', 'eyes', 'brows', 'mouth', 'cheeks', 'neck', 'torso', 'arms', 'hands', 'legs', 'shoes',
-    'skirt', 'sleeves', 'gloves', 'boots', 'mask', 'star', 'cape', 'shadow'],
+    'skirt', 'sleeves', 'gloves', 'boots', 'mask', 'star', 'cape', 'shadow', 'build'],
   poseParams: ['shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'hipL', 'hipR', 'kneeL', 'kneeR', 'fistL', 'fistR', 'lean', 'lift', 'crouch',
     'flight', 'capeFlow', 'cycle'],
   exprParams: ['eyes', 'mouth', 'brows', 'blush', 'headTilt'],
@@ -50,7 +52,7 @@ BODIES.biped = {
     const dirOf = a => [Math.cos(a), Math.sin(a)], at = (p, a, l) => [p[0] + Math.cos(a) * l, p[1] + Math.sin(a) * l];
 
     // ---- the angles: the pose, plus the run cycle and the crouch ----
-    const run = P.cycle * Math.sin(Math.PI * 2 * 2 * t), runB = P.cycle * Math.sin(Math.PI * 2 * 2 * t + Math.PI);
+    const run = P.cycle * Math.cos(Math.PI * 2 * 2 * t), runB = -run;   // a full stride at t = 0
     const A = {
       shoulderL: P.shoulderL - run * .9, shoulderR: P.shoulderR + run * .9,
       elbowL: P.elbowL + P.cycle * 1.1, elbowR: P.elbowR + P.cycle * 1.1,
@@ -60,7 +62,7 @@ BODIES.biped = {
     for (const k of ['elbowL', 'elbowR', 'kneeL', 'kneeR']) A[k] = CG.clamp(A[k], 0, 2.6);
 
     // ---- the vertical stack: the lower ankle stays a foot above the ground ----
-    const footH = .1 * HU, legL = pr.leg * HU, armL = pr.arm * HU, legW = .24 * HU, armW = .21 * HU;
+    const footH = .1 * HU, legL = pr.leg * HU, armL = pr.arm * HU, legW = (sp.build && sp.build.leg || .24) * HU, armW = (sp.build && sp.build.arm || .21) * HU;
     const legChain = (s, hip) => {
       const L = V.limbs[s], a1 = Math.PI / 2 - L.dir * (A['hip' + s] + V.legOut), a2 = a1 + L.dir * A['knee' + s];
       const knee = at(hip, a1, legL / 2); return [hip, knee, at(knee, a2, legL / 2), a2];
@@ -93,6 +95,29 @@ BODIES.biped = {
     const top = CG.block(0, shY - .03 * HU, hipY + .06 * HU, shHalf * 2, pr.hips * HU * 1.06 * V.w, .32);
     add('neck', 'skin', 2.3, upper(CG.block(0, shY - neckH - .06 * HU, shY + .06 * HU, .25 * HU * Math.max(.8, V.w), .27 * HU * Math.max(.8, V.w), .6)));
     add('torso', 'top', 2.5, upper(top));
+    if (sp.star && V.face) {                                       // a five-pointed star on the chest (not from the back)
+      const sx = V.face === 'side' ? shHalf * .7 : V.face === 'q' ? shHalf * .12 : 0, sk = V.face === 'side' ? .4 : V.face === 'q' ? .85 : 1, sr = .3 * HU;
+      const star = [...Array(10)].map((_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? sr * .45 : sr; return [sx + Math.cos(a) * rr * sk, shY + .5 * HU + Math.sin(a) * rr]; });
+      add('star', 'emblem', 2.6, upper(star), { line: .7, feature: 'star' });
+    }
+    if (sp.cape) {
+      // one shape from the shoulders to the waist; capeFlow swings it back (less so in flight, where "back" is along
+      // the body), and its hem ripples with t
+      const len = (hipY - shY) * .92, flow = P.capeFlow, wave = k => .06 * HU * (1 + flow) * Math.sin(Math.PI * 2 * 1.6 * t + k * 1.3);
+      let cape, dep;
+      if (V.face === 'side' || V.face === 'q') {
+        const a0 = V.face === 'side' ? [-shHalf * .2, shY] : [shHalf * .1, shY], b0 = [-shHalf * (V.face === 'side' ? 1.12 : 1.2), shY + .05 * HU];
+        const hem = [0, 1, 2, 3].map(k => { const f = k / 3; return [CG.lerp(a0[0] - .1 * HU, b0[0] - .3 * HU, f), shY + len * (1 + .04 * f) + wave(k)]; });
+        cape = CG.rotate([a0, ...hem.reverse(), b0], flow * 1.25 * (1 - .8 * P.flight), (a0[0] + b0[0]) / 2, shY);
+        dep = V.face === 'side' ? 1.2 : 1;
+      } else {
+        const k = 1 - .5 * flow, hw = shHalf * .95;
+        const hem = [-1, -.33, .33, 1].map((u, i) => [u * hw * 1.55, shY + len * k + wave(i)]);
+        cape = [[-hw, shY], [hw, shY], ...hem.reverse()];
+        dep = V.face ? 1 : 3;                                       // behind the body from the front, over the back from behind
+      }
+      add('cape', 'accent', dep, upper(cape), { feature: 'cape' });
+    }
     if (sp.skirt) {
       const flare = 1.5 + .25 * P.cycle * Math.abs(run) + .2 * P.crouch;
       add('skirt', 'skirt', 2, whole(CG.block(0, hipY - .12 * HU, hipY + .36 * HU, pr.hips * HU * V.w, pr.hips * HU * flare * V.w, .22)), { feature: 'skirt' });
@@ -108,7 +133,7 @@ BODIES.biped = {
       const wide = sp.sleeves && sp.sleeves.wide, cuffAt = at(wrist, a2, -.1 * HU);
       add('arm' + s, 'top', dep, upper(CG.tube([sh, elbow, wide ? cuffAt : wrist], armW * (wide ? 1.25 : 1), armW * (wide ? 1.55 : .85))), dim);
       if (sp.sleeves) add('cuff' + s, 'top', dep + .01, upper(CG.tube([cuffAt, at(wrist, a2, -.02 * HU)], armW * 1.2, armW * 1.2, 3)), { ...dim, line: .8 });
-      if (sp.gloves) add('glove' + s, 'accent', dep + .01, upper(CG.tube([at(elbow, a2, armL * .18), wrist], armW * 1.05, armW * 1.1)), { ...dim, feature: 'gloves' });
+      if (sp.gloves) add('glove' + s, 'accent', dep + .01, upper(CG.tube([at(elbow, a2, armL * .22), wrist], armW * 1.05, armW * 1.1)), { ...dim, feature: 'gloves' });
       // the hand: an oval with a thumb, or a round fist
       const hr = .12 * HU, hc = at(wrist, a2, hr * .7), role = sp.gloves ? 'accent' : 'skin';
       if (P['fist' + s] > .5) add('hand' + s, role, dep + .02, upper(CG.ellipse(hc[0], hc[1], hr * 1.05, hr * 1.05, 18)), dim);
@@ -129,6 +154,11 @@ BODIES.biped = {
       const F = V.face === 'front' ? { eyes: [[-.21, 1], [.21, 1]], mouth: 0, cheeks: [-.33, .33] }
         : V.face === 'q' ? { eyes: [[-.04, .88], [.27, 1]], mouth: .13, cheeks: [-.17, .4] } : { eyes: [[.3, .85]], mouth: .38, cheeks: [.2] };
       const ey = hcy + .16 * HU, r = .135 * HU, eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark) };
+      if (sp.mask) {                                              // a band across the eyes, cut to the head's outline
+        const mx0 = hcx + F.eyes[0][0] * HU - .2 * HU, mx1 = hcx + F.eyes[F.eyes.length - 1][0] * HU + .2 * HU;
+        const band = CG.block((mx0 + mx1) / 2 + (V.face === 'side' ? -.1 * HU : 0), ey - .13 * HU, ey + .12 * HU, mx1 - mx0 + (V.face === 'side' ? .3 * HU : 0), mx1 - mx0 - .06 * HU, .55);
+        add('mask', 'hair', 4.78, head(CG.clipConvex(band, CG.ellipse(hcx, hcy, headW / 2 + .01, HU / 2 + .01, 44))), { feature: 'mask' });
+      }
       F.eyes.forEach(([x, k], i) => {
         const ex = hcx + x * HU;
         FACES.eye(E.eyes, ex, ey, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, 4.8, head(p.pts), { line: p.line, stroke: p.stroke }));
@@ -137,8 +167,8 @@ BODIES.biped = {
         FACES.brows(sp.brows && sp.brows.kind || 'line', ex, ey - .19 * HU, .2 * HU * k * inward, E.brows).parts
           .forEach(p => add('brow' + i, p.role, 5.05, head(p.pts), { line: p.line, stroke: true }));
       });
-      F.cheeks.forEach((x, i) => FACES.cheek(hcx + x * HU, hcy + .31 * HU, .09 * HU, E.blush).parts
-        .forEach(p => add(p.id === 'cheek' ? 'cheek' + i : 'blush' + i, p.role, 4.75, head(p.pts), { line: p.line, stroke: p.stroke, ...(p.dim ? { dim: p.dim } : {}), ...(p.id === 'cheek' ? { feature: 'cheeks' } : {}) })));
+      if (sp.cheeks || E.blush > 0) F.cheeks.forEach((x, i) => FACES.cheek(hcx + x * HU, hcy + .31 * HU, .09 * HU, E.blush).parts
+        .forEach(p => add(p.id === 'cheek' ? 'cheek' + i : 'blush' + i, p.role, 4.75, head(p.pts), { line: p.line, stroke: p.stroke, ...(p.dim ? { dim: p.dim } : {}), ...(p.id === 'cheek' && sp.cheeks ? { feature: 'cheeks' } : {}) })));
       FACES.mouth(E.mouth, hcx + F.mouth * HU, hcy + .36 * HU, .15 * HU).parts
         .forEach(p => add('mouth', p.role, 4.8, head(p.pts), { line: p.stroke ? .5 : p.line, stroke: p.stroke }));
     }
@@ -157,9 +187,28 @@ BODIES.biped = {
   hair(spec, V, { hcx, hcy, headW, HU, add, head }) {
     const h = spec.parts.hair || {}, style = h.style || 'bob', hairline = hcy - .2 * HU, jaw = hcy + .53 * HU;
     const mx = hcx + (V.face === 'side' ? -.16 : V.face === 'q' ? -.07 : 0) * HU, mw = headW * (V.face === 'side' ? 1.24 : 1.36);
-    const mass = CG.drop(mx, jaw, mw, jaw - (hcy - HU / 2 - .09 * HU));
+    const spiky = style === 'spiky';
+    // the bob: a long mass down to the jaw; spiky: a short cap over the skull, the spikes standing out of it
+    const cap = CG.ellipse(mx, hcy - .06 * HU, headW * .55, .56 * HU, 44);
+    const mass = !spiky ? CG.drop(mx, jaw, mw, jaw - (hcy - HU / 2 - .09 * HU))
+      : V.face === 'side' || V.face === 'q' ? CG.clipLine(CG.clipY(cap, hcy + .22 * HU, -1), [hcx + (V.face === 'side' ? -.12 : -.3) * HU, hcy + .3 * HU], [hcx + (V.face === 'side' ? .32 : .2) * HU, hcy - .3 * HU])
+      : CG.clipY(cap, V.face ? hairline + .04 * HU : hcy + .3 * HU, -1);
     add('hair', 'hair', 4.6, head(mass));
-    if (!V.face) return;
+    function drawSpikes() {
+      const n = h.locks || 5, side = V.face === 'side' || V.face === 'q';
+      for (let i = 0; i < n; i++) {
+        // fanned over the top; in profile and 3/4 they sweep back
+        const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, a = -Math.PI / 2 + u * .95 + (side ? -.4 : 0);
+        const base = [mx + Math.cos(a) * headW * .5, hcy - .06 * HU + Math.sin(a) * .54 * HU], len = (.5 - .16 * Math.abs(u) + (i === 2 ? .06 : 0)) * HU, w = .27 * HU;
+        const tipA = a + (side ? -.6 : .45), tip = [base[0] + Math.cos(tipA) * len, base[1] + Math.sin(tipA) * len];
+        const nx = -Math.sin(a) * w, ny = Math.cos(a) * w, bx = Math.cos(a) * .1 * HU, by = Math.sin(a) * .1 * HU;
+        add('spike' + i, 'hair', 4.55, head([[base[0] - nx - bx, base[1] - ny - by], tip, [base[0] + nx - bx, base[1] + ny - by]]), { feature: 'spikes' });
+      }
+    }
+    if (!V.face || spiky) {
+      if (spiky) drawSpikes();
+      return;
+    }
     const headPts = CG.ellipse(hcx, hcy, headW / 2, HU / 2, 44), fw = headW * .37;
     let face = CG.clipY(headPts, hairline, 1);
     // from the front the hair frames the face with soft curves; in profile and 3/4 its edge runs from the forehead

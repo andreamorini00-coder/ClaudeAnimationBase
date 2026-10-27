@@ -531,3 +531,26 @@ test('blush grows the cheek and adds three strokes', () => {
   assert.equal(a.length, 1); assert.equal(b.filter(q => q.stroke).length, 3);
   assert.ok(c.call('CG.area', b[0].pts) > c.call('CG.area', a[0].pts) * 1.3);
 });
+
+// ---------- 4b1: the hero ----------
+test('supereroe spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.supereroe')), []); });
+test('supereroe features per view and counts', () => checkFeatures(lib(), 'supereroe'));
+test('supereroe uses only its roles', () => checkRoles(lib(), 'supereroe'));
+test('supereroe has no NaN', () => checkFinite(lib(), 'supereroe'));
+test('supereroe flip mirrors exactly', () => checkFlip(lib(), 'supereroe'));
+test('supereroe layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'supereroe', { pose: 'corsa', t: .41 }), layoutOf(c, 'supereroe', { pose: 'corsa', t: .41 }));
+});
+test('supereroe is heads tall', () => {
+  const c = lib(), want = c.get('CHARACTERS.supereroe.proportions.heads'), got = headsTall(c, 'supereroe');
+  assert.ok(near(got, want, .05), `${got.toFixed(2)} teste invece di ${want}`);
+});
+test('supereroe limbs keep their length', () => checkLimbs(lib(), 'supereroe'));
+test('cape trails in flight', () => {
+  const c = lib();
+  for (const t of [0, .2, .4]) {
+    const L = layoutOf(c, 'supereroe', { view: 'side', pose: 'voloOrizzontale', t }), J = L.joints;
+    const cape = partBox(L, q => q.id === 'cape'), sx = (J.shoulderL[0] + J.shoulderR[0]) / 2;
+    assert.ok((cape.x0 + cape.x1) / 2 < sx - .5, `t=${t}: il mantello non sta dietro le spalle`);
+  }
+});

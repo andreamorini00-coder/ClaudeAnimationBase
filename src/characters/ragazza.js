@@ -3,7 +3,7 @@ CHARACTERS.ragazza = {
   id: 'ragazza', version: 1, body: 'biped',
   // about 3 heads (soft chibi): foot .1 + leg .95 + torso .8 + neck .07 + head 1 + hair .09
   proportions: { heads: 3, shoulders: .8, hips: .76, torso: .8, arm: .88, leg: .95, headW: 1.12 },
-  parts: { hair: { style: 'bob' }, skirt: {}, shoes: {}, sleeves: { wide: true }, eyes: { dark: true } },
+  parts: { hair: { style: 'bob' }, skirt: {}, shoes: {}, sleeves: { wide: true }, eyes: { dark: true }, cheeks: {} },
   roles: {
     skin: '#F2D6BC', hair: '#A47C61', top: '#A6B39A', skirt: '#C99595', cheek: '#C99595', shoes: '#7A5C49',
     legs: '#F2D6BC', line: '#59463B', shadow: '#8C8074', eyeWhite: '#F6EBD8',
