@@ -31,12 +31,13 @@ BODIES.quadruped = {
   EXPR0: { eyes: 'open', mouth: 'catSmile', ears: 0, tail: 0, tailCurl: 0, headTilt: 0, squint: 0, look: 0 },
   // Per view: body shape and width factor, where the head sits (x as a share of the length), the legs
   // ([x as a share of the body length, far?, front?]; seen end-on only the near pair shows, the body hides the other),
-  // where the tail starts (y as a share of half the body height) and how it points, which face shows.
+  // where the tail starts (y as a share of half the body height), how it points and bends (hook: per link; from the
+  // back it rises straight up the middle and hooks only at the end), which face shows.
   VIEW: {
     side:  { body: 'bean', lenK: 1, headX: .5, legs: [[-.34, 1, 0], [.3, 1, 1], [-.4, 0, 0], [.24, 0, 1]], tail: { x: -.5, y: -.6, a: -.62, flipBend: 1, behind: 1 }, face: 'side' },
     q:     { body: 'bean', lenK: .7, headX: .55, legs: [[-.3, 1, 0], [.34, 1, 1], [-.38, 0, 0], [.22, 0, 1]], tail: { x: -.5, y: -.7, a: -.6, flipBend: 1, behind: 1 }, face: 'q' },
     front: { body: 'round', lenK: .6, headX: 0, legs: [[-.2, 0, 1], [.2, 0, 1]], tail: { x: .42, y: -.33, a: -.4, flipBend: -1, behind: 1 }, face: 'front' },
-    back:  { body: 'round', lenK: .6, headX: 0, legs: [[-.2, 0, 0], [.2, 0, 0]], tail: { x: .06, y: .6, a: -.47, flipBend: 1, behind: 0 }, face: null },
+    back:  { body: 'round', lenK: .6, headX: 0, legs: [[-.2, 0, 0], [.2, 0, 0]], tail: { x: 0, y: .6, a: -.5, flipBend: 1, behind: 0, hook: [0, 0, 0, .12, .5, .7] }, face: null },
   },
   // A wing's joints, in wing lengths from the shoulder: shoulder S, elbow E, wrist W, three finger tips F1..F3 and the
   // root R where the membrane meets the body. OPEN is drawn flat (u outwards, v down) and placed per view by WING_MAP;
@@ -125,7 +126,7 @@ BODIES.quadruped = {
       let a0 = a0v * Math.PI;
       if (up > 0) a0 = CG.lerp(a0, -Math.PI / 2, up); else a0 = CG.lerp(a0, (V.face === 'front' ? .1 : .85) * Math.PI * (dir < 0 ? 0 : 1) + (dir < 0 ? .15 : 0), -up);
       a0 = CG.lerp(a0, dir < 0 ? .05 : Math.PI * .97, curl);
-      const hook = [0, .16, .26, .36, .46, .5].map(b => b * hk * (1 - Math.max(0, up)) * (1 + Math.min(0, up) * .8));
+      const hook = (T.hook || [0, .16, .26, .36, .46, .5]).map(b => b * hk * (1 - Math.max(0, up)) * (1 + Math.min(0, up) * .8));
       const bends = hook.map((b, i) => dir * (b * (1 - curl) + curl * -.32) + .09 * Math.sin(Math.PI * 2 * (.45 * t) - i * .7) * (1 + P.cycle));
       const root = [cx + T.x * (V.body === 'bean' ? bodyLen : halfW * 2), cy + y0v * bodyH / 2];
       const path = pose(CG.chain(root, a0, new Array(segs).fill(L), bends));
@@ -167,7 +168,7 @@ BODIES.quadruped = {
         for (const k of Object.keys(B.WING.OPEN)) {
           const [ou, ov] = CG.rotate([B.WING.OPEN[k]], flap, 0, 0)[0], [fx, fy] = B.WING.FOLDED[k];
           const o = [ou * m.u[0] + ov * m.v[0], ou * m.u[1] + ov * m.v[1]];
-          const c = m.fold === 'side' ? [Math.sign(m.u[0]) * (.06 - fx * .32), fy] : [fx * m.fold[0], fy * m.fold[1]];
+          const c = m.fold === 'side' ? [Math.sign(m.u[0]) * (.04 - fx * .26), fy] : [fx * m.fold[0], fy * m.fold[1]];
           J[k] = [S[0] + Lw * CG.lerp(c[0], o[0], open), S[1] + Lw * CG.lerp(c[1], o[1], open)];
         }
         const sc = (a, b, k = .28) => [CG.lerp((a[0] + b[0]) / 2, J.W[0], k), CG.lerp((a[1] + b[1]) / 2, J.W[1], k)];

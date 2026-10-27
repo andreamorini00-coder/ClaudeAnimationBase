@@ -41,7 +41,7 @@ test('missing field', () => { const s = minimal(); delete s.poses; assert.match(
 
 // ---------- geometry and faces ----------
 const finite = pts => pts.every(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
-const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), y1: Math.max(...ys) }; };
+const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) }; };
 const near = (a, b, rel) => Math.abs(a - b) <= rel * Math.abs(b);
 
 test('ellipse area', () => {
@@ -311,9 +311,30 @@ test('gatto: two legs from the front and from the back, one paw per leg', () => 
   for (const view of ['front', 'back']) { const L = layoutOf(c, 'gatto', { view }); assert.equal(legs(L).length, 2, view); }
   for (const view of ['front', 'q', 'side', 'back']) { const L = layoutOf(c, 'gatto', { view }); assert.equal(paws(L).length, legs(L).length, view); }
 });
-test('gatto: from the back the tail starts low on the rump', () => {
-  const L = layoutOf(lib(), 'gatto', { view: 'back' }), body = partBox(L, p => p.id === 'body'), tail = partBox(L, p => p.id === 'tail');
-  assert.ok(tail.y1 > body.y1 - body.h * .3, `la coda finisce a ${tail.y1.toFixed(2)}, il corpo a ${body.y1.toFixed(2)}`);
+test('the back-view tail rises in the middle third', () => {
+  const c = lib();
+  for (const id of ['gatto', 'draghetto']) for (const t of [0, .37]) {
+    const spec = c.get(`CHARACTERS.${id}`), L = c.call(`(s => BODIES.quadruped.layout(CHARACTERS.${id}, s))`, { view: 'back', t, pose: {}, expression: {} });
+    const body = partBox(L, q => q.id === 'body'), tailPts = L.parts.find(q => q.id === 'tail').pts, tail = box(tailPts);
+    const half = Math.max(spec.parts.tail.base || 0, spec.parts.tail.width || .8) / 2, mid = (body.x0 + body.x1) / 2;
+    assert.ok(tail.y1 >= body.y0 + body.h * .7, `${id}: la coda parte a ${((tail.y1 - body.y0) / body.h * 100).toFixed(0)}% dell'altezza del corpo`);
+    for (const [x, y] of tailPts) if (y > tail.y0 + tail.h * .25)
+      assert.ok(Math.abs(x - mid) <= body.w / 6 + half + 1e-9, `${id} t=${t}: la coda esce dal terzo centrale (x ${(x - mid).toFixed(2)})`);
+    assert.ok(tail.y0 < body.y0, `${id}: la punta della coda non supera la schiena`);
+  }
+});
+// the cat v1, front / q / side, every pose and expression: each part's point sum (1e-6), hashed (FNV-1a). Computed with
+// the v1 code before the back-view tail changed (Fase 4b1, Task 4).
+const CAT_V1_PRINT = 'acf52372';
+test('the cat changes only its back-view tail', () => {
+  const c = lib(), spec = c.get('CHARACTERS.gatto');
+  let h = 2166136261;
+  for (const view of ['front', 'q', 'side']) for (const p of Object.keys(spec.poses)) for (const e of Object.keys(spec.expressions)) {
+    const L = c.call('(s => BODIES.quadruped.layout(CHARACTERS.gatto, s))', { view, t: .37, pose: spec.poses[p], expression: spec.expressions[e] });
+    const str = L.parts.map(q => q.id + ':' + Math.round(q.pts.reduce((a, [x, y]) => a + x + 2 * y, 0) * 1e6)).join('|');
+    for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0;
+  }
+  assert.equal(h.toString(16), CAT_V1_PRINT);
 });
 test('gatto: dark eyes with a highlight', () => {
   const c = lib(), r = c.call('FACES.eye', 'open', 0, 0, 1, { dark: true });

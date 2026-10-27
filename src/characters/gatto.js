@@ -1,9 +1,9 @@
 // gatto.js: the cat (reference/characters/gatto/). Data only: the body draws it (bodies/quadruped.js).
 CHARACTERS.gatto = {
-  id: 'gatto', version: 1, body: 'quadruped',
+  id: 'gatto', version: 2, body: 'quadruped',
   // in units: nose to rump, head width, body height, leg length and width, tail length. Andrea (2026-10-27): the head
   // about 0.45 of the length and almost as tall as the body; a short round body; short legs. Second round: the body
-  // about 20% shorter, a round bean as in base.png.
+  // about 20% shorter, a round bean as in base.png. v2 (4b1): from the back the tail starts low and rises up the middle.
   proportions: { length: 9.3, head: 4.5, bodyHeight: 4.3, legLength: .95, legWidth: 1.2, tail: 4.2 },
   parts: { ears: { size: 1.15 }, blaze: {}, whiskers: {}, tail: { width: .85 }, eyes: { dark: true }, collar: {}, bell: {} },
   roles: {
