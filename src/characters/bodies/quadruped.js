@@ -11,9 +11,12 @@
 //   whiskers, collar, bell, tail { width, base, angle, hook, tip }, eyes { dark: true } (big dark eyes with a highlight)
 //   or { iris: true } (a coloured iris with a round pupil, role iris), eyes.size (scales them), horns { size } (two
 //   short cream horns bent back), crests { head, tail } (coral spikes, role crest), belly (a cream stripe from the
-//   neck to the tail), wings { span, sections } (bat wings, role membrane; span = open width in body widths, front).
+//   neck to the tail), wings { span, sections } (bat wings, role membrane; span = open width in body widths, front),
+//   snout (a muzzle bump in profile and 3/4), nostrils (two dots instead of the cat's nose), paws { plain: true }
+//   (paws in the fur colour, not cream).
 // tail: base = width at the root (a thick, tapering tail), angle { view: direction at rest, a share of π } and
-//   y { view: root height, a share of half the body height } override the view's defaults, hook = how much the
+//   y { view: root height, a share of half the body height } override the view's defaults, len { view: length
+//   factor } (a long tail seen from behind is foreshortened), hook = how much the
 //   default hook bends (1 = the cat's), tip: false = no cream tip.
 // Expression params: eyes, mouth (FACES kinds), ears -1 (down) .. 0 .. 1 (flat back), tail -1 (drooping) .. 0 (hook)
 //   .. 1 (straight up), tailCurl 0..1 (wrapped round the body), headTilt (radians). act() adds squint and look.
@@ -22,7 +25,7 @@ BODIES.quadruped = {
   proportions: ['length', 'head', 'bodyHeight', 'legLength', 'legWidth', 'tail'],
   partRoles: { ears: 'earInner', collar: 'collar', bell: 'bell', crests: 'crest', wings: 'membrane' },   // optional parts and the colour role each needs
   parts: ['body', 'head', 'muzzle', 'blaze', 'ears', 'legs', 'tail', 'tailTip', 'collar', 'bell', 'whiskers', 'eyes', 'mouth', 'shadow',
-    'horns', 'crests', 'belly', 'wings'],
+    'horns', 'crests', 'belly', 'wings', 'snout', 'nostrils', 'paws'],
   poseParams: ['crouch', 'pitch', 'lift', 'stretch', 'legSwing', 'legPhase', 'pawRaise', 'headDrop', 'cycle', 'wingOpen', 'flap'],
   exprParams: ['eyes', 'mouth', 'ears', 'tail', 'tailCurl', 'headTilt'],
   views: ['front', 'q', 'side', 'back'],
@@ -114,14 +117,15 @@ BODIES.quadruped = {
       const depth = far ? -1 + i * .01 : (front ? .5 : .4) + i * .01;
       add('leg' + i, 'fur', depth, CG.tube([hip, foot], w, w * .95), far ? { dim: .3 } : {});
       // one round cream paw; the leg's end is hidden inside it
-      add('paw' + i, 'cream', depth + .005, CG.ellipse(foot[0], foot[1], w * .56, pawR, 18), far ? { dim: .3, line: .8 } : { line: .8 });
+      add('paw' + i, sp.paws && sp.paws.plain ? 'fur' : 'cream', depth + .005, CG.ellipse(foot[0], foot[1], w * .56, pawR, 18), far ? { dim: .3, line: .8 } : { line: .8 });
     });
 
     // ---- tail: a soft chain from the rump; hooked by default, alive with t ----
     {
-      const T = V.tail, segs = 6, L = pr.tail / segs * (V.face === 'side' || !V.face ? 1 : .78), dir = T.flipBend;
+      const T = V.tail, segs = 6, ts = sp.tail || {}, dir = T.flipBend;
+      const L = pr.tail / segs * (V.face === 'side' || !V.face ? 1 : .78) * (ts.len && ts.len[state.view] != null ? ts.len[state.view] : 1);
       const up = CG.clamp(E.tail, -1, 1), curl = CG.clamp(E.tailCurl);
-      const ts = sp.tail || {}, hk = ts.hook != null ? ts.hook : 1;
+      const hk = ts.hook != null ? ts.hook : 1;
       const vk = state.view, a0v = ts.angle && ts.angle[vk] != null ? ts.angle[vk] : T.a, y0v = ts.y && ts.y[vk] != null ? ts.y[vk] : T.y;
       let a0 = a0v * Math.PI;
       if (up > 0) a0 = CG.lerp(a0, -Math.PI / 2, up); else a0 = CG.lerp(a0, (V.face === 'front' ? .1 : .85) * Math.PI * (dir < 0 ? 0 : 1) + (dir < 0 ? .15 : 0), -up);
@@ -172,13 +176,14 @@ BODIES.quadruped = {
           J[k] = [S[0] + Lw * CG.lerp(c[0], o[0], open), S[1] + Lw * CG.lerp(c[1], o[1], open)];
         }
         const sc = (a, b, k = .28) => [CG.lerp((a[0] + b[0]) / 2, J.W[0], k), CG.lerp((a[1] + b[1]) / 2, J.W[1], k)];
-        const more = m.dim ? { dim: m.dim } : {}, dep = m.depth + wi * .001;
+        // folded, the bones are thin: thick ones would read as a dark knot on the flank
+        const more = { line: .55, ...(m.dim ? { dim: m.dim } : {}) }, dep = m.depth + wi * .001, bw = CG.lerp(.5, 1, open);
         add('membrane' + wn + '0', 'membrane', dep, pose([J.W, J.F1, sc(J.F1, J.F2), J.F2]), more);
         add('membrane' + wn + '1', 'membrane', dep, pose([J.W, J.F2, sc(J.F2, J.F3), J.F3]), more);
         add('membrane' + wn + '2', 'membrane', dep, pose([J.W, J.F3, sc(J.F3, J.R, .12), J.R, J.S, J.E]), more);
-        add('wingBone' + wn + '0', 'fur', dep + .01, pose(CG.tube([J.S, J.E, J.W, J.F1], .42, .14)), { ...more, feature: 'wings' });
-        add('wingBone' + wn + '1', 'fur', dep + .01, pose(CG.tube([J.W, J.F2], .22, .12)), more);
-        add('wingBone' + wn + '2', 'fur', dep + .01, pose(CG.tube([J.W, J.F3], .22, .12)), more);
+        add('wingBone' + wn + '0', 'fur', dep + .01, pose(CG.tube([J.S, J.E, J.W, J.F1], .62 * bw, .2 * bw)), { ...more, feature: 'wings' });
+        add('wingBone' + wn + '1', 'fur', dep + .01, pose(CG.tube([J.W, J.F2], .34 * bw, .16 * bw)), more);
+        add('wingBone' + wn + '2', 'fur', dep + .01, pose(CG.tube([J.W, J.F3], .34 * bw, .16 * bw)), more);
       });
     }
 
@@ -236,6 +241,10 @@ BODIES.quadruped = {
       }
     });
     add('head', 'fur', D, head(headPts));
+    if (sp.snout && (V.face === 'side' || V.face === 'q')) {
+      const k = V.face === 'side' ? 1 : .55;
+      add('snout', 'fur', D - .01, head(CG.ellipse(hx + headW * (.1 + .32 * k), hy + headH * .2, headW * .26, headH * .22, 28)));
+    }
 
     // the face
     if (V.face) {
@@ -251,7 +260,9 @@ BODIES.quadruped = {
       eyeAt.forEach(([ex, k], i) => FACES.eye(E.eyes, ex, eyeY, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, D + .5, head(p.pts), { line: p.line, stroke: p.stroke })));
       const ny = hy + headH * .24, nx = fx + (V.face === 'side' ? headW * .22 : 0);
       const nz = headW * .036;
-      add('nose', 'line', D + .52, head([[nx - nz * 1.4, ny - nz * .7], [nx + nz * 1.4, ny - nz * .7], [nx, ny + nz]]), { line: 0 });
+      if (sp.nostrils) (V.face === 'side' ? [nx + nz * 1.5] : [nx - nz * 2.2, nx + nz * 2.2]).forEach((x, k) =>
+        add('nostril' + k, 'line', D + .52, head(CG.ellipse(x, ny - nz * .4, nz * .55, nz * .4, 10)), { line: 0 }));
+      else add('nose', 'line', D + .52, head([[nx - nz * 1.4, ny - nz * .7], [nx + nz * 1.4, ny - nz * .7], [nx, ny + nz]]), { line: 0 });
       // the mouth: a thin line (a :3 at rest); open mouths stay filled shapes
       FACES.mouth(E.mouth, nx, ny + headW * .05, headW * .17).parts.forEach(p => add('mouth', p.role, D + .51, head(p.pts), { line: p.stroke ? .45 : p.line, stroke: p.stroke }));
       const wh = (sx, x0) => [0, 1, 2].forEach(k => add('whisker', 'line', D + .53, head([[x0, ny + .02 + k * .13], [x0 + sx * .95, ny - .18 + k * .2]]), { stroke: 1, line: .35, feature: 'whiskers' }));

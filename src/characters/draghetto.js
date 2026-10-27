@@ -3,10 +3,11 @@
 CHARACTERS.draghetto = {
   id: 'draghetto', version: 1, body: 'quadruped',
   // a big round head (about a third of the body without the tail), short legs, a tail as long as the body
-  proportions: { length: 10.5, head: 4, bodyHeight: 3.6, legLength: 1.1, legWidth: 1.25, tail: 6.8 },
+  proportions: { length: 9.2, head: 4.1, bodyHeight: 3.9, legLength: 1.15, legWidth: 1.35, tail: 6.2 },
   parts: {
     horns: { size: 1 }, crests: { head: 3, tail: 4 }, belly: {}, wings: { span: 2.5, sections: 3 },
-    tail: { width: .45, base: 1.9, angle: { side: -.97, q: -.96, front: -.06 }, y: { side: .05, q: .05, front: .35 }, hook: .9, tip: false }, eyes: { iris: true, size: 1.35 },
+    tail: { width: .45, base: 1.9, angle: { side: -.97, q: -.96, front: -.06 }, y: { side: .05, q: .05, front: .35 }, len: { back: .6 }, hook: .9, tip: false },
+    eyes: { iris: true, size: 1.35 }, snout: {}, nostrils: {}, paws: { plain: true },
   },
   roles: {
     fur: '#3FAE9B', cream: '#F7F2E8', membrane: '#ADA2E8', iris: '#FFD166', crest: '#FF5D73',
