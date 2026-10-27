@@ -131,14 +131,24 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
 
 ### 4b. Bipede, strisciante e ali · divisa in due (scelta di Andrea, 2026-10-27)
 
-#### 4b1. Bipede bambino, ali, strisciante · **in design** (branch `fase4b1-personaggi`)
+#### 4b1. Bipede bambino, ali, strisciante · **in approvazione** (branch `fase4b1-personaggi`)
 
 - Corpo **bipede** per bambini e ragazzi: ragazza (circa 3 teste, chibi morbido) e supereroe (circa 5,5 teste).
 - **Ali** come parte aggiuntiva del quadrupede (draghetto: cammina a quattro zampe, vola con le ali).
 - Corpo **strisciante** a segmenti (bruco: testa + 8 segmenti, avanzamento a onda).
 - Supereroe, ragazza, draghetto e bruco, con model sheet approvati.
-- Da rivedere insieme al draghetto (nota di Andrea, 2026-10-27): nella vista dal retro del gatto la coda sale lungo
-  il fianco e sembra un manico. Accettata per ora.
+- Fatto (gatto v2): dalla vista dal retro la coda parte in basso al centro e fa l'uncino sopra la schiena.
+- Piccolezze dalla revisione finale (2026-10-27), da fare quando servono:
+  - ali del draghetto: con `wingOpen` intermedio e `flap`, di profilo la punta dell'ala vicina passa per un istante
+    dietro la testa (la testa la copre: si vede la punta sparire);
+  - `proportions.heads` del bipede è solo una misura dichiarata (l'altezza nasce dalla somma delle parti): validarla
+    nella scheda, o ricavarne una parte;
+  - `wings.sections` documentato ma fisso a 3; `span` sotto 0,6 rovescia l'ala: validare;
+  - `skinShadow` del supereroe è nella tavolozza ma nessuna parte lo usa (ombra di collo e mento);
+  - impronta del gatto v1 nel test: aggiungere ruolo, spessore, `dim` e `stroke` alla stringa;
+  - "bipede senza extra" provato solo sulla ragazza: aggiungere il supereroe senza mantello, maschera, stella, guanti,
+    stivali;
+  - `fist` scatta a 0,5 (con `blendPose` la mano passa di colpo da aperta a pugno); `CG.block` con altezza 0 dà NaN.
 
 #### 4b2. Bipede adulto per il visual novel · **dopo la 4b1**
 
