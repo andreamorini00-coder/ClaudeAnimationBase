@@ -47,12 +47,13 @@
     }
   }
   function swatches(id, x0, cy) {
-    const spec = CHARACTERS[id];
-    Object.keys(spec.roles).forEach((role, i) => {
-      const x = x0 + i * 150;
+    // 150 apart, closer when there are more roles than fit (the adults have up to 15)
+    const spec = CHARACTERS[id], roles = Object.keys(spec.roles), step = Math.min(150, (W - 60 - x0) / Math.max(1, roles.length - 1));
+    roles.forEach((role, i) => {
+      const x = x0 + i * step;
       boilSeed('swatch ' + id + role);
       paint(ellPts(x, cy, 44, 44, 28), { wash: roleColor(spec, role), washOp: 255, ink: roleColor(spec, 'line'), sw: .8 });
-      label(role, x, cy + 70, 20);
+      label(role, x, cy + 70, step < 150 ? 16 : 20);
     });
   }
 
