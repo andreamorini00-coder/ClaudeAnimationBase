@@ -104,7 +104,10 @@ const checkFeatures = (c, id) => {
   const spec = c.get(`CHARACTERS[${JSON.stringify(id)}]`);
   everyState(c, id, (s, L) => {
     const n = featureCounts(L), where = JSON.stringify(s);
+    // a head turned back over the shoulder (headTurn, seen from the back) is drawn in profile and carries no tags
+    const turned = s.view === 'back' && spec.poses[s.pose] && spec.poses[s.pose].headTurn;
     for (const f of spec.features) {
+      if (turned && ['hair', 'fringe'].includes(f.part)) continue;
       const want = f.views.includes(s.view);
       assert.equal(!!n[f.id], want, `${id} ${f.id} ${want ? 'manca' : 'non dovrebbe esserci'} in ${where}`);
       const cnt = typeof f.count === 'number' ? f.count : f.count && f.count[s.view];
@@ -844,4 +847,45 @@ test('pose views are validated', () => {
   spec.poseViews = { volo: 'back', inPiedi: 'sopra' };
   const errs = c.call('validateCharacter', spec).join(' ');
   assert.match(errs, /volo/); assert.match(errs, /sopra/);
+});
+
+// ---------- 4b2: mara and long hair ----------
+test('mara spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.mara')), []); });
+test('mara features per view and counts', () => checkFeatures(lib(), 'mara'));
+test('mara uses only its roles', () => checkRoles(lib(), 'mara'));
+test('mara has no NaN', () => checkFinite(lib(), 'mara'));
+test('mara flip mirrors exactly', () => checkFlip(lib(), 'mara'));
+test('mara layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'mara', { view: 'back', t: .41 }), layoutOf(c, 'mara', { view: 'back', t: .41 }));
+});
+test('mara is 7.5 heads tall', () => {
+  const c = lib(), got = headsTall(c, 'mara');
+  assert.ok(near(got, 7.5, .05), `${got.toFixed(2)} teste invece di 7,5`);
+});
+test('mara limbs keep their length', () => checkLimbs(lib(), 'mara'));
+test('mara limbs are simple outlines', () => {
+  const c = lib(), spec = c.get('CHARACTERS.mara');
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) for (const t of [0, .37])
+    for (const p of layoutOf(c, 'mara', { view, pose, t }).parts.filter(q => /^(arm|leg)[LR]$/.test(q.id)))
+      assert.ok(simple(p.pts), `mara ${view} ${pose} t=${t}: ${p.id} si incrocia`);
+});
+test('mara stays readable', () => {
+  const c = lib(), spec = c.get('CHARACTERS.mara'), lay = o => c.call('((o) => BODIES.biped.layout(CHARACTERS.mara, resolveState(CHARACTERS.mara, o)))', o);
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) {
+    const L = lay({ view, pose }), where = `${view} ${pose}`;
+    assert.ok(L.parts.some(p => p.role === 'clothLight' && p.id === 'rim'), `${where}: la maglietta non ha la luce sul bordo`);
+    for (const s of ['L', 'R']) assert.ok(L.parts.some(p => p.role === 'clothLight' && p.id.startsWith('shine' + s)), `${where}: nessuna luce sulla gamba ${s}`);
+    if (view !== 'side') assert.ok(L.parts.filter(p => p.role === 'hairLight').length >= 3, `${where}: poche luci sui capelli`);
+  }
+  for (const e of Object.keys(spec.expressions))
+    assert.ok(lay({ view: 'front', expression: e, bust: true }).parts.some(p => p.role === 'clothLight'), `mezzo busto ${e}: nessuna luce`);
+});
+test('hair stays still while the face changes', () => {
+  const c = lib(), hair = e => layoutOf(c, 'mara', { view: 'front', expression: e }).parts.filter(p => /^(hair|lock)/.test(p.id));
+  assert.deepEqual(hair('neutra'), hair('sorpresa'));
+});
+test('long hair below the shoulders', () => {
+  const c = lib(), HU = c.get('BODIES.biped.HU'), L = layoutOf(c, 'mara', { view: 'back' });
+  const low = partBox(L, p => /^(hair|lock)/.test(p.id)).y1, sh = L.joints.shoulderL[1];
+  assert.ok(low > sh + HU, `i capelli arrivano a ${(low - sh).toFixed(2)} sotto le spalle`);
 });

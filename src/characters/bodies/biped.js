@@ -307,7 +307,7 @@ BODIES.biped = {
       if (sp.mouth && sp.mouth.lip && (E.mouth === 'flat' || E.mouth === 'ajar'))
         add('lip', 'lip', 4.79, head(CG.ellipse(mx, my + mw * .22, mw * .3, mw * .08, 14)), { line: 0 });
     }
-    if (sp.hair) B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head, headShape });
+    if (sp.hair) B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head, headShape, shY, turned });
     // (the features of a view describe its usual drawing: the turned head carries none)
     if (turned) { for (const p of parts.slice(firstHead)) { p.pts = p.pts.map(([x, y]) => [-x, y]); delete p.feature; } V = B.VIEW.back; }
 
@@ -373,7 +373,7 @@ BODIES.biped = {
 
   // The hair: one mass drawn over the head, then the face as a window cut out of it (the head inside straight lines,
   // so its own outline draws the hairline and the hair's edges), then the style's locks over the hairline.
-  hair(spec, V, { hcx, hcy, headW, HU, add, head, headShape }) {
+  hair(spec, V, { hcx, hcy, headW, HU, add, head, headShape, shY, turned }) {
     const h = spec.parts.hair || {}, style = h.style || 'bob', hairline = hcy - .2 * HU, jaw = hcy + .53 * HU;
     const mx = hcx + (V.face === 'side' ? -.16 : V.face === 'q' ? -.07 : 0) * HU, mw = headW * (V.face === 'side' ? 1.24 : 1.36);
     const spiky = style === 'spiky';
@@ -383,6 +383,33 @@ BODIES.biped = {
       : V.face === 'side' || V.face === 'q' ? CG.clipLine(CG.clipY(cap, hcy + .22 * HU, -1), [hcx + (V.face === 'side' ? -.12 : -.3) * HU, hcy + .3 * HU], [hcx + (V.face === 'side' ? .32 : .2) * HU, hcy - .3 * HU])
       : CG.clipY(cap, V.face ? hairline - .05 * HU : hcy + .3 * HU, -1);
     add('hair', 'hair', 4.6, head(mass));
+    if (style === 'long') {
+      // long wavy hair: a mass behind (behind the body from the front and in profile, over the back from behind),
+      // then `locks` big wavy locks, each with a light down it; the face never moves them, only the body (breath)
+      // (a head turned back over the shoulder: drawn in profile, but the hair hangs over the back)
+      const n = h.locks || 5, back = !V.face, side = V.face === 'side', W = headW * (side ? .62 : .7), bottom = shY + 1.5 * HU, over = back || turned;
+      const dome = [...Array(21)].map((_, i) => { const a = Math.PI + i / 20 * Math.PI; return [mx + W * Math.cos(a), hcy - .02 * HU + .6 * HU * Math.sin(a)]; });
+      // down from the skull, widening softly to a wavy hem
+      const hemPts = [...Array(9)].map((_, i) => { const u = i / 8; return [mx + W * 1.2 - u * W * 2.4, bottom + .08 * HU * Math.sin(u * Math.PI * 4)]; });
+      const sides = sg => [[mx + sg * W * 1.04, hcy + .35 * HU], [mx + sg * W * 1.1, shY + .3 * HU]];
+      add('hairBack', 'hair', over ? 4.62 : 2, head(CG.spline([...dome.filter((_, i) => i % 2 === 0), ...sides(1), ...hemPts, ...sides(-1).reverse()], 4)));
+      for (let i = 0; i < n; i++) {
+        const sd = side ? -1 : i % 2 ? 1 : -1, k = Math.floor(i / 2), u = n > 1 ? i / (n - 1) * 2 - 1 : 0;
+        const [x0, y0, dep] = back ? [mx + u * W * .95, hcy, 4.7] : side ? [mx - W * (.35 + .25 * i / n), hcy + .25 * HU, over ? 4.7 : 2.1]
+          : [mx + sd * W * (.6 + .12 * k), hcy + .05 * HU, 3.6];                 // the tops hidden under the hair over the head
+        const len = bottom + (back ? .1 * HU : 0) - y0, m = 14, amp = .09 * HU, ph = i * 1.3;
+        const c = [...Array(m + 1)].map((_, j) => { const tt = j / m; return [x0 + amp * Math.sin(Math.PI * 2 * 1.2 * tt + ph) + (back || side ? .05 : .2 + .1 * k) * sd * HU * Math.sqrt(tt), y0 + tt * len]; });
+        // each lock narrow where it leaves the head, widest a third of the way down, then thinner to its round tip
+        const w = tt => .34 * HU * (.5 + .5 * Math.sin(Math.min(1, tt * 3) * Math.PI / 2)) * (1 - .35 * tt) / 2, L = c.map(([x, y], j) => [x - w(j / m), y]), R = c.map(([x, y], j) => [x + w(j / m), y]);
+        const tip = FACES.arc(c[m][0], c[m][1], w(1), w(1) * 1.2, 0, Math.PI, 8).reverse();
+        const tag = side ? {} : { feature: 'locks' }, light = side ? {} : { feature: 'hairLight' };
+        add('lock' + i, 'hair', dep + i * .002, head([...L, ...tip, ...R.reverse()]), { line: .8, ...tag });
+        const sl = c.slice(Math.round(m * .12), Math.round(m * .75)).map(([x, y], j) => [x + w(j / m) * .3, y]);
+        add('lockLight' + i, 'hairLight', dep + i * .002 + .001, head(CG.tube(sl, .07 * HU, .04 * HU, 3)), { line: 0, ...light });
+      }
+      // the parting, down the middle of the crown
+      if (V.face && !side) add('parting', 'line', 4.61, head([[hcx, hcy - .58 * HU], [hcx + (V.face === 'q' ? .03 * HU : 0), hcy - .22 * HU]]), { line: .5, stroke: true });
+    }
     function drawSpikes() {
       if (V.face === 'front') {
         // from the front a quiff: three big spikes over the forehead swept to the right, the middle one tallest
