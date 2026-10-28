@@ -101,7 +101,7 @@ Da fissare nel design: quanto ciascuno può cambiare oltre a palette, pennelli e
 in `cozy` passano dalla tecnica, non dalle scene), il blocco `character` con cui ogni stile traduce i ruoli colore
 dei personaggi, e i tempi di render in finale e in draft.
 
-## Fase 4 — Creatore di personaggi · **4a e 4b1 chiuse, 4b2 in design**
+## Fase 4 — Creatore di personaggi · **4a e 4b1 chiuse, 4b2 in approvazione**
 
 Una libreria di personaggi riusabile in tutti gli stili e in tutti i formati. Design approvato da Andrea il
 2026-10-27: **viste chiave 2D parametriche** (fronte, 3/4, profilo, retro, come il model sheet di Clawd), niente
@@ -152,7 +152,7 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
     stivali;
   - `fist` scatta a 0,5 (con `blendPose` la mano passa di colpo da aperta a pugno); `CG.block` con altezza 0 dà NaN.
 
-#### 4b2. Bipede adulto per il visual novel · **in design** (branch `fase4b2-personaggi`)
+#### 4b2. Bipede adulto per il visual novel · **in approvazione** (branch `fase4b2-personaggi`)
 
 Spec: `../specs/2026-10-28-fase4b2-personaggi-design.md`. Piano: `2026-10-28-fase4b2-personaggi.md`.
 

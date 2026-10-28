@@ -454,32 +454,36 @@ clawd(x, y, 24, { ...feel('proud', t), aR: 1.2, armR: (u, sw) => paint(starPts(u
 
 ## Characters
 
-Besides Clawd, the kit has a character library in `src/characters/`, built from the model sheets in `reference/characters/`. Each character is one data file (its proportions, parts, colour roles, distinctive features, expressions and poses); its body type draws it (`bodies/quadruped.js`: the cat and the little dragon; `bodies/blob.js`: the monster; `bodies/crawler.js`: the caterpillar; `bodies/biped.js`: the girl and the hero). The characters don't depend on Clawd.
+Besides Clawd, the kit has a character library in `src/characters/`, built from the model sheets in `reference/characters/`. Each character is one data file (its proportions, parts, colour roles, distinctive features, expressions and poses); its body type draws it (`bodies/quadruped.js`: the cat and the little dragon; `bodies/blob.js`: the monster; `bodies/crawler.js`: the caterpillar; `bodies/biped.js`: the girl, the hero and the two adults of the visual novel, Vale and Mara). The characters don't depend on Clawd.
 
 ```js
 character('gatto', x, y, u, { view: 'q', pose: 'corsa', expression: 'felice', t: lt });
 character('mostro', x, y, u, { view: 'front', expression: act(lt, [[0, 'felice'], [1.2, 'sorpreso']], CHARACTERS.mostro) });
 character('draghetto', x, y, u, { view: 'side', pose: 'volo', t: lt });
 character('supereroe', x, y, u, { view: 'q', pose: { flight: 1, lift: 3, shoulderR: 3, fistR: 1, capeFlow: 1 }, t: lt });
+character('vale', x, y, u, { view: 'front', bust: true, pose: { breath: 1 }, t: lt,
+  expression: { eyes: blink(lt), mouth: talk(lt), brows: 'neutral' } });          // a half-length that talks
+character('vale', x, y, u, { view: 'q', pose: 'manoSulFianco', outfit: 'ufficio', t: lt });
 ```
 
-- `(x, y)` is the ground point under the character, `u` its size unit (the cat is about 10u long, the monster 6u tall, the caterpillar about 14u long, the dragon 9u without its tail, the girl 9u tall, the hero 16.5u).
-- `view`: `front`, `q` (3/4), `side`, `back`; `flip: true` faces left. `pose` and `expression` are names from the character's file (the cat: inPiedi, corsa, salto, balzo, zampata, agguato; felice, triste, arrabbiato, sorpreso, assonnato, curioso. The monster: fermo, rotolamento, salto, slancio, broncio, schiacciato; felice, triste, arrabbiato, sorpreso, assonnato, spaventato. The caterpillar: testaAlzata, onda, salto, disteso, testaAlta, arrotolato. The dragon: fermo, corsa, saltoAli, volo, zampata, prontoDecollo. The girl: inPiedi, corsa, salto, volo, pugno, accovacciata; the hero: inPiediEroico, corsa, salto, voloOrizzontale, pugno, atterraggio. Their expressions are the cat's set, with the girl's and the hero's sixth one imbarazzata/imbarazzato instead of curioso). A wrong name stops with the list of valid ones.
+- `(x, y)` is the ground point under the character, `u` its size unit (the cat is about 10u long, the monster 6u tall, the caterpillar about 14u long, the dragon 9u without its tail, the girl 9u tall, the hero 16.5u, Vale and Mara 22.5u).
+- `view`: `front`, `q` (3/4), `side`, `back`; `flip: true` faces left. `pose` and `expression` are names from the character's file (the cat: inPiedi, corsa, salto, balzo, zampata, agguato; felice, triste, arrabbiato, sorpreso, assonnato, curioso. The monster: fermo, rotolamento, salto, slancio, broncio, schiacciato; felice, triste, arrabbiato, sorpreso, assonnato, spaventato. The caterpillar: testaAlzata, onda, salto, disteso, testaAlta, arrotolato. The dragon: fermo, corsa, saltoAli, volo, zampata, prontoDecollo. The girl: inPiedi, corsa, salto, volo, pugno, accovacciata; the hero: inPiediEroico, corsa, salto, voloOrizzontale, pugno, atterraggio. Their expressions are the cat's set, with the girl's and the hero's sixth one imbarazzata/imbarazzato instead of curioso. Vale and Mara: inPiedi, manoSulFianco, voltataIndietro, camminata, manoTraICapelli, saluto; neutra, sorriso, risata, triste, arrabbiata, sorpresa, imbarazzata, pensierosa, each with its gesture). A wrong name stops with the list of valid ones.
 - A pose can also be an object of the body's parameters, to tween between poses or make a new one: the dragon's wings take `wingOpen` (0 folded … 1 spread) and `flap` (1 = they beat with `t`); the caterpillar's `wave` and `cycle` make the arch travel from tail to head; the biped's limbs take angles in radians (`shoulderL/R`, `elbowL/R`, `hipL/R`, `kneeL/R`; 0 = hanging, + = forward), `fistL/R`, `lean`, `lift`, `crouch`, `flight` (horizontal, head first), `capeFlow` and `cycle` (a run). Elbows and knees bend one way only, 0 … 2.6.
-- The biped is measured in heads: `heads` is the total height, everything else is in heads too, so the same body draws the 3-head girl and the 5.5-head hero (and the 7-head adults of 4b2). Its layout also returns `joints` (shoulder, elbow, wrist, hip, knee, ankle per side), handy to put a prop in a hand.
+- **Adults (Vale, Mara):** the face is made of parts you combine, as in their `viso.png`: `eyes` open, sleepy (half shut), closed, happy (closed smiling); `mouth` flat (closed), ajar, open ("a"), o, grin (with teeth); `brows` neutral, raised, frown, sad (or a number -1 … 1). `blink(t, seed)` gives the eyes' name for a blink every 3–5 s, `talk(t)` a mouth that talks without audio: both are the same every render. An expression can name a `gesture` (what the hands do: maniGiunte, manoSulPetto, bracciaIncrociate…), drawn over the pose; a pose can move a hand with `reachL/R` and `handXL/R`, `handYL/R` (heads from the shoulder; the elbow follows), plus `handFrontL/R`, `handOpenL/R`, `headTurn` (from the back, she looks over her shoulder) and `breath`. `bust: true` draws the half-length of the visual novel, hands included. `outfit: 'ufficio'` dresses Vale in her second outfit. Sitting, lying and leaning poses come later, with their props.
+- The biped is measured in heads: `heads` is the total height, everything else is in heads too, so the same body draws the 3-head girl, the 5.5-head hero and the 7.5-head adults. Its layout also returns `joints` (shoulder, elbow, wrist, hip, knee, ankle per side), handy to put a prop in a hand.
 - Pass `t` (shot time) always: tails, antennae and run cycles move with it.
 - **Faces act, they never snap:** change expressions with `act(t, keys, CHARACTERS.<id>)`, which squints through the swap and gives the body a small take, like `emotions()` does for Clawd.
 - The monster's antennae trail a change: pass `since` (seconds since the pose changed) and `kick` (1 for a jump, -1 for a landing).
 - Two of the same character on screen need different `key`s, so they boil apart.
 - Colours come from the character's roles, translated by the style (`STYLE.character`, see `src/characters/draw.js`).
 
-**Model sheets.** Every character has `LOOPS.sheet_<id>` (views, expressions, silhouette, colours) and `LOOPS.pose_<id>` (poses). Render frame 0 and compare it with the reference before using a character in a film:
+**Model sheets.** Every character has `LOOPS.sheet_<id>` (views, expressions, silhouette, colours) and `LOOPS.pose_<id>` (poses); the adults also `LOOPS.face_<id>` (the face parts), and each outfit its own three, `sheet_vale.ufficio` and so on. Render frame 0 and compare it with the reference before using a character in a film:
 
 ```bash
 node render.mjs --loop=sheet_gatto --stills=0 --style=classic --out=out/sheets/gatto
 ```
 
-`npm test` checks every view, pose and expression of every character (features present where they should be, counts, proportions, colours, the monster's constant volume, the caterpillar's fixed segment spacing, the dragon's wings, the biped's height in heads and limb lengths). Once a sheet is approved, `node tools/approve.mjs <id> <style>` stores it, and `npm run check-characters` tells you if a code change alters an approved character.
+`npm test` checks every view, pose and expression of every character (features present where they should be, counts, proportions, colours, the monster's constant volume, the caterpillar's fixed segment spacing, the dragon's wings, the biped's height in heads and limb lengths). Once a sheet is approved, `node tools/approve.mjs <id> <style>` stores it (an outfit: `vale.ufficio`), and `npm run check-characters` tells you if a code change alters an approved character.
 
 ---
 

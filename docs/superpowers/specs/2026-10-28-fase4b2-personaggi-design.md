@@ -180,6 +180,31 @@ model sheet da approvare) sono quelli della 4a (`2026-10-27-fase4a-personaggi-de
 - **Figure scure** (mara): le luci (`hairLight`, `clothLight`) devono reggere anche in `acquerello-leggero`, dove i
   colori vanno verso la carta.
 
+## Esito dell'implementazione e autocritica (2026-10-28)
+
+Cambiato rispetto al design, con il motivo:
+
+- **Gesti con le mani portate dove servono** (`reachL/R`, `handXL/R`, `handYL/R` in teste dalla spalla; il gomito si
+  trova da sé, il braccio resta lungo uguale) al posto di `crossL/R`: con `cross` la mano non arriva al collo né al
+  mento senza superare il limite di 2,6 del gomito. Le braccia incrociate di fronte reggono: non è servito il 3/4.
+- **Sheet del viso** con un taglio più stretto (`bust: 'face'`): con il mezzo busto normale le facce erano troppo
+  piccole per giudicare le varianti.
+- Fianchi: le anche stanno a `hips / 2 - thigh / 2` e il bacino non ha il contorno sotto (solo i lati), altrimenti si
+  leggeva come un pallone sopra cosce sottili. Orecchie nascoste dai capelli con `hair.ears: false`.
+- `poseCellW` nella scheda: le figure alte e strette avevano le etichette delle pose sovrapposte. I campioni di colore si
+  stringono quando i ruoli sono più di 10.
+
+Autocritica contro `base.png`, `viso.png`, `pose.png`, `pose-abito-ufficio.png`:
+
+- **Viso**: manca il naso e il contorno del viso sotto i capelli è una linea spessa che fa "maschera"; gli occhi sono
+  leggibili ma più piccoli e più marcati (ciglia) che nei riferimenti. È il punto più lontano dai riferimenti.
+- **Figura**: proporzioni e silhouette vicine (7,5 teste, vita stretta, fianchi e cosce pieni); il bacino da 3/4 resta
+  un po' a bulbo e le spalle sono squadrate dove parte il braccio.
+- **Mani**: semplificate come chiede la nota; le dita aperte (sorpresa, saluto) sono piccole.
+- **Capelli**: il caschetto di vale ha la riga laterale ma la ciocca è un'unica forma piena; le ciocche di mara sono
+  ondulate e con la luce, ma da 3/4 e nel viso a sinistra resta un piccolo spigolo dove la massa dietro esce.
+- **Leggibilità delle figure scure**: in `acquerello-leggero` le luci di mara reggono (capelli, bordi, inserto).
+
 ## Regole operative
 
 Come nella 4b1: comandi per Andrea in CMD; nessun `git push`; `package-lock.json` mai nei commit; file aggiunti uno per
