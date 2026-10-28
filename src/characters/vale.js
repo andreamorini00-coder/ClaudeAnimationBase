@@ -8,7 +8,8 @@ CHARACTERS.vale = {
     head: { chin: .32 },
     hair: { style: 'bob', part: 'side', ears: false },
     eyes: { adult: true, size: .9 },
-    mouth: { size: .8 },
+    mouth: { size: 1 },
+    brows: { kind: 'thick' },
     figure: { bust: 1.95, waist: 1.2, hips: 2.35, thigh: 1.15, bustDepth: .95, rumpDepth: .85, neck: .35, hem: .2 },
     build: { arm: .42, leg: .62, taper: .4, forearm: .3, calf: .58 },
     neckline: { shape: 'round' },
@@ -58,4 +59,16 @@ CHARACTERS.vale = {
     saluto: { reachL: 1, handXL: .25, handYL: -1.5, handOpenL: 1, breath: 1 },
   },
   poseViews: { voltataIndietro: 'back' },
+  // pose-abito-ufficio.png: classic black trousers with a crease instead of the shiny leggings, and a figure a little
+  // less pronounced than base.png's (Andrea, 2026-10-28)
+  outfits: {
+    ufficio: {
+      parts: {
+        legwear: { kind: 'trousers', crease: true },
+        figure: { bust: 1.8, waist: 1.25, hips: 2.1, thigh: 1, bustDepth: .8, rumpDepth: .7, neck: .35, hem: .2 },
+      },
+      roles: { legs: '#292A34' },
+      features: [{ id: 'shine', remove: true }, { id: 'crease', part: 'legs', views: ['front', 'q', 'side', 'back'] }],
+    },
+  },
 };

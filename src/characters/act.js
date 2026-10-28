@@ -44,6 +44,18 @@ function blendPose(a, b, k) {
   return out;
 }
 
+// A character in one of its outfits (spec.outfits[name] = { parts, roles, features }): parts and roles replaced key by
+// key, features by id ({ id, remove: true } takes one away); its id becomes "<id>.<outfit>". No name: the spec itself.
+function outfitSpec(spec, name) {
+  if (!name) return spec;
+  const o = (spec.outfits || {})[name];
+  if (!o) throw new Error(`Abito "${name}" inesistente per ${spec.id}. Disponibili: ${Object.keys(spec.outfits || {}).join(', ')}`);
+  const mine = o.features || [], features = (spec.features || []).filter(f => !mine.some(g => g.id === f.id)).concat(mine.filter(g => !g.remove));
+  const out = { ...spec, id: `${spec.id}.${name}`, parts: { ...spec.parts, ...(o.parts || {}) }, roles: { ...spec.roles, ...(o.roles || {}) }, features };
+  delete out.outfits;
+  return out;
+}
+
 // o: { view = 'q', flip, pose = <the spec's first pose> | {params}, expression = neutral | 'name' | {params} | act(...),
 //      t = 0, since, kick } → { view, flip, pose, expression, t, since, kick }, every name checked against the spec.
 function resolveState(spec, o = {}) {
@@ -69,5 +81,5 @@ function resolveState(spec, o = {}) {
   }
   // the take after a change of face: a blob squashes a little (keeping its volume), a legged body hops a little
   if (take) { if ('squash' in pose) pose.squash *= 1 - .12 * take; else if ('lift' in pose) pose.lift += .25 * Math.max(0, take); }
-  return { view, flip: !!o.flip, pose, expression, t: o.t ?? 0, since: o.since, kick: o.kick, bust: !!o.bust };
+  return { view, flip: !!o.flip, pose, expression, t: o.t ?? 0, since: o.since, kick: o.kick, bust: o.bust === 'face' ? 'face' : !!o.bust };
 }

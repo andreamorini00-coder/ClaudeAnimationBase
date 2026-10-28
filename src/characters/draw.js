@@ -5,7 +5,7 @@
 //   shadow 'fill' paints shade parts as a watercolour glaze ('hard': a flat shape, for cel styles), lineWeight scales
 //   the outline. A spec can also give a role's colour for one style: spec.styles[<style>][<role>].
 //
-//   character('gatto', x, y, u, { view, flip, pose, expression, t, since, kick, key, noShadow })
+//   character('gatto', x, y, u, { view, flip, pose, expression, t, since, kick, key, noShadow, outfit })
 // (x, y) is the ground point under the character, u its size unit (the cat is about 10u long, the monster 6u tall).
 // expression: a name, a set of params, or act(t, keys, CHARACTERS.<id>). key: a stable id for its boil seeds (default:
 // the character's id; set it when two of the same character are on screen).
@@ -23,8 +23,8 @@ function roleColor(spec, role) {
 }
 
 function character(id, x, y, u, o = {}) {
-  const spec = CHARACTERS[id];
-  if (!spec) throw new Error(`Personaggio "${id}" inesistente. Disponibili: ${Object.keys(CHARACTERS).join(', ')}`);
+  if (!CHARACTERS[id]) throw new Error(`Personaggio "${id}" inesistente. Disponibili: ${Object.keys(CHARACTERS).join(', ')}`);
+  const spec = outfitSpec(CHARACTERS[id], o.outfit);           // outfit: one of spec.outfits (vale's 'ufficio')
   const L = BODIES[spec.body].layout(spec, resolveState(spec, o));
   const key = o.key ?? id, sw0 = clamp(u / 15, .45, 2.4) * .6 * CHAR_STYLE.lineWeight;   // thinner than Clawd's: many small parts
   const line = roleColor(spec, 'line'), shade = roleColor(spec, 'shadow');

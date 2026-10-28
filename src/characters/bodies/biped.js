@@ -18,7 +18,7 @@
 //   into a fan of fingers; headTurn 1 from the back turns the head to show its profile; breath 0..1 lifts the
 //   shoulders and chest with t, a breath every 4 s.
 // state.bust: draw only the head and shoulders (the expression row of the model sheet); an adult figure is cut
-//   below the chest and keeps its hands, for the gestures.
+//   below the chest and keeps its hands, for the gestures; bust 'face' cuts just under the shoulders (the face sheet).
 // Parts the spec may declare (anything not declared is not drawn): hair { style: 'bob' | 'spiky', locks }, skirt (role skirt), shoes (role shoes),
 //   sleeves { wide } (puffy sleeves with a cuff), gloves, boots, cape (role accent), mask (role hair), star (role
 //   emblem), eyes { dark } (big dark eyes with highlights), cheeks (always pink; without, they show only when
@@ -295,7 +295,7 @@ BODIES.biped = {
         FACES.eye(E.eyes, ex, ey, r * k, { ...eo, outer: F.eyes.length > 1 ? (i ? 1 : -1) : 1 }).parts.forEach(p => add('eye' + i + p.id, p.role, 4.8, head(p.pts), { line: p.line, stroke: p.stroke }));
         // the brow's inner end is the one towards the middle of the face
         const inward = F.eyes.length > 1 ? (i ? -1 : 1) : 1;
-        FACES.brows(sp.brows && sp.brows.kind || 'line', ex, sp.mask ? ey - r * 1.25 - .07 * HU : ey - .19 * HU, .2 * HU * k * inward, browK, browLift).parts
+        FACES.brows(sp.brows && sp.brows.kind || 'line', ex, sp.mask ? ey - r * 1.25 - .07 * HU : ey - (eo.adult ? .16 : .19) * HU, .2 * HU * k * inward, browK, browLift).parts
           .forEach(p => add('brow' + i, p.role, 5.05, head(p.pts), { line: p.line, stroke: true }));
       });
       if (sp.cheeks || E.blush > 0) F.cheeks.forEach((x, i) => FACES.cheek(hcx + x * HU, hcy + .31 * HU, .09 * HU, E.blush).parts
@@ -313,7 +313,7 @@ BODIES.biped = {
 
     // ---- state.bust: only head and shoulders, cut below the chest (expression sheets, close-ups) ----
     if (state.bust) {
-      const cut = shY + (fig ? 1.35 : .6) * HU, keep = fig ? /^(head|hair|face|lock|spike|ear|eye|brow|cheek|blush|mouth|lip|mask|neck|torso|rim|collar|arm|hand|thumb|finger|sleeve|cuff)/
+      const cut = shY + (state.bust === 'face' ? .45 : fig ? 1.35 : .6) * HU, keep = fig ? /^(head|hair|face|lock|spike|ear|eye|brow|cheek|blush|mouth|lip|mask|neck|torso|rim|collar|arm|hand|thumb|finger|sleeve|cuff)/
         : /^(head|hair|face|lock|spike|ear|eye|brow|cheek|blush|mouth|mask|neck|torso|star|cape)/;
       // the cut rests on the ground line (y = 0), so a sheet row lines the busts up like whole figures
       const kept = parts.filter(p => keep.test(p.id)).map(p => ({ ...p, pts: CG.translate(p.stroke ? p.pts : CG.clipY(p.pts, cut, -1), 0, -cut) }))

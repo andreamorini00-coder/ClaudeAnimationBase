@@ -889,3 +889,45 @@ test('long hair below the shoulders', () => {
   const low = partBox(L, p => /^(hair|lock)/.test(p.id)).y1, sh = L.joints.shoulderL[1];
   assert.ok(low > sh + HU, `i capelli arrivano a ${(low - sh).toFixed(2)} sotto le spalle`);
 });
+
+// ---------- 4b2: outfits, the face sheet, approval per outfit ----------
+const office = c => c.call('((s) => outfitSpec(s, "ufficio"))', c.get('CHARACTERS.vale'));
+test('outfitSpec merges an outfit', () => {
+  const c = lib(), o = office(c), vale = c.get('CHARACTERS.vale');
+  assert.deepEqual(c.call('validateCharacter', o), []);
+  assert.equal(o.id, 'vale.ufficio');
+  assert.equal(o.parts.legwear.kind, 'trousers');
+  assert.equal(JSON.stringify(o.parts.hair), JSON.stringify(vale.parts.hair));
+  assert.ok(!o.features.some(f => f.id === 'shine'), 'il tratto delle luci dei leggings resta');
+  assert.ok(o.features.some(f => f.id === 'crease'));
+  assert.equal(c.call('((s) => outfitSpec(s))', vale).id, 'vale');
+});
+test('an outfit is validated as a whole', () => {
+  const c = lib(), spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.vale')));
+  spec.outfits.prova = { parts: { top: { rim: true } }, roles: {} };
+  delete spec.roles.clothLight;
+  spec.parts.legwear = { kind: 'leggings' }; spec.features = spec.features.filter(f => f.id !== 'shine');
+  assert.match(c.call('validateCharacter', spec).join(' '), /abito "prova".*clothLight/);
+});
+test('office figure is less pronounced', () => {
+  const c = lib(), lay = sp => c.call('((sp, s) => BODIES.biped.layout(sp, s))', sp, { view: 'front', t: 0, pose: {}, expression: {} });
+  const main = lay(c.get('CHARACTERS.vale')), off = lay(office(c));
+  const hips = L => box(L.parts.find(p => p.id === 'pelvis').pts).w;
+  assert.ok(hips(off) < hips(main), `fianchi ${hips(off).toFixed(2)} contro ${hips(main).toFixed(2)}`);
+  assert.ok(!off.parts.some(p => p.role === 'clothLight' && /^shine/.test(p.id)), 'i pantaloni hanno le luci dei leggings');
+  assert.ok(off.parts.some(p => /^crease/.test(p.id)), 'manca la piega');
+  for (const view of ['front', 'q', 'side', 'back']) assert.ok(c.call('((sp, v) => BODIES.biped.layout(sp, { view: v, t: 0, pose: {}, expression: {} }))', office(c), view).parts.every(p => finite(p.pts)));
+});
+test('unknown outfit', () => {
+  const c = lib();
+  assert.throws(() => c.call('((s) => outfitSpec(s, "mare"))', c.get('CHARACTERS.vale')), /ufficio/);
+});
+test('approval ids include outfits', async () => {
+  const { sheetTargets } = await import('./approve.mjs');
+  const t = sheetTargets({ gatto: { version: 2 }, vale: { version: 1, faceSheet: true, outfits: ['ufficio'] } });
+  assert.deepEqual(t.map(x => [x.id, x.dir, x.kinds.join(' '), x.version]), [
+    ['gatto', 'gatto/approvati', 'sheet pose', 2],
+    ['vale', 'vale/approvati', 'sheet pose face', 1],
+    ['vale.ufficio', 'vale/approvati/ufficio', 'sheet pose face', 1],
+  ]);
+});

@@ -51,6 +51,9 @@ function validateCharacter(spec) {
         else if (k === 'brows' && typeof v === 'string' && !(v in FACES.BROWS)) errs.push(`${what} "${name}": sopracciglia "${v}" inesistenti. Disponibili: ${Object.keys(FACES.BROWS).join(', ')}`);
       }
   };
+  // every outfit is checked as a whole character (outfitSpec, act.js)
+  for (const name of Object.keys(spec.outfits || {}))
+    for (const e of validateCharacter(outfitSpec(spec, name))) errs.push(`abito "${name}": ${e}`);
   params('posa', spec.poses, body.poseParams);
   params('espressione', spec.expressions, body.exprParams);
   // gestures: what the hands do while the face changes (pose params, named by an expression's gesture)
