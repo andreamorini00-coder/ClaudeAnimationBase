@@ -61,6 +61,12 @@ function resolveState(spec, o = {}) {
   if (typeof e === 'string') expression = { ...expression, ...named('Espressione', spec.expressions, e) };
   else if (e && e.expression) { expression = { ...expression, ...e.expression }; take = e.take || 0; }
   else if (e) expression = { ...expression, ...e };
+  // a gesture of the face (what the hands do) goes over the pose
+  if (expression.gesture) {
+    const g = (spec.gestures || {})[expression.gesture];
+    if (!g) throw new Error(`Gesto "${expression.gesture}" inesistente per ${spec.id}. Disponibili: ${Object.keys(spec.gestures || {}).join(', ')}`);
+    Object.assign(pose, g);
+  }
   // the take after a change of face: a blob squashes a little (keeping its volume), a legged body hops a little
   if (take) { if ('squash' in pose) pose.squash *= 1 - .12 * take; else if ('lift' in pose) pose.lift += .25 * Math.max(0, take); }
   return { view, flip: !!o.flip, pose, expression, t: o.t ?? 0, since: o.since, kick: o.kick, bust: !!o.bust };

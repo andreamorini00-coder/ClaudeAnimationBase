@@ -794,3 +794,54 @@ test('a figure without a body shape is the old torso', () => {
   assert.deepEqual(torso, old);
   assert.ok(!L.parts.some(p => p.id === 'pelvis'));
 });
+
+// ---------- 4b2: gestures, bust, breath, looking back ----------
+const valeState = (c, o) => c.call('((o) => resolveState(CHARACTERS.vale, o))', o);
+const valeLayout = (c, o) => c.call('((o) => BODIES.biped.layout(CHARACTERS.vale, resolveState(CHARACTERS.vale, o)))', o);
+test('gestures are validated', () => {
+  const c = lib(), spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.vale')));
+  spec.gestures.strano = { coda: 1 }; spec.expressions.persa = { gesture: 'nessuno' };
+  const errs = c.call('validateCharacter', spec).join(' ');
+  assert.match(errs, /coda/); assert.match(errs, /nessuno/);
+});
+test('a gesture overrides the arms only', () => {
+  const c = lib(), spec = c.get('CHARACTERS.vale'), s = valeState(c, { pose: 'manoSulFianco', expression: 'arrabbiata' });
+  const pose = spec.poses.manoSulFianco, g = spec.gestures[spec.expressions.arrabbiata.gesture];
+  for (const k of ['hipL', 'hipR', 'kneeL', 'kneeR', 'lean']) if (k in pose) assert.equal(s.pose[k], pose[k], k);
+  for (const [k, v] of Object.entries(g)) assert.equal(s.pose[k], v, k);
+});
+test('crossed arms stay inside the shoulders', () => {
+  const c = lib(), HU = c.get('BODIES.biped.HU'), L = valeLayout(c, { view: 'front', expression: 'arrabbiata' }), J = L.joints;
+  const half = c.get('CHARACTERS.vale.proportions.shoulders') * HU / 2;
+  for (const s of ['L', 'R']) assert.ok(Math.abs(J['wrist' + s][0]) < half, `polso ${s} a ${J['wrist' + s][0].toFixed(2)}, spalle a ±${half.toFixed(2)}`);
+  const len = s => Math.hypot(J['elbow' + s][0] - J['shoulder' + s][0], J['elbow' + s][1] - J['shoulder' + s][1]) + Math.hypot(J['wrist' + s][0] - J['elbow' + s][0], J['wrist' + s][1] - J['elbow' + s][1]);
+  for (const s of ['L', 'R']) assert.ok(near(len(s), c.get('CHARACTERS.vale.proportions.arm') * HU, .01), `braccio ${s} lungo ${len(s).toFixed(2)}`);
+});
+test('thinking hand is over the face', () => {
+  const c = lib(), L = valeLayout(c, { view: 'front', expression: 'pensierosa' }), mouth = L.parts.find(p => p.id === 'mouth').depth;
+  assert.ok(L.parts.some(p => /^hand[LR]$/.test(p.id) && p.depth > mouth), 'nessuna mano davanti alla faccia');
+});
+test('bust keeps the gestures', () => {
+  const c = lib(), spec = c.get('CHARACTERS.vale');
+  for (const e of Object.keys(spec.expressions)) {
+    const L = valeLayout(c, { view: 'front', expression: e, bust: true });
+    if (spec.expressions[e].gesture) assert.ok(L.parts.some(p => /^hand/.test(p.id)), `${e}: nessuna mano nel mezzo busto`);
+    assert.ok(L.parts.every(p => p.pts.every(q => q[1] <= 1e-6)), `${e}: qualcosa sotto il taglio`);
+  }
+});
+test('breath moves only the upper body', () => {
+  const c = lib(), at = t => valeLayout(c, { view: 'front', pose: { breath: 1 }, t }).joints;
+  const a = at(0), b = at(2);
+  assert.deepEqual(a.ankleL, b.ankleL);
+  assert.ok(Math.abs(a.shoulderL[1] - b.shoulderL[1]) > .02, 'le spalle non respirano');
+});
+test('looking back shows a profile', () => {
+  const c = lib(), L = valeLayout(c, { view: 'back', pose: 'voltataIndietro' });
+  assert.ok(L.parts.some(p => /^eye/.test(p.id)) && L.parts.some(p => p.id === 'mouth'), 'dal retro non si vede il profilo');
+});
+test('pose views are validated', () => {
+  const c = lib(), spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.vale')));
+  spec.poseViews = { volo: 'back', inPiedi: 'sopra' };
+  const errs = c.call('validateCharacter', spec).join(' ');
+  assert.match(errs, /volo/); assert.match(errs, /sopra/);
+});

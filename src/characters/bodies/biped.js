@@ -12,7 +12,13 @@
 //   forward), lift (units off the ground), crouch 0..1 (legs fold, the body lowers), flight 0..1 (the body turns
 //   horizontal, head first), capeFlow (how far the cape streams back), cycle (1 = run with t: arms and legs swing in
 //   opposition, about 2 strides a second).
-// state.bust: draw only the head and shoulders (the expression row of the model sheet).
+// Gestures (4b2): reachL/R 1 puts that hand at (handXL/R, handYL/R), in heads from the shoulder (x outwards from the
+//   front and back, forwards in 3/4 and profile; y down), the elbow found by the arm's two fixed segments (outwards
+//   from the front, bending forward in profile); handFrontL/R 1 draws the hand over the face; handOpenL/R 1 opens it
+//   into a fan of fingers; headTurn 1 from the back turns the head to show its profile; breath 0..1 lifts the
+//   shoulders and chest with t, a breath every 4 s.
+// state.bust: draw only the head and shoulders (the expression row of the model sheet); an adult figure is cut
+//   below the chest and keeps its hands, for the gestures.
 // Parts the spec may declare (anything not declared is not drawn): hair { style: 'bob' | 'spiky', locks }, skirt (role skirt), shoes (role shoes),
 //   sleeves { wide } (puffy sleeves with a cuff), gloves, boots, cape (role accent), mask (role hair), star (role
 //   emblem), eyes { dark } (big dark eyes with highlights), cheeks (always pink; without, they show only when
@@ -40,8 +46,9 @@ BODIES.biped = {
   parts: ['head', 'hair', 'fringe', 'ears', 'eyes', 'brows', 'mouth', 'cheeks', 'neck', 'torso', 'arms', 'hands', 'legs', 'shoes',
     'skirt', 'sleeves', 'gloves', 'boots', 'mask', 'star', 'cape', 'shadow', 'build', 'figure', 'neckline', 'legwear', 'top'],
   poseParams: ['shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'hipL', 'hipR', 'kneeL', 'kneeR', 'fistL', 'fistR', 'lean', 'lift', 'crouch',
-    'flight', 'capeFlow', 'cycle'],
-  exprParams: ['eyes', 'mouth', 'brows', 'blush', 'headTilt', 'squint', 'look'],
+    'flight', 'capeFlow', 'cycle', 'reachL', 'reachR', 'handXL', 'handYL', 'handXR', 'handYR', 'handFrontL', 'handFrontR',
+    'handOpenL', 'handOpenR', 'headTurn', 'breath'],
+  exprParams: ['eyes', 'mouth', 'brows', 'blush', 'headTilt', 'squint', 'look', 'gesture'],
   views: ['front', 'q', 'side', 'back'],
   // roles that some options of a part want (validateCharacter checks them like partRoles)
   optionRoles(parts) {
@@ -57,7 +64,8 @@ BODIES.biped = {
   },
   SHEET: { views: ['front', 'q', 'side', 'back'], poseView: 'q', exprView: 'front', exprBust: true },   // faces read big, as in base.png
   POSE0: { shoulderL: .03, shoulderR: .03, elbowL: .12, elbowR: .12, hipL: 0, hipR: 0, kneeL: 0, kneeR: 0, fistL: 0, fistR: 0,
-    lean: 0, lift: 0, crouch: 0, flight: 0, capeFlow: 0, cycle: 0 },
+    lean: 0, lift: 0, crouch: 0, flight: 0, capeFlow: 0, cycle: 0, reachL: 0, reachR: 0, handXL: 0, handYL: 0, handXR: 0, handYR: 0,
+    handFrontL: 0, handFrontR: 0, handOpenL: 0, handOpenR: 0, headTurn: 0, breath: 0 },
   EXPR0: { eyes: 'open', mouth: 'smile', brows: 0, blush: 0, headTilt: 0, squint: 0, look: 0 },
   // Per view: the body's width factor, where the face is, and per side (L, R) the limb's x (in half shoulder or hip
   // widths), which way "forward" turns it on screen (dir), whether it is the near one, plus the outward splay of
@@ -70,7 +78,8 @@ BODIES.biped = {
   },
 
   layout(spec, state) {
-    const B = BODIES.biped, V = B.VIEW[state.view];
+    const B = BODIES.biped;
+    let V = B.VIEW[state.view];
     if (!V) throw new Error(`Vista "${state.view}" inesistente. Disponibili: ${B.views.join(', ')}`);
     const P = { ...B.POSE0, ...(state.pose || {}) }, E = { ...B.EXPR0, ...(state.expression || {}) }, t = state.t || 0;
     const pr = spec.proportions, sp = spec.parts || {}, HU = B.HU, parts = [], joints = {};
@@ -149,7 +158,8 @@ BODIES.biped = {
 
     // whole body: flight turns it round the hips, head first; lean tips the upper body forward
     const flightA = P.flight * Math.PI / 2 * .9, leanA = P.lean * .35;
-    const whole = pts => CG.rotate(pts, flightA, 0, hipY), upper = pts => whole(CG.rotate(pts, leanA, 0, hipY));
+    const breathY = .03 * HU * P.breath * (1 - Math.cos(Math.PI * 2 * t / 4)) / 2;
+    const whole = pts => CG.rotate(pts, flightA, 0, hipY), upper = pts => whole(CG.translate(CG.rotate(pts, leanA, 0, hipY), 0, -breathY));
 
     add('shadow', 'shadow', -10, CG.ellipse(0, .15, Math.max(shHalf, hipHalf) * 1.25 + P.flight * legL * .6, .13 * HU * (1 - Math.min(.5, P.lift * .05)), 28), { line: 0, shade: 1 });
 
@@ -213,8 +223,20 @@ BODIES.biped = {
     // ---- arms and hands ----
     for (const s of ['L', 'R']) {
       const L = V.limbs[s], sh = [L.x * (shHalf - armW * .5), shY + armW * .45];
-      const a1 = Math.PI / 2 - L.dir * (A['shoulder' + s] + V.out), a2 = a1 - L.dir * A['elbow' + s];
-      const elbow = at(sh, a1, armL / 2), wrist = at(elbow, a2, armL / 2);
+      let a1 = Math.PI / 2 - L.dir * (A['shoulder' + s] + V.out), a2 = a1 - L.dir * A['elbow' + s];
+      let elbow = at(sh, a1, armL / 2), wrist = at(elbow, a2, armL / 2);
+      if (P['reach' + s] > .5) {
+        // the hand where the gesture puts it: two fixed segments; from the front and back the elbow hangs low (or goes
+        // outwards when the hand is above the head), in 3/4 and profile it bends forward
+        const fwd = V.face === 'side' || V.face === 'q', sx = fwd ? 1 : Math.sign(L.x) || 1, seg = armL / 2;
+        const T = [sh[0] + sx * P['handX' + s] * HU, sh[1] + P['handY' + s] * HU], th = Math.atan2(T[1] - sh[1], T[0] - sh[0]);
+        const d = CG.clamp(Math.hypot(T[0] - sh[0], T[1] - sh[1]), 2 * seg * Math.cos(1.3) + 1e-6, 2 * seg - 1e-6), al = Math.acos(d / (2 * seg));
+        const w = at(sh, th, d), pick = [th + al, th - al].map(a => { const e = at(sh, a, seg); return { a, e, cross: (e[0] - sh[0]) * (w[1] - e[1]) - (e[1] - sh[1]) * (w[0] - e[0]) }; });
+        const high = P['handY' + s] < -.9;
+        const best = fwd ? pick.find(p => p.cross < 0) || pick[0]
+          : pick.sort((p, q) => high ? Math.sign(sh[0] || 1) * (q.e[0] - p.e[0]) : q.e[1] - p.e[1])[0];
+        elbow = best.e; wrist = w; a1 = best.a; a2 = Math.atan2(w[1] - elbow[1], w[0] - elbow[0]);
+      }
       Object.assign(joints, { ['shoulder' + s]: sh, ['elbow' + s]: elbow, ['wrist' + s]: wrist });
       const dep = L.near ? 3.5 + (s === 'R' ? .02 : 0) : 1, dim = L.near ? {} : { dim: .25 };
       const wide = sp.sleeves && sp.sleeves.wide, cuffAt = at(wrist, a2, -.1 * HU);
@@ -224,15 +246,26 @@ BODIES.biped = {
       if (wide) add('cuff' + s, 'top', dep + .01, upper(CG.tube([cuffAt, at(wrist, a2, -.02 * HU)], armW * 1.2, armW * 1.2, 3)), { ...dim, line: .8 });
       if (sp.gloves) add('glove' + s, 'accent', dep + .01, upper(CG.tube([at(elbow, a2, armL * .2), wrist], armWs[3] * 1.15, armWs[4] * 1.1)), { ...dim, feature: 'gloves' });
       // the hand: an oval with a thumb, or a round fist
-      const hr = Math.max(.12 * HU, armW * .62), hc = at(wrist, a2, hr * .7), role = sp.gloves ? 'accent' : 'skin';
-      if (P['fist' + s] > .5) add('hand' + s, role, dep + .02, upper(CG.ellipse(hc[0], hc[1], hr * 1.05, hr * 1.05, 18)), dim);
-      else {
-        add('thumb' + s, role, dep + .015, upper(CG.ellipse(...at(at(wrist, a2, hr * .5), a2 + L.dir * Math.PI / 2, -hr * .55), hr * .32, hr * .5, 12, a2)), dim);
-        add('hand' + s, role, dep + .02, upper(CG.ellipse(hc[0], hc[1], hr * 1.05, hr * .78, 18, a2)), dim);
+      const hr = Math.max(.12 * HU, armW * (fig ? .5 : .62)), hc = at(wrist, a2, hr * .7), role = sp.gloves ? 'accent' : 'skin', hd = P['handFront' + s] > .5 ? 5.2 : dep;
+      if (P['fist' + s] > .5) add('hand' + s, role, hd + .02, upper(CG.ellipse(hc[0], hc[1], hr * 1.05, hr * 1.05, 18)), dim);
+      else if (P['handOpen' + s] > .5) {
+        // an open hand: a palm and four fingers fanned out, the thumb aside
+        add('hand' + s, role, hd + .02, upper(CG.ellipse(hc[0], hc[1], hr * .8, hr * .7, 16, a2)), dim);
+        for (let i = 0; i < 4; i++) {
+          const fa = a2 + (i - 1.5) * .22, fc = at(hc, fa, hr * 1.15);
+          add('finger' + s + i, role, hd + .021 + i * .001, upper(CG.ellipse(fc[0], fc[1], hr * .55, hr * .17, 10, fa)), { ...dim, line: .7 });
+        }
+        add('thumb' + s, role, hd + .025, upper(CG.ellipse(...at(hc, a2 + L.dir * 1.2, hr * .85), hr * .45, hr * .17, 10, a2 + L.dir * 1.2)), { ...dim, line: .7 });
+      } else {
+        add('thumb' + s, role, hd + .015, upper(CG.ellipse(...at(at(wrist, a2, hr * .5), a2 + L.dir * Math.PI / 2, -hr * .55), hr * .32, hr * .5, 12, a2)), dim);
+        add('hand' + s, role, hd + .02, upper(CG.ellipse(hc[0], hc[1], hr * 1.05, hr * .78, 18, a2)), dim);
       }
     }
 
     // ---- head group: hair behind, head, ears, face, hair in front (turned by headTilt) ----
+    // seen from the back with headTurn, the head is drawn in profile and mirrored: she looks back over her shoulder
+    const turned = P.headTurn > .5 && !V.face, firstHead = parts.length;
+    if (turned) V = B.VIEW.side;
     const headW = pr.headW * HU * (V.face === 'side' ? .92 : 1), hcx = V.face === 'side' ? .12 * HU : V.face === 'q' ? .06 * HU : 0;
     const tilt = E.headTilt - flightA * .8, head = pts => upper(CG.rotate(pts, tilt, hcx, hcy + HU / 2));   // in flight it looks ahead
     // the head: an ellipse, its jaw narrowing to the chin by head.chin (adults)
@@ -275,10 +308,13 @@ BODIES.biped = {
         add('lip', 'lip', 4.79, head(CG.ellipse(mx, my + mw * .22, mw * .3, mw * .08, 14)), { line: 0 });
     }
     if (sp.hair) B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head, headShape });
+    // (the features of a view describe its usual drawing: the turned head carries none)
+    if (turned) { for (const p of parts.slice(firstHead)) { p.pts = p.pts.map(([x, y]) => [-x, y]); delete p.feature; } V = B.VIEW.back; }
 
     // ---- state.bust: only head and shoulders, cut below the chest (expression sheets, close-ups) ----
     if (state.bust) {
-      const cut = shY + .6 * HU, keep = /^(head|hair|face|lock|spike|ear|eye|brow|cheek|blush|mouth|mask|neck|torso|star|cape)/;
+      const cut = shY + (fig ? 1.35 : .6) * HU, keep = fig ? /^(head|hair|face|lock|spike|ear|eye|brow|cheek|blush|mouth|lip|mask|neck|torso|rim|collar|arm|hand|thumb|finger|sleeve|cuff)/
+        : /^(head|hair|face|lock|spike|ear|eye|brow|cheek|blush|mouth|mask|neck|torso|star|cape)/;
       // the cut rests on the ground line (y = 0), so a sheet row lines the busts up like whole figures
       const kept = parts.filter(p => keep.test(p.id)).map(p => ({ ...p, pts: CG.translate(p.stroke ? p.pts : CG.clipY(p.pts, cut, -1), 0, -cut) }))
         .filter(p => p.pts.length > 2 || (p.stroke && p.pts.length > 1));

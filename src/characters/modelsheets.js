@@ -13,13 +13,18 @@
   // A row of drawings scaled together to fit between x0 and x1 and maxH tall, feet on `base`; widths from frame 0, so
   // the row doesn't shift as tails move. fitU() is the scale a row would take; pass u to share one scale across rows.
   const GAP = .8;
+  // spec.poseCellW: a tall, narrow character's cells are at least this share of its height wide, so labels don't touch
+  const widen = (spec, b) => {
+    const w = (spec.poseCellW || 0) * (b.y1 - b.y0), extra = Math.max(0, w - (b.x1 - b.x0)) / 2;
+    return extra ? { ...b, x0: b.x0 - extra, x1: b.x1 + extra } : b;
+  };
   function fitU(id, cells, x0, x1, maxH) {
-    const spec = CHARACTERS[id], bs = cells.map(c => layoutOf(spec, { ...c.o, t: 0 }).bounds);
+    const spec = CHARACTERS[id], bs = cells.map(c => layoutOf(spec, { ...c.o, t: 0 }).bounds).map(b => widen(spec, b));
     const totalW = bs.reduce((s, b) => s + b.x1 - b.x0, 0) + GAP * (cells.length - 1);
     return Math.min((x1 - x0) / totalW, maxH / Math.max(...bs.map(b => -b.y0)));
   }
   function row(id, cells, x0, x1, base, maxH, t, size, uFixed) {
-    const spec = CHARACTERS[id], bs = cells.map(c => layoutOf(spec, { ...c.o, t: 0 }).bounds), gap = GAP;
+    const spec = CHARACTERS[id], bs = cells.map(c => layoutOf(spec, { ...c.o, t: 0 }).bounds).map(b => widen(spec, b)), gap = GAP;
     const totalW = bs.reduce((s, b) => s + b.x1 - b.x0, 0) + gap * (cells.length - 1);
     const u = uFixed ?? fitU(id, cells, x0, x1, maxH);
     let x = x0 + ((x1 - x0) - totalW * u) / 2;
@@ -60,7 +65,7 @@
       swatches(id, 470, 975);
     };
     LOOPS['pose_' + id] = t => {
-      const cells = Object.keys(spec.poses).map(p => ({ o: { view: S.poseView, pose: p }, label: p }));
+      const cells = Object.keys(spec.poses).map(p => ({ o: { view: (spec.poseViews || {})[p] || S.poseView, pose: p }, label: p }));
       const rows = []; for (let i = 0; i < cells.length; i += 3) rows.push(cells.slice(i, i + 3));
       const h = (H - 140) / rows.length, u = Math.min(...rows.map(r => fitU(id, r, 80, W - 80, h - 90)));
       rows.forEach((r, i) => row(id, r, 80, W - 80, 40 + h * (i + 1) - 50, h - 90, t, 26, u));

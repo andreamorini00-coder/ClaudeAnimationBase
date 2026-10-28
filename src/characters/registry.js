@@ -47,10 +47,18 @@ function validateCharacter(spec) {
         // eye and mouth names are checked here, not halfway through a render
         else if (k === 'eyes' && !FACES.EYES.includes(v)) errs.push(`${what} "${name}": occhi "${v}" inesistenti. Disponibili: ${FACES.EYES.join(', ')}`);
         else if (k === 'mouth' && !FACES.MOUTHS.includes(v)) errs.push(`${what} "${name}": bocca "${v}" inesistente. Disponibili: ${FACES.MOUTHS.join(', ')}`);
+        else if (k === 'gesture' && !(spec.gestures || {})[v]) errs.push(`${what} "${name}": gesto "${v}" inesistente. Disponibili: ${Object.keys(spec.gestures || {}).join(', ')}`);
         else if (k === 'brows' && typeof v === 'string' && !(v in FACES.BROWS)) errs.push(`${what} "${name}": sopracciglia "${v}" inesistenti. Disponibili: ${Object.keys(FACES.BROWS).join(', ')}`);
       }
   };
   params('posa', spec.poses, body.poseParams);
   params('espressione', spec.expressions, body.exprParams);
+  // gestures: what the hands do while the face changes (pose params, named by an expression's gesture)
+  params('gesto', spec.gestures, body.poseParams);
+  // poseViews: the view a pose is drawn in on the pose sheet
+  for (const [p, v] of Object.entries(spec.poseViews || {})) {
+    if (!(spec.poses || {})[p]) errs.push(`poseViews: posa "${p}" inesistente`);
+    if (!body.views.includes(v)) errs.push(`poseViews: vista "${v}" sconosciuta`);
+  }
   return errs;
 }
