@@ -233,11 +233,21 @@ BODIES.biped = {
     const spiky = style === 'spiky';
     // the bob: a long mass down to the jaw; spiky: a short cap over the skull, the spikes standing out of it
     const cap = CG.ellipse(mx, hcy - .06 * HU, headW * .55, .56 * HU, 44);
-    const mass = !spiky ? BODIES.biped.bob(mx, hcy, headW * (V.face === 'side' ? .6 : .66), HU, V.face ? headW * .34 : 0)
+    const mass = !spiky ? BODIES.biped.bob(mx, hcy, headW * (V.face === 'side' ? .6 : V.face ? .66 : .53), HU, V.face ? headW * .34 : 0)
       : V.face === 'side' || V.face === 'q' ? CG.clipLine(CG.clipY(cap, hcy + .22 * HU, -1), [hcx + (V.face === 'side' ? -.12 : -.3) * HU, hcy + .3 * HU], [hcx + (V.face === 'side' ? .32 : .2) * HU, hcy - .3 * HU])
       : CG.clipY(cap, V.face ? hairline - .05 * HU : hcy + .3 * HU, -1);
     add('hair', 'hair', 4.6, head(mass));
     function drawSpikes() {
+      if (V.face === 'front') {
+        // from the front a quiff: three big spikes over the forehead swept to the right, the middle one tallest
+        [-.45, 0, .45].forEach((u, i) => {
+          const a = -Math.PI / 2 + u * .9, base = [mx + Math.cos(a) * headW * .42, hcy - .06 * HU + Math.sin(a) * .5 * HU];
+          const len = (i === 1 ? .62 : .46) * HU, w = .3 * HU, tipA = a + .85, tip = [base[0] + Math.cos(tipA) * len, base[1] + Math.sin(tipA) * len];
+          const nx = -Math.sin(a) * w, ny = Math.cos(a) * w, bx = Math.cos(a) * .1 * HU, by = Math.sin(a) * .1 * HU;
+          add('spike' + i, 'hair', 4.55, head([[base[0] - nx - bx, base[1] - ny - by], tip, [base[0] + nx - bx, base[1] + ny - by]]), { feature: 'spikes' });
+        });
+        return;
+      }
       const n = h.locks || 5, side = V.face === 'side' || V.face === 'q';
       for (let i = 0; i < n; i++) {
         // fanned over the top; in profile and 3/4 they sweep back
@@ -263,14 +273,19 @@ BODIES.biped = {
     }
     add('face', 'skin', 4.7, head(face));
     if (style === 'bob') {
-      // three locks over the forehead, the middle one longest
+      // three real locks over the forehead: soft points of different lengths (the middle one longest), a little
+      // overlapping, the tips bending outwards (seen from 3/4 and in profile, all towards the nape)
       const x0 = V.face === 'front' ? hcx - fw : V.face === 'q' ? hcx - .2 * HU : hcx + .05 * HU, x1 = V.face === 'front' ? hcx + fw : hcx + headW * .5;
-      const lw = (x1 - x0) / 3 * 1.12, lean = V.face === 'front' ? 0 : .05 * HU;
+      const lw = (x1 - x0) / 3 * 1.2, y0 = hairline - .1 * HU;
       [0, 1, 2].forEach(i => {
-        const x = CG.lerp(x0, x1, (i + .5) / 3), y0 = hairline - .1 * HU, lh = (i === 1 ? .23 : .19) * HU;
-        // a soft drop: straight sides from the hairline, a round end
-        const ry = lw * .5, end = FACES.arc(x + lean, y0 + lh - ry, lw / 2, ry, 0, Math.PI, 12);
-        add('lock' + i, 'hair', 5, head([[x - lw / 2, y0], [x + lw / 2, y0], ...end]), { line: .8, feature: 'fringe' });
+        const x = CG.lerp(x0, x1, (i + .5) / 3), lh = [.24, .34, .28][i] * HU;
+        const bend = (V.face === 'front' ? [-1, .15, 1][i] : -1) * lw * .35, tip = [x + bend, y0 + lh];
+        const curve = (p, q, c, n = 8) => [...Array(n + 1)].map((_, k) => { const t = k / n; return [(1 - t) ** 2 * p[0] + 2 * t * (1 - t) * c[0] + t * t * q[0], (1 - t) ** 2 * p[1] + 2 * t * (1 - t) * c[1] + t * t * q[1]]; });
+        const left = curve([x - lw / 2, y0], tip, [x - lw * .42 + bend * .3, y0 + lh * .62]);
+        const right = curve(tip, [x + lw / 2, y0], [x + lw * .42 + bend * .5, y0 + lh * .58]).slice(1);
+        // filled without an outline (its top edge would cut across the hair), its two sides drawn as one stroke
+        add('lock' + i, 'hair', 5 + i * .002, head([...left, ...right]), { line: 0, feature: 'fringe' });
+        add('lockEdge' + i, 'line', 5.001 + i * .002, head([...left, ...right]), { line: .8, stroke: true });
       });
     }
   },

@@ -666,3 +666,22 @@ test('slim gloves and boots', () => {
   assert.ok(maxW(part('gloveL')) <= cuff * 1.2, `guanto ${maxW(part('gloveL')).toFixed(2)} contro avambraccio ${cuff.toFixed(2)}`);
   assert.ok(maxW(part('bootL')) <= knee * 1.15, `stivale ${maxW(part('bootL')).toFixed(2)} contro ginocchio ${knee.toFixed(2)}`);
 });
+
+// ---------- 4b2: hair of the girl and the hero ----------
+test('ragazza fringe locks differ', () => {
+  const c = lib(), locks = layoutOf(c, 'ragazza', { view: 'front' }).parts.filter(q => /^lock\d$/.test(q.id)).map(q => box(q.pts)).sort((a, b) => a.x0 - b.x0);
+  assert.equal(locks.length, 3);
+  assert.ok(locks[1].h > locks[0].h && locks[1].h > locks[2].h, `la ciocca centrale non è la più lunga: ${locks.map(b => b.h.toFixed(2))}`);
+  assert.ok(Math.abs(locks[0].h - locks[2].h) > .02, 'le ciocche laterali sono lunghe uguali');
+  for (let i = 0; i < 2; i++) assert.ok(locks[i].x1 > locks[i + 1].x0, `le ciocche ${i} e ${i + 1} non si sovrappongono`);
+});
+test('bob from the back is no wider than the head', () => {
+  const c = lib(), L = layoutOf(c, 'ragazza', { view: 'back' });
+  const hair = partBox(L, q => q.id === 'hair'), head = partBox(L, q => q.id === 'head');
+  assert.ok(hair.w <= head.w * 1.15, `capelli larghi ${hair.w.toFixed(2)} contro la testa ${head.w.toFixed(2)}`);
+});
+test('hero quiff from the front', () => {
+  const c = lib(), spikes = layoutOf(c, 'supereroe', { view: 'front' }).parts.filter(q => /^spike\d$/.test(q.id));
+  assert.equal(spikes.length, 3);
+  for (const s of spikes) assert.ok(s.pts[1][0] > (s.pts[0][0] + s.pts[2][0]) / 2, 'una punta non è spazzata verso destra');
+});

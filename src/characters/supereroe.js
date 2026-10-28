@@ -11,7 +11,7 @@ CHARACTERS.supereroe = {
     skinShadow: '#D99A86', cheek: '#FF5D73', line: '#1C2440', shadow: '#555B91', eyeWhite: '#F7F2E8',
   },
   features: [
-    { id: 'spikes', part: 'hair', views: ['front', 'q', 'side', 'back'], count: 5 },
+    { id: 'spikes', part: 'hair', views: ['front', 'q', 'side', 'back'], count: { front: 3, q: 5, side: 5, back: 5 } },   // from the front, a quiff
     { id: 'mask', part: 'mask', views: ['front', 'q', 'side'] },                       // from the back it does not show
     { id: 'star', part: 'star', views: ['front', 'q', 'side'], count: 1 },
     { id: 'cape', part: 'cape', views: ['front', 'q', 'side', 'back'] },
