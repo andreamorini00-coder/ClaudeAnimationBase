@@ -18,6 +18,22 @@ function act(t, keys, spec) {
   return { expression: { ...blendPose(from, cur, CG.smooth(k)), squint: Math.sin(Math.PI * k) }, take: CG.spring(t, t0 + D / 2, 6, 14) };
 }
 
+// The eyes' name at t for a blink every 3 to 4.8 s (the interval from seed: the same every render): open -> sleepy ->
+// closed -> sleepy -> open, 0.2 s in all.
+function blink(t, seed = 0) {
+  const h = k => { const x = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
+  let start = 0, k = 0;
+  while (true) { const next = start + 3 + 1.8 * h(k); if (next > t) break; start = next; k++; }
+  const d = t - start;
+  return k === 0 || d >= .2 ? 'open' : d < .05 || d >= .15 ? 'sleepy' : 'closed';
+}
+
+// A mouth that talks without audio: a fixed run of mouth names, `rate` a second.
+function talk(t, rate = 8) {
+  const seq = ['flat', 'ajar', 'open', 'ajar', 'o', 'flat', 'open', 'ajar'];
+  return seq[((Math.floor(t * rate) % 8) + 8) % 8];
+}
+
 // Numbers interpolated, names (and anything else) taken from b from halfway on.
 function blendPose(a, b, k) {
   const out = {};

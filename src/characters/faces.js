@@ -5,17 +5,22 @@
 // whose whites are another role passes o.roles = { white, ink, inside }.
 const FACES = {
   EYES: ['open', 'wide', 'oval', 'happy', 'closed', 'sad', 'angry', 'sleepy'],
-  MOUTHS: ['smile', 'open', 'frown', 'o', 'flat', 'pout', 'catSmile'],
+  MOUTHS: ['smile', 'open', 'frown', 'o', 'flat', 'pout', 'catSmile', 'ajar', 'grin'],
+  // named eyebrows: [k (FACES.brows' tilt), lift (how far they rise)]
+  BROWS: { neutral: [0, 0], raised: [-.15, 1], frown: [1, -.2], sad: [-1, .3] },
   arc(cx, cy, rx, ry, a0, a1, n = 10) { const p = []; for (let i = 0; i <= n; i++) { const a = CG.lerp(a0, a1, i / n); p.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); } return p; },
 
   // kind: one of EYES. r: eye size. o.look: -1..1, where the pupil looks sideways. o.squint: 0..1 closes it.
   // o.dark: open, wide, sad and angry eyes drawn as one big dark iris with two highlights, no white (the cat).
   // o.iris: the same eyes as a coloured iris (role o.roles.iris, default iris) round a dark pupil.
+  // o.adult: an adult's almond eye (open; sleepy = the lid over the iris's upper half; closed and happy = a lash arc
+  // down or up); o.outer (-1 | 1) is the side of its outer corner, where the lash line flicks out.
   eye(kind, cx, cy, r, o = {}) {
     if (!FACES.EYES.includes(kind)) throw new Error(`Occhio "${kind}" inesistente. Disponibili: ${FACES.EYES.join(', ')}`);
     const R = { white: 'eyeWhite', ink: 'line', iris: 'iris', ...(o.roles || {}) }, look = CG.clamp(o.look || 0, -1, 1) * r * .25;
     const open = 1 - CG.clamp(o.squint || 0), P = Math.PI, parts = [];
     const stroke = (id, pts, w = .5) => parts.push({ id, role: R.ink, pts, line: w, stroke: true });
+    if (o.adult) return FACES.adultEye(kind, cx, cy, r, o, R, open, look);
     if (kind === 'happy') { stroke('lid', FACES.arc(cx, cy + r * .2, r * .75, r * .6, P, 2 * P)); return { parts }; }
     if (kind === 'closed' || open < .15) { stroke('lid', FACES.arc(cx, cy, r * .75, r * .35, 0, P)); return { parts }; }
     if (o.iris && ['open', 'wide', 'sad', 'angry'].includes(kind)) {
@@ -53,11 +58,38 @@ const FACES = {
     return { parts };
   },
 
+  adultEye(kind, cx, cy, r, o, R, open, look) {
+    const parts = [], out = o.outer || 1, rx = r * 1.05, n = 16, P = Math.PI;
+    const lash = (pts, w = 1) => parts.push({ id: 'lash', role: R.ink, pts, line: w, stroke: true });
+    const xs = [...Array(n + 1)].map((_, i) => cx - rx + 2 * rx * i / n), bump = x => Math.max(0, Math.sin(P * (x - cx + rx) / (2 * rx)));
+    if (kind === 'closed' || open < .15) { lash(xs.map(x => [x, cy + r * .1 + r * .22 * bump(x)])); return { parts }; }
+    if (kind === 'happy') { lash(xs.map(x => [x, cy + r * .2 - r * .32 * bump(x)])); return { parts }; }
+    // the almond: a high upper lid, a flatter lower one; the outer corner a little higher than the inner
+    const ry = r * .8 * open, tilt = x => -out * (x - cx) / rx * r * .08;
+    const upper = xs.map(x => [x, cy + tilt(x) - ry * Math.pow(bump(x), .7)]), lower = xs.map(x => [x, cy + tilt(x) + r * .42 * Math.pow(bump(x), .9)]);
+    let almond = [...upper, ...lower.slice(1, -1).reverse()];
+    const lidY = cy - r * .1;                                       // a sleepy lid: down to just above the middle
+    if (kind === 'sleepy') almond = CG.clipY(almond, lidY, 1);
+    parts.push({ id: 'eyeWhite', role: R.white, pts: almond, line: 0 });
+    const ix = cx + look, iy = cy + r * .05;
+    parts.push({ id: 'iris', role: R.iris, pts: CG.clipConvex(CG.ellipse(ix, iy, r * .55, r * .6, 28), almond), line: .35 });
+    parts.push({ id: 'pupil', role: R.ink, pts: CG.clipConvex(CG.ellipse(ix, iy + r * .05, r * .26, r * .32, 18), almond), line: 0 });
+    const hl = CG.clipConvex(CG.ellipse(ix - out * r * .18, iy - r * .22, r * .13, r * .13, 12), almond);
+    if (hl.length > 2) parts.push({ id: 'highlight', role: R.white, pts: hl, line: 0 });
+    // the lash line along the upper lid (or the lowered lid), flicking out past the outer corner
+    const top = kind === 'sleepy' ? upper.map(([x, y]) => [x, Math.max(lidY, y)]) : upper;
+    const end = out > 0 ? top[n] : top[0], flick = [end[0] + out * r * .25, end[1] - r * .12];
+    lash(out > 0 ? [...top, flick] : [flick, ...top], 1);
+    lash(lower.slice(Math.round(n * .2), Math.round(n * .8)), .35);
+    return { parts };
+  },
+
   // One eyebrow: a soft arc w wide centred on (cx, cy). The sign of w says which end is the inner one (w > 0: the right
   // end, as for the eye on screen-left). k: -1 (sad, the inner end up) .. 0 .. 1 (angry, the inner end down).
-  // kind: 'line' (thin) or 'thick'.
-  brows(kind, cx, cy, w, k = 0) {
+  // kind: 'line' (thin) or 'thick'. lift: raises the whole brow (1 = a third of its width).
+  brows(kind, cx, cy, w, k = 0, lift = 0) {
     const s = Math.sign(w) || 1, h = Math.abs(w) / 2, tilt = CG.clamp(k, -1, 1) * h * .55, n = 8, pts = [];
+    cy -= lift * Math.abs(w) * .35;
     for (let i = 0; i <= n; i++) {
       const u = i / n * 2 - 1;                                           // -1 outer end .. 1 inner end
       pts.push([cx + s * u * h, cy - h * .28 * (1 - u * u) + tilt * (u + 1) / 2 - tilt / 2]);
@@ -76,7 +108,7 @@ const FACES = {
   // kind: one of MOUTHS. w: mouth width.
   mouth(kind, cx, cy, w, o = {}) {
     if (!FACES.MOUTHS.includes(kind)) throw new Error(`Bocca "${kind}" inesistente. Disponibili: ${FACES.MOUTHS.join(', ')}`);
-    const R = { ink: 'line', inside: 'line', ...(o.roles || {}) }, h = w / 2, P = Math.PI;
+    const R = { ink: 'line', inside: 'line', teeth: 'eyeWhite', ...(o.roles || {}) }, h = w / 2, P = Math.PI;
     const stroke = pts => ({ parts: [{ id: 'mouth', role: R.ink, pts, line: .5, stroke: true }] });
     switch (kind) {
       case 'smile': return stroke(FACES.arc(cx, cy - h * .3, h, h * .55, .15 * P, .85 * P));
@@ -87,6 +119,12 @@ const FACES = {
       case 'catSmile': return stroke([...FACES.arc(cx - h * .38, cy, h * .38, h * .42, P, 0, 7), ...FACES.arc(cx + h * .38, cy, h * .38, h * .42, P, 0, 7).slice(1)]);
       case 'o': return { parts: [{ id: 'mouth', role: R.inside, pts: CG.ellipse(cx, cy, h * .38, h * .5, 16), line: .5 }] };
       case 'open': return { parts: [{ id: 'mouth', role: R.inside, pts: FACES.arc(cx, cy - h * .15, h * .8, h * .9, 0, P, 14), line: .5 }] };
+      case 'ajar': return { parts: [{ id: 'mouth', role: R.inside, pts: CG.ellipse(cx, cy, h * .5, h * .18, 16), line: .5 }] };
+      // a wide smile showing the upper teeth: the open smile, its top band in the teeth colour
+      case 'grin': {
+        const shape = FACES.arc(cx, cy - h * .25, h * .85, h * .7, 0, P, 16);
+        return { parts: [{ id: 'mouth', role: R.inside, pts: shape, line: .5 }, { id: 'mouthTeeth', role: R.teeth, pts: CG.clipY(shape, cy, -1), line: .35 }] };
+      }
     }
   },
 };

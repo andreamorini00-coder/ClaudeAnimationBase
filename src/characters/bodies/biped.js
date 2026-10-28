@@ -20,7 +20,9 @@
 //   heads, .21 and .24 by default as the chibi's; taper = ankle / thigh width; round = how round the torso's corners
 //   are; thigh, calf, forearm override those widths of the limb's profile),
 //   eyes.size and mouth { size } (scale the face).
-// Expression params: eyes, mouth (FACES kinds), brows -1 (sad) .. 1 (angry), blush 0..1 (embarrassed), headTilt.
+//   eyes { adult } (an adult's almond eye, role iris), mouth { lip } (the lower lip, role lip).
+// Expression params: eyes, mouth (FACES kinds), brows -1 (sad) .. 1 (angry) or a name of FACES.BROWS, blush 0..1
+//   (embarrassed), headTilt.
 BODIES.biped = {
   HU: 3,
   roles: ['skin', 'hair', 'top', 'legs', 'line', 'shadow', 'eyeWhite', 'cheek'],
@@ -32,6 +34,18 @@ BODIES.biped = {
     'flight', 'capeFlow', 'cycle'],
   exprParams: ['eyes', 'mouth', 'brows', 'blush', 'headTilt', 'squint', 'look'],
   views: ['front', 'q', 'side', 'back'],
+  // roles that some options of a part want (validateCharacter checks them like partRoles)
+  optionRoles(parts) {
+    const p = parts || {}, out = [];
+    if (p.eyes && p.eyes.adult) out.push(['eyes', 'iris']);
+    if (p.mouth && p.mouth.lip) out.push(['mouth', 'lip']);
+    if (p.legwear && p.legwear.shine) out.push(['legwear', 'clothLight']);
+    if (p.legwear && p.legwear.insert) out.push(['legwear', 'insert']);
+    if (p.top && p.top.rim) out.push(['top', 'clothLight']);
+    if (p.hair && p.hair.part) out.push(['hair', 'hairShadow']);
+    if (p.hair && p.hair.style === 'long') out.push(['hair', 'hairLight']);
+    return out;
+  },
   SHEET: { views: ['front', 'q', 'side', 'back'], poseView: 'q', exprView: 'front', exprBust: true },   // faces read big, as in base.png
   POSE0: { shoulderL: .03, shoulderR: .03, elbowL: .12, elbowR: .12, hipL: 0, hipR: 0, kneeL: 0, kneeR: 0, fistL: 0, fistR: 0,
     lean: 0, lift: 0, crouch: 0, flight: 0, capeFlow: 0, cycle: 0 },
@@ -166,7 +180,8 @@ BODIES.biped = {
       const F = V.face === 'front' ? { eyes: [[-.21, 1], [.21, 1]], mouth: 0, cheeks: [-.33, .33] }
         : V.face === 'q' ? { eyes: [[-.04, .88], [.27, 1]], mouth: .13, cheeks: [-.17, .4] } : { eyes: [[.3, .85]], mouth: .38, cheeks: [.2] };
       const ey = hcy + (sp.mask ? .07 : .16) * HU, r = .135 * HU * (sp.eyes && sp.eyes.size || 1),   // a mask lifts the eyes, leaving room for the mouth
-        eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark) };
+        eo = { look: E.look, squint: E.squint, dark: !!(sp.eyes && sp.eyes.dark), adult: !!(sp.eyes && sp.eyes.adult) };
+      const [browK, browLift] = typeof E.brows === 'string' ? FACES.BROWS[E.brows] : [E.brows, 0];
       if (sp.mask) {
         // a domino mask: a lobe round each eye, thinner over the nose, cut to the head's outline
         const exs = F.eyes.map(([x, k]) => [hcx + x * HU, r * k]), m = r * .2;
@@ -178,16 +193,20 @@ BODIES.biped = {
       }
       F.eyes.forEach(([x, k], i) => {
         const ex = hcx + x * HU;
-        FACES.eye(E.eyes, ex, ey, r * k, eo).parts.forEach(p => add('eye' + i + p.id, p.role, 4.8, head(p.pts), { line: p.line, stroke: p.stroke }));
+        FACES.eye(E.eyes, ex, ey, r * k, { ...eo, outer: F.eyes.length > 1 ? (i ? 1 : -1) : 1 }).parts.forEach(p => add('eye' + i + p.id, p.role, 4.8, head(p.pts), { line: p.line, stroke: p.stroke }));
         // the brow's inner end is the one towards the middle of the face
         const inward = F.eyes.length > 1 ? (i ? -1 : 1) : 1;
-        FACES.brows(sp.brows && sp.brows.kind || 'line', ex, sp.mask ? ey - r * 1.25 - .07 * HU : ey - .19 * HU, .2 * HU * k * inward, E.brows).parts
+        FACES.brows(sp.brows && sp.brows.kind || 'line', ex, sp.mask ? ey - r * 1.25 - .07 * HU : ey - .19 * HU, .2 * HU * k * inward, browK, browLift).parts
           .forEach(p => add('brow' + i, p.role, 5.05, head(p.pts), { line: p.line, stroke: true }));
       });
       if (sp.cheeks || E.blush > 0) F.cheeks.forEach((x, i) => FACES.cheek(hcx + x * HU, hcy + .31 * HU, .09 * HU, E.blush).parts
         .forEach(p => add(p.id === 'cheek' ? 'cheek' + i : 'blush' + i, p.role, 4.75, head(p.pts), { line: p.line, stroke: p.stroke, ...(p.dim ? { dim: p.dim } : {}), ...(p.id === 'cheek' && sp.cheeks ? { feature: 'cheeks' } : {}) })));
-      FACES.mouth(E.mouth, hcx + F.mouth * HU, sp.mask ? ey + r * 1.1 + .08 * HU : hcy + .36 * HU, .15 * HU * (sp.mouth && sp.mouth.size || 1)).parts
-        .forEach(p => add('mouth', p.role, 4.8, head(p.pts), { line: p.stroke ? .5 : p.line, stroke: p.stroke }));
+      const mx = hcx + F.mouth * HU, my = sp.mask ? ey + r * 1.1 + .08 * HU : hcy + .36 * HU, mw = .15 * HU * (sp.mouth && sp.mouth.size || 1);
+      FACES.mouth(E.mouth, mx, my, mw).parts
+        .forEach(p => add(p.id, p.role, 4.8 + (p.id === 'mouth' ? 0 : .001), head(p.pts), { line: p.stroke ? .5 : p.line, stroke: p.stroke }));
+      // the lower lip, a soft touch of colour under a closed or half-open mouth
+      if (sp.mouth && sp.mouth.lip && (E.mouth === 'flat' || E.mouth === 'ajar'))
+        add('lip', 'lip', 4.79, head(CG.ellipse(mx, my + mw * .22, mw * .3, mw * .08, 14)), { line: 0 });
     }
     if (sp.hair) B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head });
 

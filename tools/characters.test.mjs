@@ -685,3 +685,51 @@ test('hero quiff from the front', () => {
   assert.equal(spikes.length, 3);
   for (const s of spikes) assert.ok(s.pts[1][0] > (s.pts[0][0] + s.pts[2][0]) / 2, 'una punta non è spazzata verso destra');
 });
+
+// ---------- 4b2: face parts, blink, talk ----------
+const adultGirl = c => {
+  const spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.ragazza')));
+  spec.parts.eyes = { adult: true }; spec.parts.mouth = { lip: true }; spec.roles.iris = '#527D9C'; spec.roles.lip = '#D99A8E';
+  return spec;
+};
+const faceOf = (c, spec, expression, view = 'front') => c.call('((sp, s) => BODIES.biped.layout(sp, s))', spec, { view, t: 0, pose: {}, expression });
+test('adult face parts combine', () => {
+  const c = lib(), spec = adultGirl(c);
+  assert.deepEqual(c.call('validateCharacter', spec), []);
+  for (const eyes of ['open', 'sleepy', 'closed', 'happy']) for (const mouth of ['flat', 'ajar', 'open', 'o', 'grin']) for (const brows of ['neutral', 'raised', 'frown', 'sad']) {
+    const L = faceOf(c, spec, { eyes, mouth, brows });
+    for (const p of L.parts) assert.ok(finite(p.pts) && p.pts.length > 1, `${eyes} ${mouth} ${brows}: ${p.id}`);
+  }
+  assert.ok(faceOf(c, spec, { mouth: 'grin' }).parts.some(p => /^mouth/.test(p.id) && p.role === 'eyeWhite'), 'il sorriso con i denti non ha i denti');
+  assert.ok(faceOf(c, spec, { mouth: 'flat' }).parts.some(p => p.id === 'lip' && p.role === 'lip'), 'manca il labbro');
+  const irisTop = e => box(faceOf(c, spec, { eyes: e }).parts.find(p => p.id === 'eye0iris').pts).y0, r = .135 * c.get('BODIES.biped.HU');
+  assert.ok(irisTop('sleepy') > irisTop('open') + r * .2, `socchiusi: iride a ${irisTop('sleepy').toFixed(2)}, aperti a ${irisTop('open').toFixed(2)}`);
+});
+test('brow names are validated', () => {
+  const c = lib(), spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.ragazza')));
+  spec.expressions.strana = { brows: 'stupite' };
+  assert.match(c.call('validateCharacter', spec).join(' '), /stupite/);
+  spec.expressions.strana = { brows: 'raised' };
+  assert.deepEqual(c.call('validateCharacter', spec), []);
+  const browTop = b => partBox(faceOf(c, spec, { brows: b }), p => p.id === 'brow0').y0;
+  assert.ok(browTop('raised') < browTop('neutral') - .05, 'le sopracciglia alzate non stanno più in alto');
+});
+test('option roles are required', () => {
+  const c = lib(), spec = JSON.parse(JSON.stringify(c.get('CHARACTERS.ragazza')));
+  spec.parts.eyes = { adult: true };
+  assert.match(c.call('validateCharacter', spec).join(' '), /vuole il ruolo colore "iris"/);
+});
+test('blink is deterministic and short', () => {
+  const c = lib(), seq = seed => [...Array(2000)].map((_, i) => c.call('blink', i / 100, seed));
+  const a = seq(0);
+  assert.deepEqual(a, seq(0));
+  for (let w = 0; w + 500 <= 2000; w += 500) assert.ok(a.slice(w, w + 500).includes('closed'), `nessun battito tra ${w / 100} e ${w / 100 + 5} s`);
+  let run = 0; for (const e of a) { run = e === 'open' ? 0 : run + 1; assert.ok(run <= 25, 'occhi non aperti per più di 0,25 s'); }
+  assert.notDeepEqual(a, seq(7), 'semi diversi, stessi battiti');
+  for (const e of a) assert.ok(['open', 'sleepy', 'closed'].includes(e));
+});
+test('talk cycles mouth names', () => {
+  const c = lib(), mouths = c.get('FACES.MOUTHS');
+  assert.equal(c.call('talk', 0), 'flat');
+  for (let i = 0; i < 40; i++) { const m = c.call('talk', i / 20); assert.ok(mouths.includes(m), m); assert.equal(m, c.call('talk', i / 20 + 1)); }
+});

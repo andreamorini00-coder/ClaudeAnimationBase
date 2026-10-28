@@ -25,6 +25,9 @@ function validateCharacter(spec) {
   for (const r of body.roles) if (!(r in roles)) errs.push(`manca il ruolo colore "${r}"`);
   for (const [part, r] of Object.entries(body.partRoles || {}))
     if (spec.parts && part in spec.parts && !(r in roles)) errs.push(`la parte "${part}" vuole il ruolo colore "${r}"`);
+  // roles some options of a part want (an adult eye's iris, a lip...)
+  if (body.optionRoles) for (const [part, r] of body.optionRoles(spec.parts || {}))
+    if (!(r in roles)) errs.push(`la parte "${part}" vuole il ruolo colore "${r}"`);
   for (const k of body.proportions || []) {
     const v = (spec.proportions || {})[k];
     if (typeof v !== 'number' || !Number.isFinite(v)) errs.push(`proporzione "${k}" mancante o non numerica`);
@@ -44,6 +47,7 @@ function validateCharacter(spec) {
         // eye and mouth names are checked here, not halfway through a render
         else if (k === 'eyes' && !FACES.EYES.includes(v)) errs.push(`${what} "${name}": occhi "${v}" inesistenti. Disponibili: ${FACES.EYES.join(', ')}`);
         else if (k === 'mouth' && !FACES.MOUTHS.includes(v)) errs.push(`${what} "${name}": bocca "${v}" inesistente. Disponibili: ${FACES.MOUTHS.join(', ')}`);
+        else if (k === 'brows' && typeof v === 'string' && !(v in FACES.BROWS)) errs.push(`${what} "${name}": sopracciglia "${v}" inesistenti. Disponibili: ${Object.keys(FACES.BROWS).join(', ')}`);
       }
   };
   params('posa', spec.poses, body.poseParams);
