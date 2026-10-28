@@ -101,7 +101,7 @@ Da fissare nel design: quanto ciascuno può cambiare oltre a palette, pennelli e
 in `cozy` passano dalla tecnica, non dalle scene), il blocco `character` con cui ogni stile traduce i ruoli colore
 dei personaggi, e i tempi di render in finale e in draft.
 
-## Fase 4 — Creatore di personaggi · **4a e 4b1 chiuse, 4b2 da fare**
+## Fase 4 — Creatore di personaggi · **4a e 4b1 chiuse, 4b2 in design**
 
 Una libreria di personaggi riusabile in tutti gli stili e in tutti i formati. Design approvato da Andrea il
 2026-10-27: **viste chiave 2D parametriche** (fronte, 3/4, profilo, retro, come il model sheet di Clawd), niente
@@ -152,7 +152,10 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
     stivali;
   - `fist` scatta a 0,5 (con `blendPose` la mano passa di colpo da aperta a pugno); `CG.block` con altezza 0 dà NaN.
 
-#### 4b2. Bipede adulto per il visual novel · **dopo la 4b1**
+#### 4b2. Bipede adulto per il visual novel · **in design** (branch `fase4b2-personaggi`)
+
+Spec: `../specs/2026-10-28-fase4b2-personaggi-design.md`. Piano: `2026-10-28-fase4b2-personaggi.md`.
+
 
 - Bipede adulto a **7–7,5 teste**, con le parti del viso separate (occhi, bocca, sopracciglia) da combinare nelle
   espressioni, come in `viso.png`.
@@ -161,6 +164,9 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
   - arti morbidi e affusolati invece di tubi con giunture tonde; guanti e stivali più snelli e proporzionati;
   - frangia della ragazza: 3 ciocche vere invece della fila di smerli; la testa dal retro meno "a fungo";
   - capelli del supereroe da davanti più simili a un ciuffo che a una corona.
+- Corporatura di vale e mara come nei loro `base.png`, in parametri della scheda; l'abito ufficio di vale con la sua
+  corporatura meno accentuata (Andrea, 2026-10-28).
+- **Dopo la 4b2:** pose sedute, sdraiate e appoggiate al muro, insieme agli oggetti di scena (sgabello, divano, muro).
 
 ### 4c. Pagina web dei personaggi · **da fare**
 
