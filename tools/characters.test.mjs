@@ -733,3 +733,64 @@ test('talk cycles mouth names', () => {
   assert.equal(c.call('talk', 0), 'flat');
   for (let i = 0; i < 40; i++) { const m = c.call('talk', i / 20); assert.ok(mouths.includes(m), m); assert.equal(m, c.call('talk', i / 20 + 1)); }
 });
+
+// ---------- 4b2: the adult figure and vale ----------
+test('vale spec is valid', () => { assert.deepEqual(lib().call('validateCharacter', lib().get('CHARACTERS.vale')), []); });
+test('vale features per view and counts', () => checkFeatures(lib(), 'vale'));
+test('vale uses only its roles', () => checkRoles(lib(), 'vale'));
+test('vale has no NaN', () => checkFinite(lib(), 'vale'));
+test('vale flip mirrors exactly', () => checkFlip(lib(), 'vale'));
+test('vale layout is deterministic', () => {
+  const c = lib(); assert.deepEqual(layoutOf(c, 'vale', { view: 'side', t: .41 }), layoutOf(c, 'vale', { view: 'side', t: .41 }));
+});
+test('vale is 7.5 heads tall', () => {
+  const c = lib(), got = headsTall(c, 'vale');
+  assert.ok(near(got, 7.5, .05), `${got.toFixed(2)} teste invece di 7,5`);
+});
+test('vale limbs keep their length', () => checkLimbs(lib(), 'vale'));
+test('vale limbs are simple outlines', () => {
+  const c = lib(), spec = c.get('CHARACTERS.vale');
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) for (const t of [0, .37])
+    for (const p of layoutOf(c, 'vale', { view, pose, t }).parts.filter(q => /^(arm|leg)[LR]$/.test(q.id)))
+      assert.ok(simple(p.pts), `vale ${view} ${pose} t=${t}: ${p.id} si incrocia`);
+});
+test('vale figure follows the reference', () => {
+  const c = lib(), HU = c.get('BODIES.biped.HU');
+  const F = layoutOf(c, 'vale', { view: 'front' }), J = F.joints, torso = F.parts.find(p => p.id === 'torso').pts, pelvis = F.parts.find(p => p.id === 'pelvis').pts;
+  const fig = c.get('CHARACTERS.vale.parts.figure'), at = (poly, y) => widthAt(poly, y);
+  const waistY = box(torso).y0 + (J.hipL[1] - box(torso).y0) * .68;
+  const ys = k => box(torso).y0 + k * HU;
+  const chest = Math.max(...[.6, .75, .9].map(k => at(torso, ys(k)))), waist = at(torso, waistY);
+  const hips = Math.max(...[0, .05, .1, .15].map(k => at(pelvis, J.hipL[1] + k * HU)));
+  assert.ok(waist < .75 * hips, `vita ${waist.toFixed(2)} contro fianchi ${hips.toFixed(2)}`);
+  assert.ok(waist < .8 * chest, `vita ${waist.toFixed(2)} contro petto ${chest.toFixed(2)}`);
+  const S = layoutOf(c, 'vale', { view: 'side' }), sj = S.joints, st = [...S.parts.find(p => p.id === 'torso').pts, ...S.parts.find(p => p.id === 'pelvis').pts];
+  const front = Math.max(...st.map(p => p[0])), back = Math.min(...st.map(p => p[0])), line = (sj.shoulderR[0] + sj.hipR[0]) / 2;
+  assert.ok(front > line + fig.bustDepth * HU * .8, `il petto non sporge: ${front.toFixed(2)}`);
+  assert.ok(back < line - fig.rumpDepth * HU * .8, `i glutei non sporgono: ${back.toFixed(2)}`);
+});
+test('leggings shine in every view', () => {
+  const c = lib(), spec = c.get('CHARACTERS.vale');
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) {
+    const L = layoutOf(c, 'vale', { view, pose });
+    for (const s of ['L', 'R']) assert.ok(L.parts.some(p => p.role === 'clothLight' && p.id.startsWith('shine' + s)), `vale ${view} ${pose}: nessuna luce sulla gamba ${s}`);
+  }
+});
+test('heels stand on the ground', () => {
+  const c = lib(), spec = c.get('CHARACTERS.vale'), HU = c.get('BODIES.biped.HU');
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) {
+    if (spec.poses[pose].lift) continue;
+    const y = partBox(layoutOf(c, 'vale', { view, pose }), q => /^(leg|foot|shoe|heel|boot)/.test(q.id)).y1;
+    assert.ok(Math.abs(y) < 1e-6, `vale ${view} ${pose}: il piede è a ${y.toFixed(3)} dal suolo`);
+  }
+  const flat = JSON.parse(JSON.stringify(spec)); flat.parts.shoes = {};
+  const ankle = sp => c.call('((sp, s) => BODIES.biped.layout(sp, s))', sp, { view: 'side', t: 0, pose: {}, expression: {} }).joints.ankleR[1];
+  assert.ok(ankle(flat) - ankle(spec) > spec.parts.shoes.heel * HU * .95, `il tacco non alza la caviglia: ${(ankle(flat) - ankle(spec)).toFixed(3)}`);
+});
+test('a figure without a body shape is the old torso', () => {
+  const c = lib(), L = layoutOf(c, 'ragazza', { view: 'front' }), J = L.joints, pr = c.get('CHARACTERS.ragazza.proportions'), HU = c.get('BODIES.biped.HU');
+  const torso = L.parts.find(p => p.id === 'torso').pts, shY = J.hipL[1] - pr.torso * HU;
+  const old = c.call('CG.block', 0, shY - .03 * HU, J.hipL[1] + .06 * HU, pr.shoulders * HU, pr.hips * HU * 1.06, .32);
+  assert.deepEqual(torso, old);
+  assert.ok(!L.parts.some(p => p.id === 'pelvis'));
+});

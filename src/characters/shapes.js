@@ -149,6 +149,18 @@ const CG = {
     const cap = (p, ang, h, from) => { const out = []; for (let k = 1; k < 6; k++) { const t = ang + from - k / 6 * Math.PI; out.push([p[0] + Math.cos(t) * h, p[1] + Math.sin(t) * h]); } return out; };
     return [...left, ...cap(c, s2.a, half(1), Math.PI / 2), ...right.reverse(), ...cap(a, s1.a, half(0), -Math.PI / 2)];
   },
+  // A smooth closed curve through pts (Catmull-Rom), n points per span: torsos and other soft outlines.
+  spline(pts, n = 6) {
+    const m = pts.length, out = [];
+    for (let i = 0; i < m; i++) {
+      const p0 = pts[(i - 1 + m) % m], p1 = pts[i], p2 = pts[(i + 1) % m], p3 = pts[(i + 2) % m];
+      for (let k = 0; k < n; k++) {
+        const t = k / n, t2 = t * t, t3 = t2 * t, f = (a, b, c, d) => .5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+      }
+    }
+    return out;
+  },
   // Where segments p1-p2 and p3-p4 cross, or null.
   _cross(p1, p2, p3, p4) {
     const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]);
