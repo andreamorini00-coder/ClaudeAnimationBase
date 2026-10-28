@@ -1,6 +1,6 @@
 // supereroe.js: the hero (reference/characters/supereroe/). Data only: the biped body draws him (bodies/biped.js).
 CHARACTERS.supereroe = {
-  id: 'supereroe', version: 1, body: 'biped',
+  id: 'supereroe', version: 2, body: 'biped',
   // about 5.3 heads with the spikes (Andrea, 2026-10-27: a bigger head): foot .1 + leg 2.15 + torso 1.5 + neck .07 + head 1
   // + spikes .45. A V torso: wide shoulders, a narrow waist.
   proportions: { heads: 5.3, shoulders: 1.6, hips: .85, torso: 1.5, arm: 1.85, leg: 2.15, headW: 1.05 },

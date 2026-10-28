@@ -107,4 +107,53 @@ const CG = {
       for (let k = 1; k < capN; k++) { const a = a0 - k / capN * Math.PI; out.push([path[i][0] + Math.cos(a) * w, path[i][1] + Math.sin(a) * w]); } return out; };
     return [...L, ...cap(n - 1, 0), ...R.reverse(), ...cap(0, Math.PI)];
   },
+  // A soft limb: one smooth outline through three joints [a, b, c] (shoulder, elbow, wrist or hip, knee, ankle), two
+  // segments of any length. widths: five full widths at 0, .25, .5, .75, 1 of the way (w2 at b), joined by a smooth
+  // curve. At b the outer side turns on an arc, the inner side folds (its two edges stop where they meet); the ends
+  // are round caps, so a limb drawn over the body shows no cut.
+  limb([a, b, c], widths, n = 8) {
+    const half = u => {                                            // Catmull-Rom through the five widths, halved
+      const x = CG.clamp(u) * 4, i = Math.min(3, Math.floor(x)), k = x - i, w = j => widths[CG.clamp(j, 0, 4)];
+      const p0 = w(i - 1), p1 = w(i), p2 = w(i + 1), p3 = w(i + 2);
+      return .25 * (2 * p1 + (-p0 + p2) * k + (2 * p0 - 5 * p1 + 4 * p2 - p3) * k * k + (-p0 + 3 * p1 - 3 * p2 + p3) * k * k * k);
+    };
+    const seg = (p, q, u0, u1) => {                               // the two offset edges of one segment, p → q
+      const dx = q[0] - p[0], dy = q[1] - p[1], d = Math.hypot(dx, dy) || 1, nx = -dy / d, ny = dx / d, L = [], R = [];
+      for (let i = 0; i <= n; i++) {
+        const k = i / n, x = CG.lerp(p[0], q[0], k), y = CG.lerp(p[1], q[1], k), h = half(CG.lerp(u0, u1, k));
+        L.push([x + nx * h, y + ny * h]); R.push([x - nx * h, y - ny * h]);
+      }
+      return { L, R, a: Math.atan2(dy, dx) };
+    };
+    const s1 = seg(a, b, 0, .5), s2 = seg(b, c, .5, 1);
+    const turn = Math.sin(s2.a - s1.a), hb = half(.5);
+    // the outer side: an arc round b from the first segment's normal to the second's
+    const arc = (side, a1, a2) => {
+      let da = a2 - a1; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+      const out = [], m = Math.max(2, Math.ceil(Math.abs(da) / .25));
+      for (let i = 1; i < m; i++) { const t = a1 + da * i / m; out.push([b[0] + Math.cos(t) * hb, b[1] + Math.sin(t) * hb]); }
+      return side === 'L' ? out : out.reverse();
+    };
+    // the inner side: both edges cut where they cross
+    const fold = (e1, e2) => {
+      for (let i = e1.length - 2; i >= 0; i--) for (let j = 0; j < e2.length - 1; j++) {
+        const p = CG._cross(e1[i], e1[i + 1], e2[j], e2[j + 1]);
+        if (p) return [...e1.slice(0, i + 1), p, ...e2.slice(j + 1)];
+      }
+      return [...e1, ...e2];
+    };
+    const nL1 = s1.a + Math.PI / 2, nL2 = s2.a + Math.PI / 2;
+    // turning towards L (turn > 0, y down) makes L the inner side
+    const left = turn > 1e-6 ? fold(s1.L, s2.L) : [...s1.L, ...arc('L', nL1, nL2), ...s2.L];
+    const right = turn < -1e-6 ? fold(s1.R, s2.R) : [...s1.R, ...arc('L', nL1 + Math.PI, nL2 + Math.PI), ...s2.R];
+    const cap = (p, ang, h, from) => { const out = []; for (let k = 1; k < 6; k++) { const t = ang + from - k / 6 * Math.PI; out.push([p[0] + Math.cos(t) * h, p[1] + Math.sin(t) * h]); } return out; };
+    return [...left, ...cap(c, s2.a, half(1), Math.PI / 2), ...right.reverse(), ...cap(a, s1.a, half(0), -Math.PI / 2)];
+  },
+  // Where segments p1-p2 and p3-p4 cross, or null.
+  _cross(p1, p2, p3, p4) {
+    const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]);
+    if (Math.abs(d) < 1e-12) return null;
+    const t = ((p3[0] - p1[0]) * (p4[1] - p3[1]) - (p3[1] - p1[1]) * (p4[0] - p3[0])) / d, u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? [p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])] : null;
+  },
 };

@@ -605,3 +605,64 @@ test('a biped without hair is bald', () => {
   const L = c.call('((sp, s) => BODIES.biped.layout(sp, s))', spec, { view: 'front', t: 0, pose: {}, expression: {} });
   assert.deepEqual(L.parts.filter(q => /hair|lock|^face$/.test(q.id)).map(q => q.id), []);
 });
+
+// ---------- 4b2: soft limbs ----------
+// a polygon is simple when no two non-adjacent edges cross
+const crosses = (a, b, c, d) => {
+  const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+  return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+};
+const simple = poly => {
+  const n = poly.length;
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) {
+    if (i === 0 && j === n - 1) continue;
+    if (crosses(poly[i], poly[(i + 1) % n], poly[j], poly[(j + 1) % n])) return false;
+  }
+  return true;
+};
+// the horizontal width of a polygon at height y
+const widthAt = (poly, y) => {
+  const xs = [];
+  poly.forEach((a, i) => { const b = poly[(i + 1) % poly.length]; if ((a[1] - y) * (b[1] - y) < 0) xs.push(a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1])); });
+  return xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+};
+test('CG.limb makes a simple outline', () => {
+  const c = lib();
+  for (const bendA of [0, .8, 1.6, 2.6]) for (const s of [1, -1]) {
+    const a = [0, 0], b = [0, 1], cc = [Math.sin(s * bendA) * 1, 1 + Math.cos(s * bendA) * 1];
+    const poly = c.call('CG.limb', [a, b, cc], [.4, .37, .3, .32, .25]);
+    assert.ok(finite(poly) && poly.length > 8, `angolo ${bendA}`);
+    assert.ok(simple(poly), `contorno che si incrocia, angolo ${bendA * s}`);
+    assert.ok(c.call('CG.area', poly) > .3, `area ${bendA}`);
+  }
+});
+test('biped limbs are simple outlines', () => {
+  const c = lib();
+  for (const id of ['ragazza', 'supereroe']) {
+    const spec = c.get(`CHARACTERS.${id}`);
+    for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) for (const t of [0, .37])
+      for (const p of layoutOf(c, id, { view, pose, t }).parts.filter(q => /^(arm|leg)[LR]$/.test(q.id)))
+        assert.ok(simple(p.pts), `${id} ${view} ${pose} t=${t}: ${p.id} si incrocia`);
+  }
+});
+test('biped limbs taper', () => {
+  const c = lib();
+  for (const id of ['ragazza', 'supereroe']) {
+    const L = layoutOf(c, id, { view: 'front', pose: Object.keys(c.get(`CHARACTERS.${id}.poses`))[0] }), J = L.joints;
+    const leg = L.parts.find(q => q.id === 'legL').pts, arm = L.parts.find(q => q.id === 'armL').pts;
+    const thigh = widthAt(leg, CG_lerp(J.hipL[1], J.kneeL[1], .3)), ankle = widthAt(leg, CG_lerp(J.kneeL[1], J.ankleL[1], .92));
+    assert.ok(ankle < thigh * .9, `${id}: caviglia ${ankle.toFixed(2)} non più stretta della coscia ${thigh.toFixed(2)}`);
+    const upper = widthAt(arm, CG_lerp(J.shoulderL[1], J.elbowL[1], .3)), wrist = widthAt(arm, CG_lerp(J.elbowL[1], J.wristL[1], .9));
+    // a puffy sleeve (the girl's) widens at the cuff on purpose
+    if (!(c.get(`CHARACTERS.${id}.parts`).sleeves || {}).wide) assert.ok(wrist < upper * .9, `${id}: polso ${wrist.toFixed(2)} non più stretto del braccio ${upper.toFixed(2)}`);
+  }
+});
+const CG_lerp = (a, b, k) => a + (b - a) * k;
+test('slim gloves and boots', () => {
+  const c = lib(), L = layoutOf(c, 'supereroe', { view: 'front', pose: 'inPiediEroico' }), J = L.joints, part = id => L.parts.find(q => q.id === id).pts;
+  const maxW = poly => { const b = box(poly); let m = 0; for (let k = .05; k < 1; k += .05) m = Math.max(m, widthAt(poly, CG_lerp(b.y0, b.y1, k))); return m; };
+  // the glove's cuff against the forearm where the glove starts
+  const cuff = widthAt(part('armL'), box(part('gloveL')).y0 + .05), knee = widthAt(part('legL'), J.kneeL[1]);
+  assert.ok(maxW(part('gloveL')) <= cuff * 1.2, `guanto ${maxW(part('gloveL')).toFixed(2)} contro avambraccio ${cuff.toFixed(2)}`);
+  assert.ok(maxW(part('bootL')) <= knee * 1.15, `stivale ${maxW(part('bootL')).toFixed(2)} contro ginocchio ${knee.toFixed(2)}`);
+});

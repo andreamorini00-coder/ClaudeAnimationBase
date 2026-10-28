@@ -1,6 +1,6 @@
 // ragazza.js: the girl (reference/characters/ragazza/). Data only: the biped body draws her (bodies/biped.js).
 CHARACTERS.ragazza = {
-  id: 'ragazza', version: 1, body: 'biped',
+  id: 'ragazza', version: 2, body: 'biped',
   // about 3 heads (soft chibi): foot .1 + leg .95 + torso .8 + neck .07 + head 1 + hair .09
   proportions: { heads: 3, shoulders: .8, hips: .76, torso: .8, arm: .88, leg: .95, headW: 1.12 },
   parts: { hair: { style: 'bob' }, skirt: {}, shoes: {}, sleeves: { wide: true }, eyes: { dark: true }, cheeks: {} },

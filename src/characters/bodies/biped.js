@@ -6,7 +6,7 @@
 // shoulders and hips (widths), torso (shoulder line to hips), arm (shoulder to wrist), leg (hip to ankle), headW
 // (the head's width). The height adds up as foot + leg + torso + neck + head + hair, so the spec's numbers are chosen
 // to make that sum `heads` (the test checks it).
-// Limbs are two equal segments of fixed length. Angles in radians, 0 = hanging straight down, + = swung forward (in
+// Limbs are two equal segments of fixed length, drawn as one soft outline (CG.limb) that narrows to the ankle and wrist. Angles in radians, 0 = hanging straight down, + = swung forward (in
 // the front and back views, outwards). Elbows bend only forward and knees only backward, 0..2.6.
 // Pose params: shoulderL/R, elbowL/R, hipL/R, kneeL/R, fistL/R 0..1 (a round fist), lean (the upper body tips
 //   forward), lift (units off the ground), crouch 0..1 (legs fold, the body lowers), flight 0..1 (the body turns
@@ -16,8 +16,9 @@
 // Parts the spec may declare (anything not declared is not drawn): hair { style: 'bob' | 'spiky', locks }, skirt (role skirt), shoes (role shoes),
 //   sleeves { wide } (puffy sleeves with a cuff), gloves, boots, cape (role accent), mask (role hair), star (role
 //   emblem), eyes { dark } (big dark eyes with highlights), cheeks (always pink; without, they show only when
-//   blushing), brows { kind: 'thick' }, build { arm, leg, taper, round } (limb thickness in heads, .21 and .24 by
-//   default as the chibi's; taper = ankle / thigh width; round = how round the torso's corners are),
+//   blushing), brows { kind: 'thick' }, build { arm, leg, taper, round, thigh, calf, forearm } (limb thickness in
+//   heads, .21 and .24 by default as the chibi's; taper = ankle / thigh width; round = how round the torso's corners
+//   are; thigh, calf, forearm override those widths of the limb's profile),
 //   eyes.size and mouth { size } (scale the face).
 // Expression params: eyes, mouth (FACES kinds), brows -1 (sad) .. 1 (angry), blush 0..1 (embarrassed), headTilt.
 BODIES.biped = {
@@ -69,17 +70,20 @@ BODIES.biped = {
 
     // ---- legs, with the hip at height hy: joints and shapes (before the whole-body turn) ----
     const footH = .1 * HU, legL = pr.leg * HU, armL = pr.arm * HU, legW = (sp.build && sp.build.leg || .24) * HU, armW = (sp.build && sp.build.arm || .21) * HU;
-    const hipHalf = pr.hips * HU / 2 * V.w, shHalf = pr.shoulders * HU / 2 * V.w;
+    const hipHalf = pr.hips * HU / 2 * V.w, shHalf = pr.shoulders * HU / 2 * V.w, bd = sp.build || {};
+    // the limbs' profiles (full widths at 0, .25, .5, .75, 1 of the way): thigh → knee → calf → ankle, shoulder → elbow → wrist
+    const legWs = [bd.thigh ? bd.thigh * HU : legW, legW * .92, legW * .8, bd.calf ? bd.calf * HU : legW * .82, legW * (bd.taper || .9) * .85];
+    const armWs = [armW, armW * .95, armW * .78, bd.forearm ? bd.forearm * HU : armW * .8, armW * .72];
     const legOf = (s, hy) => {
       const L = V.limbs[s], hip = [L.x * (hipHalf - legW * .55), hy];
       const a1 = Math.PI / 2 - L.dir * (A['hip' + s] + V.legOut), a2 = a1 + L.dir * A['knee' + s];
       const knee = at(hip, a1, legL / 2), ankle = at(knee, a2, legL / 2);
       // the foot: its sole a foot below the ankle, turned half as much as the shin (a bent knee doesn't stab the
       // ground with the toe); in profile the toe points forward
-      const toe = (V.face === 'side' || V.face === 'q' ? .1 * HU : 0) * (sp.boots ? 1.8 : 1), fw = Math.max(V.face === 'side' ? .4 * HU : .3 * HU, sp.boots ? legW * (V.face === 'side' ? 1.6 : 1.2) : 0);
+      const toe = (V.face === 'side' || V.face === 'q' ? .1 * HU : 0) * (sp.boots ? 1.4 : 1), fw = Math.max(V.face === 'side' ? .4 * HU : .3 * HU, sp.boots ? legW * (V.face === 'side' ? 1.6 : 1.2) : 0);
       const footAt = (y0, w, round) => CG.rotate(CG.block(ankle[0] + toe, ankle[1] + y0, ankle[1] + footH, w, w * 1.05, round), (a2 - Math.PI / 2) * .5, ankle[0], ankle[1]);
-      const shapes = [['leg' + s, 'legs', 0, CG.tube([hip, knee, ankle], legW, legW * (sp.build && sp.build.taper || .9)), {}]];
-      if (sp.boots) shapes.push(['boot' + s, 'accent', .02, CG.tube([[CG.lerp(knee[0], ankle[0], .15), CG.lerp(knee[1], ankle[1], .15)], ankle], legW * 1.4, legW * 1.05), { feature: 'boots' }]);
+      const shapes = [['leg' + s, 'legs', 0, CG.limb([hip, knee, ankle], legWs), {}]];
+      if (sp.boots) shapes.push(['boot' + s, 'accent', .02, CG.tube([[CG.lerp(knee[0], ankle[0], .15), CG.lerp(knee[1], ankle[1], .15)], ankle], legWs[2] * 1.1, legWs[4] * 1.15), { feature: 'boots' }]);
       if (sp.shoes || sp.boots) shapes.push(['shoe' + s, sp.boots ? 'accent' : 'shoes', .03, footAt(sp.boots ? -.22 * HU : -.16 * HU, fw, .5), sp.boots ? { feature: 'boots' } : {}]);
       else shapes.push(['foot' + s, 'legs', .03, footAt(-.04 * HU, fw * .85, .7), {}]);
       return { L, hip, knee, ankle, shapes };
@@ -139,9 +143,9 @@ BODIES.biped = {
       Object.assign(joints, { ['shoulder' + s]: sh, ['elbow' + s]: elbow, ['wrist' + s]: wrist });
       const dep = L.near ? 3.5 + (s === 'R' ? .02 : 0) : 1, dim = L.near ? {} : { dim: .25 };
       const wide = sp.sleeves && sp.sleeves.wide, cuffAt = at(wrist, a2, -.1 * HU);
-      add('arm' + s, 'top', dep, upper(CG.tube([sh, elbow, wide ? cuffAt : wrist], armW * (wide ? 1.25 : 1), armW * (wide ? 1.55 : .85))), dim);
+      add('arm' + s, 'top', dep, upper(CG.limb([sh, elbow, wide ? cuffAt : wrist], wide ? [1.25, 1.3, 1.35, 1.45, 1.55].map(k => k * armW) : armWs)), dim);
       if (sp.sleeves) add('cuff' + s, 'top', dep + .01, upper(CG.tube([cuffAt, at(wrist, a2, -.02 * HU)], armW * 1.2, armW * 1.2, 3)), { ...dim, line: .8 });
-      if (sp.gloves) add('glove' + s, 'accent', dep + .01, upper(CG.tube([at(elbow, a2, armL * .2), wrist], armW * 1.4, armW * 1.05)), { ...dim, feature: 'gloves' });
+      if (sp.gloves) add('glove' + s, 'accent', dep + .01, upper(CG.tube([at(elbow, a2, armL * .2), wrist], armWs[3] * 1.15, armWs[4] * 1.1)), { ...dim, feature: 'gloves' });
       // the hand: an oval with a thumb, or a round fist
       const hr = Math.max(.12 * HU, armW * .62), hc = at(wrist, a2, hr * .7), role = sp.gloves ? 'accent' : 'skin';
       if (P['fist' + s] > .5) add('hand' + s, role, dep + .02, upper(CG.ellipse(hc[0], hc[1], hr * 1.05, hr * 1.05, 18)), dim);
