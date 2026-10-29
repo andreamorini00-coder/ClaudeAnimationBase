@@ -2,7 +2,8 @@
 // Measured on base.png (one head = 80 px there): about 7.5 heads, the figure as in the model sheet. Almost all dark:
 // the lights on her hair (hairLight) and on the edges of her clothes (clothLight) keep her readable.
 CHARACTERS.mara = {
-  id: 'mara', version: 1, body: 'biped', faceSheet: true, poseCellW: .6,
+  // draft: see vale.js
+  id: 'mara', version: 1, body: 'biped', faceSheet: true, draft: true, poseCellW: .6,
   // foot .1 + heel .3 + leg 3.05 + torso 2.55 + neck .35 + head 1 + hair .09 = 7.44
   proportions: { heads: 7.5, shoulders: 1.8, hips: 2, torso: 2.55, arm: 2.6, leg: 3.05, headW: .78 },
   parts: {

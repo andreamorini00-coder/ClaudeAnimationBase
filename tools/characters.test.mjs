@@ -982,3 +982,15 @@ test('gestures keep the arms long and the elbows right', () => {
     }
   }
 });
+test('a draft character is marked and skipped by the approval check', async () => {
+  const { sheetTargets, approvalStatus } = await import('./approve.mjs');
+  const t = sheetTargets({ vale: { version: 1, draft: true, outfits: ['ufficio'] }, gatto: { version: 2 } });
+  assert.deepEqual(t.map(x => [x.id, x.draft]), [['vale', true], ['vale.ufficio', true], ['gatto', false]]);
+  assert.equal(approvalStatus({ version: 1, approvedVersion: null, draft: true }), 'bozza');
+  assert.equal(approvalStatus({ version: 1, approvedVersion: null }), 'da approvare');
+});
+test('vale and mara are drafts', () => {
+  const c = lib();
+  for (const id of ['vale', 'mara']) assert.equal(c.get(`CHARACTERS.${id}.draft`), true, id);
+  for (const id of ['gatto', 'mostro', 'bruco', 'draghetto', 'ragazza', 'supereroe']) assert.ok(!c.get(`CHARACTERS.${id}.draft`), id);
+});

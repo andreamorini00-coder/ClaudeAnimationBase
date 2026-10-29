@@ -101,7 +101,7 @@ Da fissare nel design: quanto ciascuno può cambiare oltre a palette, pennelli e
 in `cozy` passano dalla tecnica, non dalle scene), il blocco `character` con cui ogni stile traduce i ruoli colore
 dei personaggi, e i tempi di render in finale e in draft.
 
-## Fase 4 — Creatore di personaggi · **4a e 4b1 chiuse, 4b2 in approvazione**
+## Fase 4 — Creatore di personaggi · **4a, 4b1 e 4b2 chiuse**
 
 Una libreria di personaggi riusabile in tutti gli stili e in tutti i formati. Design approvato da Andrea il
 2026-10-27: **viste chiave 2D parametriche** (fronte, 3/4, profilo, retro, come il model sheet di Clawd), niente
@@ -152,7 +152,7 @@ Spec: `../specs/2026-10-27-fase4a-personaggi-design.md`. Piano: `2026-10-27-fase
     stivali;
   - `fist` scatta a 0,5 (con `blendPose` la mano passa di colpo da aperta a pugno); `CG.block` con altezza 0 dà NaN.
 
-#### 4b2. Bipede adulto per il visual novel · **in approvazione** (branch `fase4b2-personaggi`)
+#### 4b2. Bipede adulto per il visual novel · **chiusa** (2026-10-29, merge in main; vale e mara restano bozza)
 
 Spec: `../specs/2026-10-28-fase4b2-personaggi-design.md`. Piano: `2026-10-28-fase4b2-personaggi.md`.
 
@@ -173,6 +173,18 @@ Spec: `../specs/2026-10-28-fase4b2-personaggi-design.md`. Piano: `2026-10-28-fas
     scheda base si ripetono con il prefisso `abito`;
   - `approve --check` dice "deriva" invece di "da approvare" se una scheda aggiunge `faceSheet` senza alzare la versione;
   - abito ufficio: la piega (#1C2440 su #292A34) è quasi invisibile e le gambe non hanno luce: guardare lo sheet.
+- **Esito (Andrea, 2026-10-29):** ragazza v2 e supereroe v2 approvati (arti affusolati, frangia a 3 ciocche, ciuffo).
+  **Vale e mara: bozza, non approvate**: la resa disegnata in codice è troppo lontana dai riferimenti del visual novel,
+  e non si fanno altri giri di correzioni. Restano (`draft: true` nella scheda, `check-characters` stampa `bozza`):
+  il codice del viso a parti (occhio adulto, bocche, sopracciglia), `blink` e `talk`, i gesti con `reachL/R`, l'abito
+  `ufficio`, lo sheet `face_`, la figura adulta, i capelli lunghi. Differenze dai riferimenti (dalla autocritica):
+  - viso: manca il naso, il contorno del viso sotto i capelli fa effetto "maschera", gli occhi sono più piccoli e più
+    marcati (ciglia) che nei riferimenti: è il punto più lontano;
+  - figura: bacino da 3/4 un po' a bulbo, spalle squadrate dove parte il braccio, mani semplici e dita aperte piccole;
+  - capelli: la ciocca di vale è un'unica forma piena; mara ha ciocche ondulate con la luce ma un piccolo spigolo dove
+    esce la massa dietro.
+  Per portarle all'approvazione servirebbe un altro tipo di disegno (per esempio pannelli dipinti o immagini sulle
+  parti del viso e del corpo) più che altri ritocchi alla geometria: da decidere con la Fase 3 (`visual-novel`).
 - Corporatura di vale e mara come nei loro `base.png`, in parametri della scheda; l'abito ufficio di vale con la sua
   corporatura meno accentuata (Andrea, 2026-10-28).
 - **Dopo la 4b2:** pose sedute, sdraiate e appoggiate al muro, insieme agli oggetti di scena (sgabello, divano, muro).

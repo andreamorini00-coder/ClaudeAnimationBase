@@ -1,7 +1,9 @@
 // vale.js: Vale, an adult for the visual novel (reference/characters/vale/). Data only: the biped body draws her.
 // Measured on base.png (one head = 80 px there): about 7.5 heads, the figure as in the model sheet.
 CHARACTERS.vale = {
-  id: 'vale', version: 1, body: 'biped', faceSheet: true, poseCellW: .6,
+  // draft: the parts (face, gestures, outfits, blink and talk) are kept, but the drawing is too far from the visual-novel
+  // reference to approve; check-characters skips it (Andrea, 2026-10-29)
+  id: 'vale', version: 1, body: 'biped', faceSheet: true, draft: true, poseCellW: .6,
   // foot .1 + heel .3 + leg 3.05 + torso 2.55 + neck .35 + head 1 + hair .09 = 7.44
   proportions: { heads: 7.5, shoulders: 1.75, hips: 2, torso: 2.55, arm: 2.6, leg: 3.05, headW: .78 },
   parts: {

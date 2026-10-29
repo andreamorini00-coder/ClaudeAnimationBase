@@ -18,20 +18,21 @@ import { loadPageScripts, CHAR_SCRIPTS } from './pagecode.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-export function approvalStatus({ version, approvedVersion, sameBytes, sameGpu }) {
+export function approvalStatus({ version, approvedVersion, sameBytes, sameGpu, draft }) {
+  if (draft) return 'bozza';                       // a spec marked draft: its drawing is not approved material, not watched
   if (approvedVersion == null || approvedVersion < version) return 'da approvare';
   if (sameBytes) return 'ok';
   return sameGpu === false ? 'altra GPU' : 'deriva';
 }
 
 // What can be approved: every character, and each of its outfits as "<id>.<outfit>". characters: { id: { version,
-// faceSheet, outfits: [names] } } → [{ id, dir (under reference/characters/), kinds, version }].
+// faceSheet, draft, outfits: [names] } } → [{ id, dir (under reference/characters/), kinds, version }].
 export function sheetTargets(characters) {
   const out = [];
   for (const [id, c] of Object.entries(characters)) {
     const kinds = ['sheet', 'pose', ...(c.faceSheet ? ['face'] : [])];
-    out.push({ id, dir: `${id}/approvati`, kinds, version: c.version });
-    for (const o of c.outfits || []) out.push({ id: `${id}.${o}`, dir: `${id}/approvati/${o}`, kinds, version: c.version });
+    out.push({ id, dir: `${id}/approvati`, kinds, version: c.version, draft: !!c.draft });
+    for (const o of c.outfits || []) out.push({ id: `${id}.${o}`, dir: `${id}/approvati/${o}`, kinds, version: c.version, draft: !!c.draft });
   }
   return out;
 }
@@ -54,20 +55,20 @@ function renderSheets({ id, kinds }, style, dir) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const characters = loadPageScripts(CHAR_SCRIPTS).call('(() => Object.fromEntries(Object.entries(CHARACTERS).map(([k, v]) => [k, { version: v.version, faceSheet: !!v.faceSheet, outfits: Object.keys(v.outfits || {}) }])))');
+  const characters = loadPageScripts(CHAR_SCRIPTS).call('(() => Object.fromEntries(Object.entries(CHARACTERS).map(([k, v]) => [k, { version: v.version, faceSheet: !!v.faceSheet, draft: !!v.draft, outfits: Object.keys(v.outfits || {}) }])))');
   const targets = sheetTargets(characters), args = process.argv.slice(2);
   if (args[0] === '--check') {
     let drift = 0;
     for (const target of targets) for (const style of styles()) {
-      const { id, version } = target, entry = readApproved(target)[style], approved = typeof entry === 'number' ? entry : entry && entry.version;
+      const { id, version, draft } = target, entry = readApproved(target)[style], approved = typeof entry === 'number' ? entry : entry && entry.version;
       let sameBytes = null, sameGpu;
-      if (approved != null && approved >= version) {
+      if (!draft && approved != null && approved >= version) {
         const tmp = mkdtempSync(join(tmpdir(), 'approve-')), now = renderSheets(target, style, tmp);
         sameBytes = target.kinds.every(k => existsSync(join(dirOf(target), `${k}-${style}.png`)) && readFileSync(now[k]).equals(readFileSync(join(dirOf(target), `${k}-${style}.png`))));
         if (entry && entry.gpu) sameGpu = entry.gpu === now.gpu;
         rmSync(tmp, { recursive: true, force: true });
       }
-      const s = approvalStatus({ version, approvedVersion: approved, sameBytes, sameGpu });
+      const s = approvalStatus({ version, approvedVersion: approved, sameBytes, sameGpu, draft });
       if (s === 'deriva') drift++;
       console.log(`${id.padEnd(13)} ${style.padEnd(20)} v${version}  ${s}`);
     }
