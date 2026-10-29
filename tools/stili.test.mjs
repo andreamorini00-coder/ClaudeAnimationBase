@@ -156,3 +156,37 @@ test('the styles\' shadow tones and outlines', () => {
   assert.equal(anime.paper.stains, 0, 'l\'anime non ha texture di carta'); assert.ok(cozy.paper.stains > 0, 'cozy ha una carta leggera');
   assert.equal(c.get('STYLES.cozy.luci'), undefined, 'cozy non ha set di luci');
 });
+
+// ---------- applying a light to the page's palette (luce() in core.js is a thin wrapper) ----------
+const withPal = (c, style, code) => { c.run(`globalThis.__pal = { ...STYLES.${style}.palette }; globalThis.__base = { ...STYLES.${style}.palette };`); return c.run(code); };
+test('luce does not leak: a reset gives the base palette back', () => {
+  const c = lib();
+  withPal(c, 'anime', 'LIGHT.apply(__pal, { ...STYLES.anime, palette: __base }, "notte");');
+  assert.notEqual(c.get('__pal.sky'), c.get('__base.sky'), 'la notte ha cambiato PAL');
+  c.run('LIGHT.reset(__pal, { palette: __base });');
+  assert.equal(JSON.stringify(c.get('__pal')), JSON.stringify(c.get('__base')));
+  c.run('LIGHT.apply(__pal, { ...STYLES.anime, palette: __base }, "controluce"); LIGHT.apply(__pal, { ...STYLES.anime, palette: __base }, "giorno");');
+  assert.equal(JSON.stringify(c.get('__pal')), JSON.stringify(c.get('__base')), 'giorno dopo controluce = base, senza resto');
+});
+test('luce is the same called once or twice, and the base palette is never changed', () => {
+  const c = lib(), once = () => JSON.stringify(c.get('__pal'));
+  withPal(c, 'anime', 'LIGHT.apply(__pal, { ...STYLES.anime, palette: __base }, "notte");');
+  const a = once();
+  c.run('LIGHT.apply(__pal, { ...STYLES.anime, palette: __base }, "notte");');
+  assert.equal(once(), a);
+  assert.equal(c.get('__base.sky'), c.get('STYLES.anime.palette.sky'));
+});
+test('luce with two lights blends them: k 0 is the first, k 1 the second', () => {
+  const c = lib();
+  withPal(c, 'anime', 'LIGHT.apply(__pal, { ...STYLES.anime, palette: __base }, "giorno", "notte", 1);');
+  assert.equal(c.get('__pal.sky'), c.get('STYLES.anime.luci.notte.palette.sky'));
+  withPal(c, 'anime', 'LIGHT.apply(__pal, { ...STYLES.anime, palette: __base }, "giorno", "notte", 0);');
+  assert.equal(JSON.stringify(c.get('__pal')), JSON.stringify(c.get('__base')));
+});
+test('luce in a style without lights does nothing; an unknown light is an error naming the right ones', () => {
+  const c = lib();
+  withPal(c, 'classic', 'globalThis.__r = LIGHT.apply(__pal, { ...STYLES.classic, palette: __base }, "notte");');
+  assert.equal(c.get('__r'), null);
+  assert.equal(JSON.stringify(c.get('__pal')), JSON.stringify(c.get('STYLES.classic.palette')));
+  assert.throws(() => c.call('LIGHT.set', c.get('STYLES.anime'), 'alba'), /Disponibili: giorno, notte, controluce/);
+});

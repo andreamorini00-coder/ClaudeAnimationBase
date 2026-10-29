@@ -30,8 +30,9 @@ const LIGHT = {
   },
   // The complete set called nome for a style, or null if the style has no lights. giorno is the style's own palette.
   set(style, nome) {
-    const s = style.luci && style.luci[nome];
-    if (!s) return null;
+    if (!style.luci) return null;
+    const s = style.luci[nome];
+    if (!s) throw new Error(`Luce "${nome}" inesistente. Disponibili: ${Object.keys(style.luci).join(', ')}`);
     const palette = { ...style.palette, ...(s.palette || {}) }, ink = s.ink || palette.ink;
     palette.ink = ink;
     return { nome, palette, ink, tone: s.tone, k: s.k, skin: s.skin, skinShadow: s.skinShadow, shadow: s.shadow,
@@ -53,6 +54,15 @@ const LIGHT = {
       skin: m(A.skin, B.skin), skinShadow: m(A.skinShadow, B.skinShadow), shadow: m(A.shadow, B.shadow), rim,
       light: [lerp(A.light[0], B.light[0]), lerp(A.light[1], B.light[1])] };
   },
+  // Write a light onto the page's palette `pal` (the style's palette is never changed: `style.palette` is the base).
+  // luce(nome) or luce(da, a, k). Returns the set, or null when the style has no lights (then nothing changes).
+  apply(pal, style, a, b, k) {
+    const set = b == null ? LIGHT.set(style, a) : LIGHT.mix(style, a, b, k);
+    if (set) Object.assign(pal, set.palette);
+    return set;
+  },
+  // Back to the style's own palette (the start of every frame).
+  reset(pal, style) { Object.assign(pal, style.palette); },
   // The colour of one of a character's roles in a light: the outline and the whites never change, the skin is the
   // set's, everything else is mixed towards the set's tone.
   role(col, role, set) {

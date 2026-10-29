@@ -38,6 +38,19 @@ const W = FORMATS[FORMAT_NAME].w, H = FORMATS[FORMAT_NAME].h, SAFE = FORMATS[FOR
 const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = STYLE.boil, DUR = PROJECT.duration;
 const TAU = Math.PI * 2;
 const PAL = STYLE.palette;
+// PAL is the style's own palette object and luce() writes a light onto it, so the base is kept apart: every frame starts
+// from it (draw), and luce() always mixes from it. window.LUCE_NOW is the light in force for the frame (or null).
+const PAL_BASE = { ...STYLE.palette };
+window.LUCE_NOW = null;
+let LUCE_WARNED = false;
+// luce(nome) or luce(da, a, k): the light of the rest of this frame (see src/lighting.js, ANIMATION_GUIDE.md). Call it at
+// the start of a shot, before painting; it changes PAL and the colours characters take from their roles. A style without
+// lights ignores it (one warning); an unknown name stops with the right ones.
+function luce(a, b, k) {
+  const set = LIGHT.apply(PAL, { ...STYLE, palette: PAL_BASE }, a, b, k);
+  if (!set) { if (!LUCE_WARNED) { LUCE_WARNED = true; console.warn(`luce(): lo stile "${STYLE_NAME}" non ha set di luce (ignorato)`); } return null; }
+  window.LUCE_NOW = set; return set;
+}
 const TECH = TECHNIQUES[STYLE.technique];
 if (!TECH) {
   window.loadError = `Tecnica "${STYLE.technique}" (stile "${STYLE_NAME}") inesistente. Disponibili: ${Object.keys(TECHNIQUES).join(', ')}`;
@@ -309,6 +322,7 @@ async function setup() {
 function draw() {
   if (!window.ready) return;
   LETTERS = []; CAM = LAST_CAM = null;
+  LIGHT.reset(PAL, { palette: PAL_BASE }); window.LUCE_NOW = null;     // every frame starts in the style's own light
   push(); translate(-width / 2, -height / 2); if (DRAFT.scale !== 1) scale(DRAFT.scale);
   BOILN = Math.floor(T * BOIL); CLAWD_N = 0; boilSeed('frame'); noiseSeed(77);
   image(paperG, 0, 0);

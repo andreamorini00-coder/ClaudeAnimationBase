@@ -29,3 +29,18 @@ LOOPS.forme = t => {
   row(2, (x, y) => paint(ellPts(x, y + 380, 110, 90, 40), { wash: col, ink: PAL.ink, sw: .5, inner: true }));                  // an inner line
 };
 LOOPS.forme.len = 1; LOOPS.forme.format = 'landscape';
+
+// The same view in the three lights of a style that has them (anime), one per second: giorno, notte, controluce.
+LOOPS.luci = t => {
+  const nome = ['giorno', 'notte', 'controluce'][Math.min(2, Math.floor(t))];
+  luce(nome);
+  const G = 880;
+  boilSeed('sky'); paint(rectPts(-50, -50, W + 100, G + 50), { wash: PAL.sky, ink: null });
+  boilSeed('hill'); paint(ellPts(900, G + 60, 1100, 330, 40, 3), { wash: PAL.sap, ink: PAL.ink, sw: 1, shade: false });
+  boilSeed('ground'); paint(rectPts(-50, G, W + 100, H), { wash: PAL.sap, ink: null });
+  character('gatto', 430, G, 36, { view: 'side', pose: 'inPiedi', expression: 'felice', t, key: 'gatto' });
+  character('mostro', 960, G, 40, { view: 'q', pose: 'fermo', expression: 'felice', t, key: 'mostro' });
+  character('ragazza', 1450, G, 30, { view: 'q', pose: 'inPiedi', expression: 'felice', t, key: 'ragazza' });
+  boilSeed('lamp'); glow(1250, 520, 150, PAL.ochre, .9); paint(ellPts(1250, 520, 22, 22, 14), { wash: PAL.ochre, ink: null });
+};
+LOOPS.luci.len = 3; LOOPS.luci.format = 'landscape';
