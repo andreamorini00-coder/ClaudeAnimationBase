@@ -75,3 +75,38 @@ test('only the backlight has a rim light', () => {
   const rim = lights(c).find(([n]) => n === 'controluce')[1].rim;
   assert.match(rim.colore, hex); assert.ok(rim.spessore > 0);
 });
+
+// ---------- the cel technique's pure parts ----------
+const celOk = { line: 1, lineInner: .6, wobble: .25, light: [-1, -1], shadow: '#8C8074', shadeK: .45, shadeSize: .22, tones: 1, outline: 'constant' };
+test('a cel style missing a field is rejected by name', () => {
+  const c = lib();
+  assert.deepEqual(c.call('CEL.problems', { technique: 'cel', cel: celOk }), []);
+  assert.match(c.call('CEL.problems', { technique: 'cel' }).join(' '), /cel/);
+  const { shadeK, ...rest } = celOk;
+  assert.match(c.call('CEL.problems', { technique: 'cel', cel: rest }).join(' '), /cel\.shadeK/);
+  assert.deepEqual(c.call('CEL.problems', { technique: 'watercolor' }), [], 'only a cel style needs them');
+});
+test('cel parameters are in range', () => {
+  const c = lib(), bad = o => c.call('CEL.problems', { technique: 'cel', cel: { ...celOk, ...o } }).join(' ');
+  assert.match(bad({ line: 0 }), /cel\.line/);
+  assert.match(bad({ shadeK: 1.5 }), /cel\.shadeK/);
+  assert.match(bad({ shadeSize: 0 }), /cel\.shadeSize/);
+  assert.match(bad({ light: [0, 0] }), /cel\.light/);
+  assert.match(bad({ light: [1] }), /cel\.light/);
+  assert.match(bad({ tones: 3 }), /cel\.tones/);
+  assert.match(bad({ outline: 'tondo' }), /cel\.outline/);
+  assert.match(bad({ shadow: 'viola' }), /cel\.shadow/);
+  assert.match(bad({ wobble: -1 }), /cel\.wobble/);
+});
+test('the crescent is shifted towards the light, and its canvas holds the shape and the shifted copy', () => {
+  const c = lib(), box = { x0: 100, y0: 50, x1: 300, y1: 150 };
+  const r = c.call('CEL.crescent', box, [-1, -1], .2);                       // light up and to the left
+  assert.ok(r.dx < 0 && r.dy < 0 && near(Math.hypot(r.dx, r.dy), .2 * 200, .5), 'verso la luce, .2 × il lato maggiore');
+  assert.ok(near(r.dx, r.dy, .01), 'la luce a 45°');
+  const r2 = c.call('CEL.crescent', box, [1, 0], .1);
+  assert.ok(r2.dx > 0 && near(r2.dy, 0, .001));
+  for (const k of [r, r2]) {
+    assert.ok(k.box.x0 <= box.x0 + Math.min(0, k.dx) && k.box.x1 >= box.x1 + Math.max(0, k.dx));
+    assert.ok(k.box.y0 <= box.y0 + Math.min(0, k.dy) && k.box.y1 >= box.y1 + Math.max(0, k.dy));
+  }
+});

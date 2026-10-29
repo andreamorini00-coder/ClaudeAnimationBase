@@ -31,6 +31,7 @@ export const CHAR_SCRIPTS = [
 export const STYLE_SCRIPTS = [
   'src/styles/registry.js',
   'src/lighting.js',
+  'src/techniques/cel.js',
   'src/styles/classic.js',
   'src/styles/acquerello-leggero.js',
   'src/styles/anime.js',

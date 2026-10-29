@@ -8,9 +8,10 @@ if (!STYLE) {
 }
 // A style copied from classic.js with a field left out fails here, by name, instead of somewhere deep in setup().
 const STYLE_MISSING = ['technique', 'palette', 'paper', 'grain', 'brushes', 'brushScale', 'boil', 'paint'].filter(k => STYLE[k] == null)
-  .concat(STYLE.paint ? ['fillOp', 'bleed', 'tex', 'washOp', 'sw', 'fillAs'].filter(k => STYLE.paint[k] == null).map(k => 'paint.' + k) : []);
+  .concat(STYLE.paint ? ['fillOp', 'bleed', 'tex', 'washOp', 'sw', 'fillAs'].filter(k => STYLE.paint[k] == null).map(k => 'paint.' + k) : [])
+  .concat(typeof CEL === 'undefined' ? [] : CEL.problems(STYLE));     // a cel style's own block (src/techniques/cel.js)
 if (STYLE_MISSING.length) {
-  window.loadError = `Stile "${STYLE_NAME}" incompleto: mancano ${STYLE_MISSING.join(', ')} (confronta con src/styles/classic.js)`;
+  window.loadError = `Stile "${STYLE_NAME}" incompleto: mancano ${STYLE_MISSING.join(', ')} (confronta con src/styles/classic.js e, per la tecnica cel, src/techniques/cel.js)`;
   throw new Error(window.loadError);
 }
 // Draft preview: studio.html?draft=flat,half or render.mjs --draft (plain ?draft means DRAFT_DEFAULT).
