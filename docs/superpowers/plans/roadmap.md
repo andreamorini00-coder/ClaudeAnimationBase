@@ -24,10 +24,10 @@ Sei, e nessun altro (i quattro nuovi decisi da Andrea il 2026-10-27):
 |---|---|---|
 | `classic` | fatto | 1 |
 | `acquerello-leggero` | fatto | 1 |
-| `cozy` | da fare | 3 |
-| `anime` | da fare | 3 |
-| `marker-comic` | da fare | 3 |
-| `visual-novel` | da fare | 3 |
+| `cozy` | in design | 3a |
+| `anime` | in design | 3a |
+| `marker-comic` | da fare | 3b |
+| `visual-novel` | da fare | 3b |
 
 ## Fase 1 — STYLE, anteprima, acquerello leggero · **chiusa**
 
@@ -77,7 +77,14 @@ unita in `main` (21aca5c), push fatto da Andrea.
   lettere ÷ 15 + 1,5 s; un titolo almeno 4 s. Un controllo legge i testi visibili a ogni istante e segnala quelli
   troppo brevi, come fa il loro `readcheck`.
 
-## Fase 3 — Stili · **da fare, dopo la Fase 4**
+## Fase 3 — Stili · **in design** (divisa in 3a e 3b, scelta di Andrea 2026-10-29)
+
+- **3a** (branch `fase3a-stili`, spec `../specs/2026-10-29-fase3a-stili-design.md`): tecnica `cel` (colori piatti, ombra
+  netta a mezzaluna, contorno costante), stili `cozy` e `anime`, set di luci dell'anime (giorno, notte, controluce).
+- **3b**: `marker-comic` (contorno che si ispessisce sul lato in ombra) e `visual-novel` (ombre a due toni), con i set di
+  luci del visual-novel; vale e mara restano bozza fino a lì.
+
+Descrizione generale della fase:
 
 **Si parte dai riferimenti di Andrea in `reference/styles/`** (mood board, palette e codici colore): il design di
 ogni stile li legge prima di proporre valori. Per `marker-comic` e `visual-novel` i riferimenti arriveranno lì.
