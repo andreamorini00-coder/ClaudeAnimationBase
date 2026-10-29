@@ -35,5 +35,5 @@ STYLES.cozy = {
   // characters keep their own colours (the cat's are this palette's); the shadow is the cel technique's crescent
   character: { toPaper: 0, shadow: 'hard', lineWeight: 1 },
   // cel: a soft, constant outline, a little breath in it, one shadow in tortora from the upper left
-  cel: { line: 1, lineInner: .8, wobble: .6, light: [-1, -1], shadow: '#8C8074', shadeK: .5, shadeSize: .2, tones: 1, outline: 'constant' },
+  cel: { line: 1, lineInner: .8, wobble: .6, light: [-1, -1], shadow: '#8C8074', skinShadow: '#C99595', shadeK: .5, shadeSize: .2, tones: 1, outline: 'constant' },
 };

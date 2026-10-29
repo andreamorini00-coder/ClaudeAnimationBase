@@ -35,7 +35,8 @@ const LIGHT = {
     if (!s) throw new Error(`Luce "${nome}" inesistente. Disponibili: ${Object.keys(style.luci).join(', ')}`);
     const palette = { ...style.palette, ...(s.palette || {}) }, ink = s.ink || palette.ink;
     palette.ink = ink;
-    return { nome, palette, ink, tone: s.tone, k: s.k, skin: s.skin, skinShadow: s.skinShadow, shadow: s.shadow,
+    // skinK: how far a character's own skin goes to the light's skin (0 in the day light, where it keeps its own)
+    return { nome, palette, ink, tone: s.tone, k: s.k, skinK: s.skinK ?? (s.k > 0 ? 1 : 0), skin: s.skin, skinShadow: s.skinShadow, shadow: s.shadow,
       rim: s.rim ? { ...s.rim } : null, light: (s.light || (style.cel && style.cel.light) || [-1, -1]).slice() };
   },
   // A set between two others: colours mixed, k, the light's direction and the rim's thickness interpolated (a rim
@@ -50,9 +51,28 @@ const LIGHT = {
     else if (A.rim) rim = { ...A.rim, spessore: A.rim.spessore * (1 - Math.max(0, Math.min(1, k))) };
     else if (B.rim) rim = { ...B.rim, spessore: B.rim.spessore * Math.max(0, Math.min(1, k)) };
     if (rim && rim.spessore <= 0) rim = null;
-    return { nome: k <= 0 ? da : k >= 1 ? a : `${da}>${a}`, palette, ink: palette.ink, tone: m(A.tone, B.tone), k: lerp(A.k, B.k),
+    return { nome: k <= 0 ? da : k >= 1 ? a : `${da}>${a}`, palette, ink: palette.ink, tone: m(A.tone, B.tone), k: lerp(A.k, B.k), skinK: lerp(A.skinK, B.skinK),
       skin: m(A.skin, B.skin), skinShadow: m(A.skinShadow, B.skinShadow), shadow: m(A.shadow, B.shadow), rim,
       light: [lerp(A.light[0], B.light[0]), lerp(A.light[1], B.light[1])] };
+  },
+  // The colour of one of a character's roles in a light, for the character's spec (draw.js): its own colour in no light or
+  // in the day, the spec's own colour for that light if it gives one (spec.styles.<style>.luci.<light>.<role>), the light's
+  // skin for the skin roles (and any role that is the skin's colour, like the girl's legs), else LIGHT.role.
+  charRole(spec, role, base, set, styleName) {
+    if (!set) return base;
+    const own = spec.styles && spec.styles[styleName] && spec.styles[styleName].luci && spec.styles[styleName].luci[set.nome];
+    if (own && own[role]) return own[role];
+    if (LIGHT.isSkin(spec, role)) return set.skinK ? LIGHT.mixHex(base, set.skin, set.skinK) : base;
+    if (role === 'skinShadow') return set.skinK ? LIGHT.mixHex(base, set.skinShadow, set.skinK) : base;
+    return LIGHT.role(base, role, set);
+  },
+  // Is this role a skin: the skin itself, or any role that has the skin's colour (the girl's legs).
+  isSkin(spec, role) { const roles = spec.roles || {}; return role === 'skin' || (role !== 'skinShadow' && role !== 'line' && !!roles.skin && roles[role] === roles.skin); },
+  // The role holding the shadow colour of a role in this spec (a skin has skinShadow when the spec gives one), or null.
+  shadeRole(spec, role) {
+    const roles = spec.roles || {};
+    if (LIGHT.isSkin(spec, role) && 'skinShadow' in roles) return 'skinShadow';
+    return (role + 'Shadow') in roles ? role + 'Shadow' : null;
   },
   // Write a light onto the page's palette `pal` (the style's palette is never changed: `style.palette` is the base).
   // luce(nome) or luce(da, a, k). Returns the set, or null when the style has no lights (then nothing changes).

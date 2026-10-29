@@ -190,3 +190,59 @@ test('luce in a style without lights does nothing; an unknown light is an error 
   assert.equal(JSON.stringify(c.get('__pal')), JSON.stringify(c.get('STYLES.classic.palette')));
   assert.throws(() => c.call('LIGHT.set', c.get('STYLES.anime'), 'alba'), /Disponibili: giorno, notte, controluce/);
 });
+
+// ---------- the characters in a light ----------
+import { CHAR_SCRIPTS } from './pagecode.mjs';
+const both = () => loadPageScripts([...STYLE_SCRIPTS, ...CHAR_SCRIPTS]);
+const charRole = (c, id, role, light) => c.call(`((l) => LIGHT.charRole(CHARACTERS.${id}, ${JSON.stringify(role)}, CHARACTERS.${id}.roles[${JSON.stringify(role)}], l && LIGHT.set(STYLES.anime, l), "anime"))`, light);
+test('a character in the day light keeps all its colours, skin included', () => {
+  const c = both();
+  for (const id of ['gatto', 'ragazza', 'supereroe']) for (const role of Object.keys(c.get(`CHARACTERS.${id}.roles`)))
+    assert.equal(charRole(c, id, role, 'giorno'), c.get(`CHARACTERS.${id}.roles.${role}`), `${id}.${role}`);
+});
+test('a character in the night: skin is the light\'s, the outline and whites stay, the rest takes the tone', () => {
+  const c = both(), night = c.call('LIGHT.set', c.get('STYLES.anime'), 'notte');
+  assert.equal(charRole(c, 'ragazza', 'skin', 'notte'), night.skin);
+  assert.equal(charRole(c, 'ragazza', 'legs', 'notte'), night.skin, 'le gambe hanno il colore della pelle: seguono la pelle');
+  assert.equal(charRole(c, 'supereroe', 'skinShadow', 'notte'), night.skinShadow);
+  assert.equal(charRole(c, 'ragazza', 'line', 'notte'), c.get('CHARACTERS.ragazza.roles.line'));
+  assert.equal(charRole(c, 'ragazza', 'eyeWhite', 'notte'), c.get('CHARACTERS.ragazza.roles.eyeWhite'));
+  for (const [id, role] of [['ragazza', 'top'], ['ragazza', 'skirt'], ['gatto', 'fur'], ['supereroe', 'accent']])
+    assert.notEqual(charRole(c, id, role, 'notte'), c.get(`CHARACTERS.${id}.roles.${role}`), `${id}.${role}`);
+});
+test('with no light at all a role is its own colour', () => {
+  const c = both();
+  assert.equal(charRole(c, 'gatto', 'fur', null), c.get('CHARACTERS.gatto.roles.fur'));
+});
+test('a character can give its own colour for a role in a light', () => {
+  const c = both(), r = c.call('((spec) => LIGHT.charRole(Object.assign({}, spec, { styles: { anime: { luci: { notte: { top: "#123456" } } } } }), "top", spec.roles.top, LIGHT.set(STYLES.anime, "notte"), "anime"))', c.get('CHARACTERS.ragazza'));
+  assert.equal(r, '#123456');
+});
+test('a part\'s own shadow role is used when the spec has one', () => {
+  const c = both(), s = (id, role) => c.call('((id, role) => LIGHT.shadeRole(CHARACTERS[id], role))', id, role);
+  assert.equal(s('supereroe', 'skin'), 'skinShadow');
+  assert.equal(s('ragazza', 'skin'), null);
+  assert.equal(s('gatto', 'fur'), null);
+});
+test('a mix of two lights moves a character\'s skin smoothly (no jump at the first frame of a change)', () => {
+  const c = both(), own = c.get('CHARACTERS.ragazza.roles.skin');
+  const at = k => c.call('((k) => LIGHT.charRole(CHARACTERS.ragazza, "skin", CHARACTERS.ragazza.roles.skin, LIGHT.mix(STYLES.anime, "giorno", "notte", k), "anime"))', k);
+  assert.equal(at(0), own);
+  const night = c.call('LIGHT.set', c.get('STYLES.anime'), 'notte').skin;
+  assert.equal(at(1), night);
+  const d = (a, b) => Math.abs(parseInt(a.slice(1, 3), 16) - parseInt(b.slice(1, 3), 16));
+  assert.ok(d(at(.05), own) < d(night, own) * .25, 'a k piccolo la pelle è ancora quasi la sua');
+});
+test('which roles are skin: the skin and every role with the skin\'s colour', () => {
+  const c = both(), is = (id, role) => c.call('((id, role) => LIGHT.isSkin(CHARACTERS[id], role))', id, role);
+  assert.equal(is('ragazza', 'skin'), true);
+  assert.equal(is('ragazza', 'legs'), true, 'le gambe hanno il colore della pelle');
+  assert.equal(is('ragazza', 'top'), false); assert.equal(is('ragazza', 'line'), false);
+  assert.equal(is('gatto', 'fur'), false);
+  assert.equal(is('supereroe', 'skin'), true); assert.equal(is('supereroe', 'legs'), false);
+});
+test('cozy and anime give a warm shadow for skin that has no shadow role of its own', () => {
+  const c = lib();
+  for (const n of ['cozy', 'anime']) assert.match(c.get(`STYLES.${n}.cel.skinShadow`), hex, n);
+  assert.equal(c.get('STYLES.anime.cel.skinShadow'), '#D99A86');
+});

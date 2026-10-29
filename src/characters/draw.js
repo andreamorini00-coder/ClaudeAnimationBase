@@ -17,9 +17,26 @@ for (const [id, spec] of Object.entries(CHARACTERS)) {
   if (errs.length) { window.loadError = `Personaggio "${id}": ${errs.join('; ')}`; throw new Error(window.loadError); }
 }
 
+// A role's colour: the spec's own for this style, else the spec's, mixed towards the paper as the style says, and then
+// in the light in force (luce(), src/lighting.js): none in the styles without lights.
 function roleColor(spec, role) {
   const own = spec.styles && spec.styles[STYLE_NAME] && spec.styles[STYLE_NAME][role];
-  return own || mixCol(spec.roles[role], PAL.paper, CHAR_STYLE.toPaper);
+  return LIGHT.charRole(spec, role, own || mixCol(spec.roles[role], PAL.paper, CHAR_STYLE.toPaper), window.LUCE_NOW, STYLE_NAME);
+}
+
+// What the cel technique adds to a part: a thinner line for inner details, the part's own shadow colour when its role has
+// one (the skin's), and the light's rim along an outlined part in a backlight.
+const CEL_STYLE = STYLE.technique === 'cel';
+function celOptions(spec, p, col, shade) {
+  const o = {}, sr = LIGHT.shadeRole(spec, p.role), L = window.LUCE_NOW;
+  if (p.line > 0 && p.line < 1) o.inner = true;
+  // a skin with no shadow role of its own takes the style's warm skin shadow (cel.skinShadow), in the light in force
+  let sc = sr ? roleColor(spec, sr) : null;
+  if (!sc && LIGHT.isSkin(spec, p.role) && STYLE.cel.skinShadow)
+    sc = LIGHT.charRole(spec, 'skinShadow', mixCol(mixCol(spec.roles[p.role], PAL.paper, CHAR_STYLE.toPaper), STYLE.cel.skinShadow, .6), L, STYLE_NAME);
+  if (sc) o.shadeCol = p.dim ? mixCol(sc, shade, p.dim) : sc;
+  if (L && L.rim && p.line) o.rim = L.rim;
+  return o;
 }
 
 function character(id, x, y, u, o = {}) {
@@ -38,7 +55,7 @@ function character(id, x, y, u, o = {}) {
     if (p.stroke) inkLine(pts, Math.max(sw, .3), col, 'ink', .5);
     else if (p.shade) paint(pts, CHAR_STYLE.shadow === 'hard' ? { wash: col, washOp: 255, ink: null }
       : { fill: col, fillOp: p.id === 'shadow' ? 90 : 110, bleed: .1, tex: .4, ink: null });
-    else paint(pts, { wash: col, washOp: 255, ink: p.line ? line : null, sw });
+    else paint(pts, { wash: col, washOp: 255, ink: p.line ? line : null, sw, ...(CEL_STYLE ? celOptions(spec, p, col, shade) : {}) });
   }
   boilSeed(`char ${key} after`);                      // whatever is drawn next doesn't depend on this pose
 }

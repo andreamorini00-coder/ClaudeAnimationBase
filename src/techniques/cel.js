@@ -9,7 +9,7 @@
 //   line        outline weight multiplier (1 = the style's normal); lineInner  the factor for shapes marked inner
 //   wobble      px the outline breathes at the boil rate (0 = still)
 //   light       [dx, dy] direction towards the light; the shadow falls on the opposite side
-//   shadow      hex, the tone the shadows are mixed towards; shadeK how far (0..1); shadeSize the crescent's width as a
+//   shadow      hex, the tone the shadows are mixed towards (skinShadow, optional: the warm shadow of skin, draw.js); shadeK how far (0..1); shadeSize the crescent's width as a
 //               share of the shape's larger side
 //   tones       shadow tones (1; 2 in the visual-novel style, 3b); outline  'constant' ('shadowThick' in 3b)
 // paint(pts, o) options it reads: wash / fill (colour, washOp / fillOp = opacity), ink (outline colour; null = none),
@@ -69,7 +69,7 @@ TECHNIQUES.cel = {
     const xs = P.map(p => p[0]), ys = P.map(p => p[1]), box = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
     const light = (window.LUCE_NOW && window.LUCE_NOW.light) || C.light;
     const cr = CEL.crescent(box, light, shade || rim ? C.shadeSize : 0), rimW = rim ? rim.spessore : 0;
-    const m = Math.ceil(sw + rimW + 3), x0 = cr.box.x0 - m, y0 = cr.box.y0 - m, w = cr.box.x1 - cr.box.x0 + 2 * m, h = cr.box.y1 - cr.box.y0 + 2 * m;
+    const m = Math.ceil(sw * 1.5 + rimW + 3), x0 = cr.box.x0 - m, y0 = cr.box.y0 - m, w = cr.box.x1 - cr.box.x0 + 2 * m, h = cr.box.y1 - cr.box.y0 + 2 * m;
     const zoom = clamp((CAM ? CAM.zoom : 1) * DRAFT.scale, .5, 3), pw = Math.ceil(w * zoom), ph = Math.ceil(h * zoom);
     const g = CEL.canvas(pw, ph), c = g.drawingContext;
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, g.width, g.height); c.setTransform(zoom, 0, 0, zoom, -x0 * zoom, -y0 * zoom);
@@ -80,9 +80,10 @@ TECHNIQUES.cel = {
       c.beginPath(); c.rect(x0 - 5, y0 - 5, w + 10, h + 10); path(dx, dy); c.fillStyle = style; c.fill('evenodd'); c.restore();
     };
     if (col) { c.beginPath(); path(); c.fillStyle = CEL.rgba(col, alpha); c.fill(); }
-    if (shade && col) crescent(cr.dx, cr.dy, CEL.rgba(o.shadeCol || mixCol(col, C.shadow, C.shadeK), alpha));
-    if (rim) { const n = Math.hypot(light[0], light[1]) || 1; crescent(-light[0] / n * rimW, -light[1] / n * rimW, CEL.rgba(rim.colore)); }
+    if (shade && col) crescent(cr.dx, cr.dy, CEL.rgba(o.shadeCol || mixCol(col, (window.LUCE_NOW && window.LUCE_NOW.shadow) || C.shadow, C.shadeK), alpha));
     if (outlined) { c.beginPath(); path(); c.lineWidth = sw; c.lineJoin = 'round'; c.strokeStyle = CEL.rgba(o.ink || PAL.ink); c.stroke(); }
+    // the rim light goes over the outline's inner half, so it reads: its width is the rim's plus half the line
+    if (rim) { const n = Math.hypot(light[0], light[1]) || 1, w = rimW + (outlined ? sw / 2 : 0); crescent(-light[0] / n * w, -light[1] / n * w, CEL.rgba(rim.colore)); }
     flushBrush();
     push(); noStroke(); image(g, x0, y0, w, h, 0, 0, pw, ph); pop();
   },
