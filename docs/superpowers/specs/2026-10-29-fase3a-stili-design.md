@@ -128,9 +128,9 @@ Nuovo file puro `src/lighting.js` (testabile con `node:vm`), caricato prima di `
 - **Valori iniziali (da giudicare sullo sheet):**
   - *giorno*: `PAL` dell'anime; pelle `#F5C6A5`/`#D99A86`; `tone` nessuno.
   - *notte*: `sky` → #2B3766; `ink` → #111830 (il contorno si legge anche di notte); `sap`, `teal` e `cream` mescolati
-    40-55% con `night`; `ochre` invariato (le lampade restano gialle); `tone` #2B3766, `k` .42; pelle `#C9A39C`/`#8E7A8F`;
+    40-55% con `night`; `ochre` invariato (le lampade restano gialle); `tone` #2B3766, `k` .42; pelle `#C9A39C`/`#B98A86`;
     ombra `#3A4275`.
-  - *controluce*: `sky` → mix di `ochre` e `rose`; `tone` #555B91, `k` .55; pelle `#D99A86`/`#9C6F7E`; `rim`
+  - *controluce*: `sky` → mix di `ochre` e `rose`; `tone` #555B91, `k` .55; pelle `#D99A86`/`#A87470`; `rim`
     #FFD166 spesso 2,5 px (alla scala 1).
 - Il `cozy` non ha set di luci: usa il solo `giorno`; `luce('notte')` in `cozy` non fa nulla e lo dice una volta nel log.
 

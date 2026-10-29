@@ -27,6 +27,15 @@ export const CHAR_SCRIPTS = [
   'src/characters/mara.js',
 ];
 
+// The style files and the pure lighting functions, in the order studio.html loads them.
+export const STYLE_SCRIPTS = [
+  'src/styles/registry.js',
+  'src/lighting.js',
+  'src/styles/classic.js',
+  'src/styles/acquerello-leggero.js',
+  'src/styles/anime.js',
+];
+
 // get(expr): the value of an expression in the page context. run(code): runs more code there.
 // call(fn, ...args): calls a page function and returns a plain copy of the result (JSON), so assert.deepEqual compares
 // values rather than objects from another realm.
