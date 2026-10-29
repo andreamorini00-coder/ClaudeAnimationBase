@@ -34,6 +34,7 @@ const CEL = {
     if (c.shadeSize != null && num('shadeSize', 1e-6, 1)) errs.push('cel.shadeSize (maggiore di 0, al massimo 1)');
     if (c.light != null && (!Array.isArray(c.light) || c.light.length !== 2 || c.light.some(v => typeof v !== 'number') || !Math.hypot(...c.light))) errs.push('cel.light ([dx, dy], non nulla)');
     if (c.shadow != null && !/^#[0-9A-Fa-f]{6}$/.test(c.shadow)) errs.push('cel.shadow (#RRGGBB)');
+    if (c.skinShadow != null && !/^#[0-9A-Fa-f]{6}$/.test(c.skinShadow)) errs.push('cel.skinShadow (#RRGGBB)');
     if (c.tones != null && ![1, 2].includes(c.tones)) errs.push('cel.tones (1 o 2)');
     if (c.outline != null && !['constant', 'shadowThick'].includes(c.outline)) errs.push('cel.outline (constant o shadowThick)');
     return errs;
@@ -44,6 +45,11 @@ const CEL = {
     const n = Math.hypot(light[0], light[1]) || 1, d = size * Math.max(box.x1 - box.x0, box.y1 - box.y0), dx = light[0] / n * d, dy = light[1] / n * d;
     return { dx, dy, box: { x0: box.x0 + Math.min(0, dx), y0: box.y0 + Math.min(0, dy), x1: box.x1 + Math.max(0, dx), y1: box.y1 + Math.max(0, dy) } };
   },
+  CAP: 4096,                  // the largest canvas side: above it a texture may not upload (MAX_TEXTURE_SIZE) and the shape would vanish
+  // The scale a shape of w × h is drawn at: the wished zoom, lowered so that neither side goes over the cap (a huge shape
+  // at a high zoom gets a softer outline instead of vanishing).
+  fit(w, h, zoom, cap = CEL.CAP) { return Math.min(zoom, cap / Math.max(w, 1), cap / Math.max(h, 1)); },
+  finite(pts) { return pts.every(p => Number.isFinite(p[0]) && Number.isFinite(p[1])); },
   // a reusable canvas per power-of-two size, so textures stay small and nothing is allocated per shape
   canvas(w, h) {
     const b = n => Math.max(32, 2 ** Math.ceil(Math.log2(n))), bw = b(w), bh = b(h), key = bw + 'x' + bh;
@@ -51,11 +57,12 @@ const CEL = {
     return CEL.POOL.get(key);
   },
   rgba(col, a = 255) { const c = color(col); return `rgba(${red(c)},${green(c)},${blue(c)},${a / 255})`; },
-  warn(what) { if (!CEL.WARNED.has(what)) { CEL.WARNED.add(what); console.warn(`cel: "${what}" non esiste in questa tecnica (ignorato)`); } },
+  warn(what) { if (!CEL.WARNED.has(what)) { CEL.WARNED.add(what); console.warn(`cel: "${what}" non esiste o non è valido in questa tecnica (ignorato)`); } },
 };
 TECHNIQUES.cel = {
   paintAt(pts, o) {
     const C = STYLE.cel;
+    if (!CEL.finite(pts)) { CEL.warn('punti non finiti'); return; }
     for (const k of ['hatch', 'bleed', 'tex', 'border', 'br']) if (o[k] != null && (k !== 'hatch' || o.hatch)) CEL.warn(k);
     const col = o.wash || o.fill, alpha = o.wash ? (o.washOp ?? 255) : (o.fillOp ?? 170);
     const outlined = o.ink !== null, shade = o.shade === true || (o.shade !== false && outlined), rim = o.rim && o.rim.spessore > 0 ? o.rim : null;
@@ -70,7 +77,7 @@ TECHNIQUES.cel = {
     const light = (window.LUCE_NOW && window.LUCE_NOW.light) || C.light;
     const cr = CEL.crescent(box, light, shade || rim ? C.shadeSize : 0), rimW = rim ? rim.spessore : 0;
     const m = Math.ceil(sw * 1.5 + rimW + 3), x0 = cr.box.x0 - m, y0 = cr.box.y0 - m, w = cr.box.x1 - cr.box.x0 + 2 * m, h = cr.box.y1 - cr.box.y0 + 2 * m;
-    const zoom = clamp((CAM ? CAM.zoom : 1) * DRAFT.scale, .5, 3), pw = Math.ceil(w * zoom), ph = Math.ceil(h * zoom);
+    const zoom = CEL.fit(w, h, clamp((CAM ? CAM.zoom : 1) * DRAFT.scale, .5, 3)), pw = Math.ceil(w * zoom), ph = Math.ceil(h * zoom);
     const g = CEL.canvas(pw, ph), c = g.drawingContext;
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, g.width, g.height); c.setTransform(zoom, 0, 0, zoom, -x0 * zoom, -y0 * zoom);
     const path = (dx = 0, dy = 0) => { c.moveTo(P[0][0] + dx, P[0][1] + dy); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0] + dx, P[i][1] + dy); c.closePath(); };
@@ -83,7 +90,7 @@ TECHNIQUES.cel = {
     if (shade && col) crescent(cr.dx, cr.dy, CEL.rgba(o.shadeCol || mixCol(col, (window.LUCE_NOW && window.LUCE_NOW.shadow) || C.shadow, C.shadeK), alpha));
     if (outlined) { c.beginPath(); path(); c.lineWidth = sw; c.lineJoin = 'round'; c.strokeStyle = CEL.rgba(o.ink || PAL.ink); c.stroke(); }
     // the rim light goes over the outline's inner half, so it reads: its width is the rim's plus half the line
-    if (rim) { const n = Math.hypot(light[0], light[1]) || 1, w = rimW + (outlined ? sw / 2 : 0); crescent(-light[0] / n * w, -light[1] / n * w, CEL.rgba(rim.colore)); }
+    if (rim) { const n = Math.hypot(light[0], light[1]) || 1, f = rim.fade ?? 1, w = rimW + (outlined ? sw / 2 * f : 0); crescent(-light[0] / n * w, -light[1] / n * w, CEL.rgba(rim.colore, 255 * f)); }
     push(); noStroke(); image(g, x0, y0, w, h, 0, 0, pw, ph); pop();
   },
   inkLine(P, sw, col, br, curv) {

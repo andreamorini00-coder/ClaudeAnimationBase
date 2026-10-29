@@ -376,6 +376,7 @@ function hat(u, h, sw) {
   } else if (h === 'halo') {
     brush.noFill(); brush.noWash(); brush.noHatch(); brush.set('ink', PAL.ochre, sw * 1.4);
     brush.beginShape(0); for (const p of ellPts(0, -10.4 * u, 3.2 * u, .8 * u, 20)) brush.vertex(p[0], p[1]); brush.endShape(true);
+    if (STYLE.technique === 'cel') flushBrush();      // the cel technique draws straight to the frame: keep the halo in its place in the order
   } else if (h === 'wizard' || h === 'hood') {
     paint(P([[-3.9, -7.9], [.9, -15], [3.9, -7.9]]), { wash: h === 'hood' ? PAL.violet : PAL.indigo, fill: PAL.violet, fillOp: 80, ink: PAL.ink, sw: sw * .8 });
     paint(starPts(.2 * u, -10.6 * u, u * .9, .4, 5), { wash: PAL.ochre, ink: null });

@@ -44,3 +44,11 @@ LOOPS.luci = t => {
   boilSeed('lamp'); glow(1250, 520, 150, PAL.ochre, .9); paint(ellPts(1250, 520, 22, 22, 14), { wash: PAL.ochre, ink: null });
 };
 LOOPS.luci.len = 3; LOOPS.luci.format = 'landscape';
+
+// Clawd's halo is the one mark drawn straight through p5.brush: a cel shape in front of it must cover it.
+LOOPS.aureola = t => {
+  boilSeed('bg'); paint(rectPts(-50, -50, W + 100, H + 100), { wash: PAL.cream, ink: null });
+  clawd(700, 800, 40, { hat: 'halo' });
+  boilSeed('tree'); paint(rectPts(560, 330, 280, 140, 4), { wash: PAL.sap, ink: PAL.ink, sw: 1 });    // in front of the halo
+};
+LOOPS.aureola.len = 1; LOOPS.aureola.format = 'landscape';

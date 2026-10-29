@@ -81,6 +81,15 @@ unita in `main` (21aca5c), push fatto da Andrea.
 
 - **3a** (branch `fase3a-stili`, spec `../specs/2026-10-29-fase3a-stili-design.md`): tecnica `cel` (colori piatti, ombra
   netta a mezzaluna, contorno costante), stili `cozy` e `anime`, set di luci dell'anime (giorno, notte, controluce).
+- **Piccolezze dalla revisione finale della 3a** (2026-10-29), da fare quando servono:
+  - `cel` ignora `curv` senza avviso: le bocche e la lente di Clawd escono come poligoni (appiattirle con `through()`);
+  - la copia del canvas usa `ceil(w*zoom)` in sorgente e `w` in destinazione: fino a un pixel di scarto tra parti;
+  - la risoluzione del canvas segue solo `CAM.zoom * DRAFT.scale` (un `scale()` della scena o uno zoom sopra 3 la ammorbidiscono);
+  - i colori di un personaggio per una luce (`spec.styles.<stile>.luci.<luce>`) si saltano durante una miscela;
+  - l'ombra calda della pelle ignora il colore di pelle dello stile (`spec.styles.<stile>.skin`);
+  - le forme semitrasparenti con solo `fill` hanno l'ombra più opaca, e il bordo di luce è sempre opaco;
+  - la larghezza della mezzaluna è proporzionale al lato maggiore: code e arti lunghi e sottili sono quasi tutta ombra;
+  - alcuni test controllano solo dati di stile.
 - **3b**: `marker-comic` (contorno che si ispessisce sul lato in ombra) e `visual-novel` (ombre a due toni), con i set di
   luci del visual-novel; vale e mara restano bozza fino a lì.
 

@@ -37,7 +37,7 @@ const LIGHT = {
     palette.ink = ink;
     // skinK: how far a character's own skin goes to the light's skin (0 in the day light, where it keeps its own)
     return { nome, palette, ink, tone: s.tone, k: s.k, skinK: s.skinK ?? (s.k > 0 ? 1 : 0), skin: s.skin, skinShadow: s.skinShadow, shadow: s.shadow,
-      rim: s.rim ? { ...s.rim } : null, light: (s.light || (style.cel && style.cel.light) || [-1, -1]).slice() };
+      rim: s.rim ? { ...s.rim, fade: 1 } : null, light: (s.light || (style.cel && style.cel.light) || [-1, -1]).slice() };
   },
   // A set between two others: colours mixed, k, the light's direction and the rim's thickness interpolated (a rim
   // that only one of them has fades in or out).
@@ -46,11 +46,13 @@ const LIGHT = {
     if (!A || !B) return A || B;
     const m = (x, y) => LIGHT.mixHex(x, y, k), lerp = (x, y) => x + (y - x) * Math.max(0, Math.min(1, k));
     const palette = {}; for (const key of Object.keys(A.palette)) palette[key] = m(A.palette[key], B.palette[key]);
+    // rim.fade: 0..1, how much of the rim shows (the whole mark fades: the colour's alpha and the extra band over the outline)
+    const kk = Math.max(0, Math.min(1, k));
     let rim = null;
-    if (A.rim && B.rim) rim = { colore: m(A.rim.colore, B.rim.colore), spessore: lerp(A.rim.spessore, B.rim.spessore) };
-    else if (A.rim) rim = { ...A.rim, spessore: A.rim.spessore * (1 - Math.max(0, Math.min(1, k))) };
-    else if (B.rim) rim = { ...B.rim, spessore: B.rim.spessore * Math.max(0, Math.min(1, k)) };
-    if (rim && rim.spessore <= 0) rim = null;
+    if (A.rim && B.rim) rim = { colore: m(A.rim.colore, B.rim.colore), spessore: lerp(A.rim.spessore, B.rim.spessore), fade: 1 };
+    else if (A.rim) rim = { ...A.rim, spessore: A.rim.spessore * (1 - kk), fade: 1 - kk };
+    else if (B.rim) rim = { ...B.rim, spessore: B.rim.spessore * kk, fade: kk };
+    if (rim && (rim.spessore <= 0 || rim.fade <= 0)) rim = null;
     return { nome: k <= 0 ? da : k >= 1 ? a : `${da}>${a}`, palette, ink: palette.ink, tone: m(A.tone, B.tone), k: lerp(A.k, B.k), skinK: lerp(A.skinK, B.skinK),
       skin: m(A.skin, B.skin), skinShadow: m(A.skinShadow, B.skinShadow), shadow: m(A.shadow, B.shadow), rim,
       light: [lerp(A.light[0], B.light[0]), lerp(A.light[1], B.light[1])] };
@@ -74,9 +76,27 @@ const LIGHT = {
     if (LIGHT.isSkin(spec, role) && 'skinShadow' in roles) return 'skinShadow';
     return (role + 'Shadow') in roles ? role + 'Shadow' : null;
   },
+  // The problems with a style's lights, one string each, naming the light and the field; [] when it is fine or the style has none.
+  problems(style) {
+    if (!style.luci) return [];
+    const errs = [], hexRe = /^#[0-9A-Fa-f]{6}$/, names = Object.keys(style.palette || {});
+    if (!style.luci.giorno) errs.push('luci.giorno (la luce di base)');
+    for (const [nome, s] of Object.entries(style.luci)) {
+      for (const k of ['tone', 'skin', 'skinShadow', 'shadow']) if (!hexRe.test(s[k] || '')) errs.push(`luci.${nome}.${k} (#RRGGBB)`);
+      if (typeof s.k !== 'number' || !Number.isFinite(s.k) || s.k < 0 || s.k > 1) errs.push(`luci.${nome}.k (un numero da 0 a 1)`);
+      if (s.ink != null && !hexRe.test(s.ink)) errs.push(`luci.${nome}.ink (#RRGGBB)`);
+      for (const [pn, v] of Object.entries(s.palette || {})) {
+        if (!names.includes(pn)) errs.push(`luci.${nome}.palette.${pn} (un nome di PAL: ${names.join(', ')})`);
+        else if (!hexRe.test(v)) errs.push(`luci.${nome}.palette.${pn} (#RRGGBB)`);
+      }
+      if (s.rim && (!hexRe.test(s.rim.colore || '') || typeof s.rim.spessore !== 'number' || !(s.rim.spessore > 0))) errs.push(`luci.${nome}.rim ({ colore #RRGGBB, spessore > 0 })`);
+    }
+    return errs;
+  },
   // Write a light onto the page's palette `pal` (the style's palette is never changed: `style.palette` is the base).
   // luce(nome) or luce(da, a, k). Returns the set, or null when the style has no lights (then nothing changes).
   apply(pal, style, a, b, k) {
+    if (b != null && !(typeof k === 'number' && Number.isFinite(k))) throw new Error('luce(da, a, k): serve k, un numero da 0 a 1');
     const set = b == null ? LIGHT.set(style, a) : LIGHT.mix(style, a, b, k);
     if (set) Object.assign(pal, set.palette);
     return set;

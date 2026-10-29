@@ -258,3 +258,56 @@ test('anime draws its characters with the style\'s ink outline, cozy with the ch
   assert.equal(c.get('STYLES.anime.character.line'), c.get('STYLES.anime.palette.ink'));
   assert.equal(c.get('STYLES.cozy.character.line'), undefined);
 });
+
+// ---------- 3a final review: fixes ----------
+test('a rim light fades in and out in a blend, it does not pop in', () => {
+  const c = lib(), st = c.get('STYLES.anime'), rimAt = k => c.call('LIGHT.mix', st, 'giorno', 'controluce', k).rim;
+  assert.equal(rimAt(0), null);
+  const low = rimAt(.05);
+  assert.ok(low && low.fade > 0 && near(low.fade, .05, .001), `fade ${low && low.fade}`);
+  assert.ok(near(rimAt(1).fade, 1, .001));
+  assert.ok(rimAt(.6).fade > rimAt(.3).fade, 'cresce con k');
+  assert.ok(near(c.call('LIGHT.mix', st, 'controluce', 'giorno', .25).fade ?? c.call('LIGHT.mix', st, 'controluce', 'giorno', .25).rim.fade, .75, .001), 'e cala all\'uscita');
+  const both = c.call('LIGHT.mix', st, 'controluce', 'controluce', .5).rim;
+  assert.ok(near(both.fade, 1, .001), 'con il bordo in entrambe le luci resta pieno');
+  assert.ok(near(c.call('LIGHT.set', st, 'controluce').rim.fade ?? 1, 1, .001));
+});
+test('a canvas never exceeds the texture cap: big shapes at high zoom are scaled down, not lost', () => {
+  const c = lib();
+  const fit = (w, h, z) => c.call('CEL.fit', w, h, z, 4096);
+  assert.equal(fit(200, 100, 1.8), 1.8, 'una forma piccola non cambia');
+  const z = fit(3900, 900, 2.2);
+  assert.ok(3900 * z <= 4096 + 1e-6 && z < 2.2, `zoom ${z}`);
+  assert.ok(fit(20000, 400, 1) <= 4096 / 20000 + 1e-9, 'una forma più larga del limite scende sotto 1');
+  assert.ok(fit(500, 500, 1) === 1);
+  assert.equal(c.call('CEL.finite', [[0, 0], [1, 2], [3, NaN]]), false);
+  assert.equal(c.call('CEL.finite', [[0, 0], [1, 2], [3, 4]]), true);
+  assert.equal(c.call('CEL.finite', [[0, 0], [Infinity, 1]]), false);
+});
+test('a style\'s lights are validated at load, by name', () => {
+  const c = lib(), prob = st => c.call('LIGHT.problems', st);
+  assert.deepEqual(prob(c.get('STYLES.anime')), []);
+  assert.deepEqual(prob(c.get('STYLES.classic')), [], 'uno stile senza luci non ha problemi');
+  const mk = f => { const st = JSON.parse(JSON.stringify(c.get('STYLES.anime'))); f(st); return prob(st).join(' | '); };
+  assert.match(mk(s => { delete s.luci.notte.skin; }), /notte.*skin/);
+  assert.match(mk(s => { delete s.luci.notte.tone; }), /notte.*tone/);
+  assert.match(mk(s => { delete s.luci.controluce.shadow; }), /controluce.*shadow/);
+  assert.match(mk(s => { s.luci.notte.skinShadow = 'rosa'; }), /notte.*skinShadow/);
+  assert.match(mk(s => { s.luci.notte.palette.cielo = '#112233'; }), /notte.*cielo/);
+  assert.match(mk(s => { s.luci.notte.palette.sky = 'blu'; }), /notte.*sky/);
+  assert.match(mk(s => { delete s.luci.notte.k; }), /notte.*k/);
+  assert.match(mk(s => { delete s.luci.giorno; }), /giorno/);
+  assert.match(mk(s => { s.luci.controluce.rim = { colore: '#FFD166' }; }), /controluce.*rim/);
+});
+test('luce(da, a) without a number k is an error, not a black palette', () => {
+  const c = lib();
+  c.run('globalThis.__pal = { ...STYLES.anime.palette };');
+  assert.throws(() => c.run('LIGHT.apply(__pal, STYLES.anime, "giorno", "notte");'), /k/);
+  assert.throws(() => c.run('LIGHT.apply(__pal, STYLES.anime, "giorno", "notte", NaN);'), /k/);
+  assert.doesNotThrow(() => c.run('LIGHT.apply(__pal, STYLES.anime, "giorno", "notte", 0.5);'));
+});
+test('cel.skinShadow, when given, is a colour', () => {
+  const c = lib(), bad = v => c.call('CEL.problems', { technique: 'cel', cel: { ...celOk, skinShadow: v } }).join(' ');
+  assert.match(bad('pesca'), /cel\.skinShadow/);
+  assert.equal(bad('#D99A86'), '');
+});
