@@ -17,7 +17,7 @@ STYLES.cozy = {
     teal: '#8E9C9A',                   // blu crepuscolo 40% verso salvia
     violet: '#8C8074',                 // tortora (l'ombra unica)
     cream: '#FAF3E8',                  // crema 40% verso bianco
-    sky: '#C0C0BC',                    // blu crepuscolo 55% verso crema (cielo coperto)
+    sky: '#EED3A3',                    // oro tenue 45% verso crema (la luce calda del pomeriggio della mood board)
   },
   // a light paper, a soft grain, a gentle vignette
   paper: { seed: 11, stains: 40, stainR: [120, 380], stainAlpha: .02, stainRGB: '160,125,80',

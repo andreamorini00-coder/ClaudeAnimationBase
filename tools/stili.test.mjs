@@ -140,7 +140,7 @@ test('the styles\' palettes follow the notes, and the derived colours their rule
   assert.equal(cozy.indigo, mix(cozy.night, cozy.ink, .25));
   assert.equal(cozy.teal, mix(cozy.night, cozy.sap, .4));
   assert.equal(cozy.cream, mix(cozy.paper, '#FFFFFF', .4));
-  assert.equal(cozy.sky, mix(cozy.night, cozy.paper, .55));
+  assert.equal(cozy.sky, mix(cozy.ochre, cozy.paper, .45));    // the warm afternoon sky of the mood board
   // given by reference/styles/anime/note.md
   assert.deepEqual([anime.paper, anime.ink, anime.clay, anime.night, anime.indigo, anime.ochre, anime.sap, anime.violet, anime.cream, anime.sky],
     ['#F7F2E8', '#1C2440', '#FF5D73', '#2B3766', '#555B91', '#FFD166', '#3FAE9B', '#ADA2E8', '#F7F2E8', '#427BEF']);
@@ -245,4 +245,16 @@ test('cozy and anime give a warm shadow for skin that has no shadow role of its 
   const c = lib();
   for (const n of ['cozy', 'anime']) assert.match(c.get(`STYLES.${n}.cel.skinShadow`), hex, n);
   assert.equal(c.get('STYLES.anime.cel.skinShadow'), '#D99A86');
+});
+
+// ---------- 3a closing: scarti dalle mood board ----------
+test('cozy\'s sky is the warm afternoon light of its mood board, from oro tenue towards crema', () => {
+  const c = lib(), cozy = c.get('STYLES.cozy.palette');
+  assert.equal(cozy.sky, c.call('LIGHT.mixHex', cozy.ochre, cozy.paper, .45));
+  assert.ok(channels(cozy.sky)[0] > channels(cozy.sky)[2] + 20, 'caldo: più rosso che blu');
+});
+test('anime draws its characters with the style\'s ink outline, cozy with the characters\' own', () => {
+  const c = lib();
+  assert.equal(c.get('STYLES.anime.character.line'), c.get('STYLES.anime.palette.ink'));
+  assert.equal(c.get('STYLES.cozy.character.line'), undefined);
 });

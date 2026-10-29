@@ -21,6 +21,8 @@ for (const [id, spec] of Object.entries(CHARACTERS)) {
 // in the light in force (luce(), src/lighting.js): none in the styles without lights.
 function roleColor(spec, role) {
   const own = spec.styles && spec.styles[STYLE_NAME] && spec.styles[STYLE_NAME][role];
+  // a style may draw every character's outline in its own ink (anime): in a light, the light's ink (darker at night)
+  if (role === 'line' && !own && CHAR_STYLE.line) return window.LUCE_NOW ? window.LUCE_NOW.ink : CHAR_STYLE.line;
   return LIGHT.charRole(spec, role, own || mixCol(spec.roles[role], PAL.paper, CHAR_STYLE.toPaper), window.LUCE_NOW, STYLE_NAME);
 }
 

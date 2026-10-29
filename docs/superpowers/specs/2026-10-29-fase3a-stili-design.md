@@ -97,7 +97,7 @@ le scene non cambiano. Colori **dati** dalle note; i **derivati** con la regola 
 | teal | night 40% verso sap | verde acqua 35% verso blu |
 | violet | #8C8074 tortora | #ADA2E8 lavanda |
 | cream | crema 40% verso bianco | #F7F2E8 avorio |
-| sky | night 55% verso crema | #427BEF blu intenso |
+| sky | oro tenue 45% verso crema (la luce calda della mood board) | #427BEF blu intenso |
 
 - **`cozy`**: `cel.line` morbido (1,0), `wobble` .6, ombra unica `#8C8074` (tortora), forme tonde (le forme sono delle
   scene e dei personaggi: la tecnica le arrotonda solo con `curv` più alto per default), texture di carta leggera.
@@ -195,6 +195,40 @@ e il reel intero in finale costa circa 70 s (288 fotogrammi) invece di 6 minuti.
 - **Carattere e lettere:** `letter()` usa "Permanent Marker": resta (non è parte dello stile in 3a).
 - **GPU:** i byte degli sheet dipendono dalla scheda (vale già per le approvazioni: `approvati.json` la registra).
 - **`hatch`** nelle scene o in Clawd: ignorato in `cel`; se una scena vi si appoggia per un'ombra lo si vede dallo sheet.
+
+## Esito dell'implementazione e autocritica (2026-10-29)
+
+Cambiato rispetto al design, con il motivo:
+- **Prima del Task 3 `flushBrush()` era chiamato per ogni forma:** il costo sul reel era 2,0 e 1,8 volte quello di
+  `acquerello-leggero`; tolto (la tecnica non usa p5.brush) è un terzo, con gli stessi byte (§7).
+- **La logica di `luce()` è pura** (`LIGHT.apply`, `LIGHT.reset`), con un `luce()` sottile in `core.js` e una copia di base di
+  `PAL`; così i controlli sulla perdita di luce tra fotogrammi girano in `node:test`.
+- **La pelle di un personaggio di giorno resta la sua** e va alla pelle della luce solo di notte e in controluce (`skinK`);
+  i ruoli che hanno il colore della pelle (le gambe della ragazza) la seguono. La spec diceva "la pelle del set", che
+  avrebbe dato a tutti la pelle dell'anime anche a mezzogiorno.
+- **`cel.skinShadow`** (opzionale): l'ombra calda per le pelli senza un ruolo `skinShadow` (anime #D99A86, cozy #C99595); la
+  mescolanza verso il viola ardesia dava visi grigio-violetti.
+- **Il bordo di luce** si disegna sopra la metà interna del contorno, con spessore `rim + contorno / 2`: sotto il contorno
+  non si vedeva.
+- **Valori delle luci ritoccati** dopo i primi render (`notte`: tono #2F3C85, k .34; pelle in ombra più calda); il `sky`
+  del `cozy` ricavato da oro tenue verso crema (i cieli della mood board sono caldi) e `anime` con il contorno dei
+  personaggi in inchiostro (`character.line`), come nella mood board.
+
+Autocritica contro `reference/styles/cozy/moodboard.png` e `anime/moodboard.png`:
+- **Vicino:** colori piatti, una sola ombra netta, contorno costante e pulito (anime: esterno più spesso delle linee
+  interne), carta leggera nel `cozy` e nessuna nell'`anime`, pelle viva sotto ogni luce, bordo di luce calda nel controluce,
+  luci (lampade) come `glow()` caldo.
+- **Lontano o non fatto, e perché:**
+  - nuvole a cumulo con ombra lavanda, cieli a tre fasce, coni di luce dei lampioni, riflessi sul bagnato, finestre e
+    arredi: sono **disegno di scena**, non di stile; la tecnica non ha forme pronte per questi e una scena li dipinge con
+    `paint`. Nessuno stile le fa da solo.
+  - la mezzaluna dell'ombra ha una larghezza proporzionale alla forma: sulle parti piccole (orecchie, mani) pesa troppo
+    rispetto ai riferimenti; una larghezza massima in pixel andrebbe provata.
+  - le forme "più tonde" del `cozy` non sono una proprietà dello stile: restano quelle delle scene e dei personaggi.
+  - `hatch`, `bleed` e `tex` sono ignorati: una scena che si appoggia a un'ombreggiatura a tratti la perde.
+  - di notte e in controluce i personaggi virano al grigio-violetto e si leggono soprattutto per il contorno e per il bordo;
+    la mood board li ha più blu e con pochi colori caldi (finestre, lampioni).
+  - il contrasto contorno su notte è basso (1,34) come nella mood board; di notte il contorno si scurisce (#111830, 1,5).
 
 ## Fuori dalla 3a (in 3b)
 
