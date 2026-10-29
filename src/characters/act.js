@@ -15,7 +15,9 @@ function act(t, keys, spec) {
   const [t0, cur] = K[i];
   if (i === 0 || t >= t0 + D) return { expression: { ...cur, squint: 0 }, take: i === 0 ? 0 : CG.spring(t, t0 + D / 2, 6, 14) };
   const from = K[i - 1][1], k = (t - t0) / D;
-  return { expression: { ...blendPose(from, cur, CG.smooth(k)), squint: Math.sin(Math.PI * k) }, take: CG.spring(t, t0 + D / 2, 6, 14) };
+  // the gesture is a name, so it is blended by its numbers (resolveState): the arms move, they don't pop at halfway
+  const gest = { gestureFrom: from.gesture, gestureTo: cur.gesture, gestureK: CG.smooth(k) };
+  return { expression: { ...blendPose(from, cur, CG.smooth(k)), squint: Math.sin(Math.PI * k), ...gest }, take: CG.spring(t, t0 + D / 2, 6, 14) };
 }
 
 // The eyes' name at t for a blink every 3 to 4.8 s (the interval from seed: the same every render): open -> sleepy ->
@@ -73,8 +75,11 @@ function resolveState(spec, o = {}) {
   if (typeof e === 'string') expression = { ...expression, ...named('Espressione', spec.expressions, e) };
   else if (e && e.expression) { expression = { ...expression, ...e.expression }; take = e.take || 0; }
   else if (e) expression = { ...expression, ...e };
-  // a gesture of the face (what the hands do) goes over the pose
-  if (expression.gesture) {
+  // a gesture of the face (what the hands do) goes over the pose; mid-change (act) the two gestures' numbers are blended
+  if (expression.gestureK != null) {
+    const G = spec.gestures || {}, a = G[expression.gestureFrom] || {}, b = G[expression.gestureTo] || {};
+    for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) pose[key] = CG.lerp(a[key] ?? pose[key], b[key] ?? pose[key], expression.gestureK);
+  } else if (expression.gesture) {
     const g = (spec.gestures || {})[expression.gesture];
     if (!g) throw new Error(`Gesto "${expression.gesture}" inesistente per ${spec.id}. Disponibili: ${Object.keys(spec.gestures || {}).join(', ')}`);
     Object.assign(pose, g);

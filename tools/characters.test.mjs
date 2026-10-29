@@ -480,7 +480,7 @@ test('ragazza layout is deterministic', () => {
   const c = lib(); assert.deepEqual(layoutOf(c, 'ragazza', { pose: 'corsa', t: .41 }), layoutOf(c, 'ragazza', { pose: 'corsa', t: .41 }));
 });
 const headsTall = (c, id) => {
-  const L = layoutOf(c, id, { view: 'front', pose: Object.keys(c.get(`CHARACTERS.${id}.poses`))[0] });
+  const L = layoutOf(c, id, { view: 'front', pose: Object.keys(c.get(`CHARACTERS[${JSON.stringify(id)}].poses`))[0] });
   return partBox(L, q => q.id !== 'shadow').h / partBox(L, q => q.id === 'head').h;
 };
 test('biped is heads tall', () => {
@@ -494,7 +494,7 @@ const bend = (a, b, c) => {                 // the angle a limb turns at its mid
 };
 const CGclamp = x => Math.max(-1, Math.min(1, x));
 const checkLimbs = (c, id) => {
-  const spec = c.get(`CHARACTERS.${id}`), HU = c.get('BODIES.biped.HU');
+  const spec = c.get(`CHARACTERS[${JSON.stringify(id)}]`), HU = c.get('BODIES.biped.HU');
   for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) for (const t of [0, .37]) {
     const J = layoutOf(c, id, { view, pose, t }).joints;
     for (const [a, b, d, kind] of limbs(J)) {
@@ -930,4 +930,55 @@ test('approval ids include outfits', async () => {
     ['vale', 'vale/approvati', 'sheet pose face', 1],
     ['vale.ufficio', 'vale/approvati/ufficio', 'sheet pose face', 1],
   ]);
+});
+
+// ---------- 4b2 final review: fixes ----------
+test('a turned head stays on its neck', () => {
+  const c = lib();
+  for (const id of ['vale', 'mara']) for (const extra of [{}, { lean: 1 }, { flight: 1 }, { lean: .6, flight: .5 }]) {
+    const L = c.call(`((o) => BODIES.biped.layout(CHARACTERS.${id}, resolveState(CHARACTERS.${id}, o)))`, { view: 'back', pose: { headTurn: 1, ...extra } });
+    const head = partBox(L, p => p.id === 'head'), neck = partBox(L, p => p.id === 'neck'), where = `${id} ${JSON.stringify(extra)}`;
+    assert.ok(Math.abs((head.x0 + head.x1) / 2 - (neck.x0 + neck.x1) / 2) < head.w * .6, `${where}: la testa è a ${((head.x0 + head.x1) / 2).toFixed(2)}, il collo a ${((neck.x0 + neck.x1) / 2).toFixed(2)}`);
+  }
+});
+test('a gesture moves the arms smoothly under act()', () => {
+  const c = lib(), fn = '((t, to) => { const sp = CHARACTERS.vale; return BODIES.biped.layout(sp, resolveState(sp, { view: "front", t, expression: act(t, [[0, "neutra"], [1, to]], sp) })).joints; })';
+  for (const to of ['arrabbiata', 'sorriso', 'manoAlMento'.replace('manoAlMento', 'pensierosa')]) {
+    const pts = [...Array(31)].map((_, i) => c.call(fn, .95 + i * .01, to).wristR);
+    const steps = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1])), total = Math.hypot(pts[30][0] - pts[0][0], pts[30][1] - pts[0][1]);
+    assert.ok(total > .5, `${to}: il polso non si muove (${total.toFixed(2)})`);
+    assert.ok(Math.max(...steps) < total * .4, `${to}: il polso scatta di ${Math.max(...steps).toFixed(2)} su ${total.toFixed(2)} in un fotogramma`);
+  }
+});
+// the office outfit and the gestures get the same checks as the main look (the spec's §8)
+const withOffice = c => { c.run("CHARACTERS['vale.ufficio'] = outfitSpec(CHARACTERS.vale, 'ufficio');"); return 'vale.ufficio'; };
+test('vale.ufficio features per view and counts', () => { const c = lib(); checkFeatures(c, withOffice(c)); });
+test('vale.ufficio uses only its roles', () => { const c = lib(); checkRoles(c, withOffice(c)); });
+test('vale.ufficio has no NaN', () => { const c = lib(); checkFinite(c, withOffice(c)); });
+test('vale.ufficio flip mirrors exactly', () => { const c = lib(); checkFlip(c, withOffice(c)); });
+test('vale.ufficio is 7.5 heads tall', () => { const c = lib(), got = headsTall(c, withOffice(c)); assert.ok(near(got, 7.5, .05), `${got.toFixed(2)} teste`); });
+test('vale.ufficio limbs keep their length', () => { const c = lib(); checkLimbs(c, withOffice(c)); });
+test('vale.ufficio heels stand on the ground', () => {
+  const c = lib(), id = withOffice(c), spec = c.get(`CHARACTERS[${JSON.stringify(id)}]`);
+  for (const view of ['front', 'q', 'side', 'back']) for (const pose of Object.keys(spec.poses)) {
+    if (spec.poses[pose].lift) continue;
+    const y = partBox(layoutOf(c, id, { view, pose }), q => /^(leg|foot|shoe|heel)/.test(q.id)).y1;
+    assert.ok(Math.abs(y) < 1e-6, `${view} ${pose}: il piede è a ${y.toFixed(3)} dal suolo`);
+  }
+});
+test('gestures keep the arms long and the elbows right', () => {
+  const c = lib(), HU = c.get('BODIES.biped.HU');
+  for (const id of ['vale', 'mara']) {
+    const spec = c.get(`CHARACTERS.${id}`), lay = o => c.call(`((o) => BODIES.biped.layout(CHARACTERS.${id}, resolveState(CHARACTERS.${id}, o)))`, o);
+    for (const e of Object.keys(spec.expressions)) for (const view of ['front', 'q', 'side', 'back']) {
+      const J = lay({ view, expression: e }).joints;
+      for (const s of ['L', 'R']) {
+        const len = Math.hypot(J['elbow' + s][0] - J['shoulder' + s][0], J['elbow' + s][1] - J['shoulder' + s][1]) + Math.hypot(J['wrist' + s][0] - J['elbow' + s][0], J['wrist' + s][1] - J['elbow' + s][1]);
+        assert.ok(near(len, spec.proportions.arm * HU, .01), `${id} ${e} ${view} ${s}: braccio lungo ${len.toFixed(2)}`);
+        const { angle, cross } = bend(J['shoulder' + s], J['elbow' + s], J['wrist' + s]);
+        assert.ok(angle <= 2.6 + 1e-6, `${id} ${e} ${view} ${s}: gomito piegato di ${angle.toFixed(2)}`);
+        if (view === 'side' && angle > 1e-6) assert.ok(cross < 0, `${id} ${e} ${s}: gomito piegato al contrario`);
+      }
+    }
+  }
 });

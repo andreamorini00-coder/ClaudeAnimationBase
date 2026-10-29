@@ -225,7 +225,8 @@ BODIES.biped = {
       const L = V.limbs[s], sh = [L.x * (shHalf - armW * .5), shY + armW * .45];
       let a1 = Math.PI / 2 - L.dir * (A['shoulder' + s] + V.out), a2 = a1 - L.dir * A['elbow' + s];
       let elbow = at(sh, a1, armL / 2), wrist = at(elbow, a2, armL / 2);
-      if (P['reach' + s] > .5) {
+      const reach = CG.clamp(P['reach' + s]);
+      if (reach > 0) {
         // the hand where the gesture puts it: two fixed segments; from the front and back the elbow hangs low (or goes
         // outwards when the hand is above the head), in 3/4 and profile it bends forward
         const fwd = V.face === 'side' || V.face === 'q', sx = fwd ? 1 : Math.sign(L.x) || 1, seg = armL / 2;
@@ -235,7 +236,10 @@ BODIES.biped = {
         const high = P['handY' + s] < -.9;
         const best = fwd ? pick.find(p => p.cross < 0) || pick[0]
           : pick.sort((p, q) => high ? Math.sign(sh[0] || 1) * (q.e[0] - p.e[0]) : q.e[1] - p.e[1])[0];
-        elbow = best.e; wrist = w; a1 = best.a; a2 = Math.atan2(w[1] - elbow[1], w[0] - elbow[0]);
+        // partly reaching (a gesture fading in): the angles are blended, so the arm keeps its length all the way
+        const turn = (a, b) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * reach, b2 = Math.atan2(w[1] - best.e[1], w[0] - best.e[0]);
+        a1 = turn(a1, best.a); a2 = turn(a2, b2);
+        elbow = at(sh, a1, seg); wrist = at(elbow, a2, seg);
       }
       Object.assign(joints, { ['shoulder' + s]: sh, ['elbow' + s]: elbow, ['wrist' + s]: wrist });
       const dep = L.near ? 3.5 + (s === 'R' ? .02 : 0) : 1, dim = L.near ? {} : { dim: .25 };
@@ -267,7 +271,9 @@ BODIES.biped = {
     const turned = P.headTurn > .5 && !V.face, firstHead = parts.length;
     if (turned) V = B.VIEW.side;
     const headW = pr.headW * HU * (V.face === 'side' ? .92 : 1), hcx = V.face === 'side' ? .12 * HU : V.face === 'q' ? .06 * HU : 0;
-    const tilt = E.headTilt - flightA * .8, head = pts => upper(CG.rotate(pts, tilt, hcx, hcy + HU / 2));   // in flight it looks ahead
+    // a head turned back is drawn in profile and mirrored in its own frame, before the body's lean and flight turn it
+    // (so it stays on its neck); in flight it looks ahead
+    const tilt = E.headTilt - flightA * .8, head = pts => turned ? upper(CG.rotate(pts.map(([x, y]) => [-x, y]), -tilt, -hcx, hcy + HU / 2)) : upper(CG.rotate(pts, tilt, hcx, hcy + HU / 2));
     // the head: an ellipse, its jaw narrowing to the chin by head.chin (adults)
     const chin = sp.head && sp.head.chin || 0;
     const headShape = (cx, cy, rx, ry) => CG.ellipse(cx, cy, rx, ry, 44).map(([x, y]) => [cx + (x - cx) * (1 - chin * Math.pow(Math.max(0, (y - cy) / ry), 1.6)), y]);
@@ -309,7 +315,7 @@ BODIES.biped = {
     }
     if (sp.hair) B.hair(spec, V, { hcx, hcy, headW, HU, t, add, head, headShape, shY, turned });
     // (the features of a view describe its usual drawing: the turned head carries none)
-    if (turned) { for (const p of parts.slice(firstHead)) { p.pts = p.pts.map(([x, y]) => [-x, y]); delete p.feature; } V = B.VIEW.back; }
+    if (turned) { for (const p of parts.slice(firstHead)) delete p.feature; V = B.VIEW.back; }
 
     // ---- state.bust: only head and shoulders, cut below the chest (expression sheets, close-ups) ----
     if (state.bust) {
