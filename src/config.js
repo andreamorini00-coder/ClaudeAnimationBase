@@ -7,4 +7,6 @@
 //             'feed' 1080×1350 (Instagram posts). ?format=name / --format=name override it. See "Social formats" in
 //             ANIMATION_GUIDE.md.
 //   music:    an optional music file for the whole video (a scene's sounds({ music }) or --music=file override it).
-const PROJECT = { duration: 11, bpm: 120, offset: 0, style: 'classic', format: 'landscape', music: '' };
+//   A project (progetti/<nome>/, run with render.mjs --progetto=<nome>) brings its own sheet in window.PROGETTO, which
+//   overrides these values: see tools/progetti.mjs.
+const PROJECT = { duration: 11, bpm: 120, offset: 0, style: 'classic', format: 'landscape', music: '', ...(window.PROGETTO || {}) };

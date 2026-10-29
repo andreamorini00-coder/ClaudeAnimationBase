@@ -994,3 +994,12 @@ test('vale and mara are drafts', () => {
   for (const id of ['vale', 'mara']) assert.equal(c.get(`CHARACTERS.${id}.draft`), true, id);
   for (const id of ['gatto', 'mostro', 'bruco', 'draghetto', 'ragazza', 'supereroe']) assert.ok(!c.get(`CHARACTERS.${id}.draft`), id);
 });
+
+test('act() takes an expression given as an object as well as a name', () => {
+  const c = lib(), at = t => c.call('((t) => act(t, [[0, "felice"], [1, { eyes: "sad", ears: .6 }]], CHARACTERS.gatto))', t).expression;
+  const e = at(2);
+  assert.equal(e.eyes, 'sad'); assert.equal(e.ears, .6);
+  assert.equal(e.mouth, c.get('BODIES.quadruped.EXPR0.mouth'), 'the object is merged over the neutral expression');
+  assert.ok(Math.abs(at(1.15).ears - .3) < .5, 'it eases in like a named one');
+  assert.throws(() => c.call('((t) => act(t, [[0, "inesistente"]], CHARACTERS.gatto))', 0), /inesistente/);
+});

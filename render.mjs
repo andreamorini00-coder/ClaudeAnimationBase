@@ -11,6 +11,8 @@
 //     node render.mjs --clip [--range=0:4] --out=out/video.mp4                               straight to MP4 (one worker)
 //     node render.mjs --frames [--range=0:8] --workers=4                                     JPEG frames → out/frames (parallel, resumable)
 //     node render.mjs --encode --out=out/video.mp4                                           out/frames → MP4
+//   A project (progetti/<nome>/): add --progetto=<nome> to any of the above. Its sheet (progetto.js) sets the length, format,
+//   style and scenes, and the outputs go to out/<nome>/ (frames included) instead of out/.
 //   Standalone loops (LOOPS in the page): add --loop=<name> to any of the above (times are then loop times), or
 //     node render.mjs --loop=emotions --png --out=out/loop_emotions                          one cycle as PNGs (for GIFs)
 //   Sound: the scene's sounds() (or LOOPS.x.sounds) are mixed into --clip and --encode at -14 LUFS, AAC 48 kHz.
@@ -29,6 +31,7 @@ import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 import { checkStamp, writeStamp, readStamp } from './tools/stamp.mjs';
 import { resolvePlan, levelGains, renderMix } from './tools/audio.mjs';
+import { validateProgetto, loadProgetto, outDir } from './tools/progetti.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 const CHROMES = [args.chrome, process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -46,7 +49,13 @@ if (!CHROME) { console.error('Chrome not found: pass --chrome=<path> or set CHRO
 if (args.safe && (args.clip || args.frames || args.png || args.encode)) {
   console.error('--safe è solo per sheet, strip e stills: non va mai in un video'); process.exit(1);
 }
-const fps = +(args.fps || (args.draft ? 12 : 24)), FRAMES_DIR = 'out/frames';
+// --progetto=<nome>: checked before Chrome opens, so a typo or a broken sheet stops here with the reason
+if (args.progetto) {
+  const errs = validateProgetto(args.progetto);
+  if (errs.length) { console.error(`Progetto "${args.progetto}": ${errs.join('; ')}`); process.exit(1); }
+}
+const OUT = outDir(args.progetto);
+const fps = +(args.fps || (args.draft ? 12 : 24)), FRAMES_DIR = `${OUT}frames`;
 // Frames are JPEGs (full-range YUV), so ffmpeg would write yuvj420p; social apps want yuv420p in TV range.
 const TO_TV = ['-vf', 'scale=in_range=pc:out_range=tv,format=yuv420p', '-color_range', 'tv'];
 const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { stdio: 'inherit' }); p.on('close', c => c ? bad(new Error(cmd + ' exited ' + c)) : ok()); });
@@ -74,7 +83,7 @@ async function openPage(tag = '') {
   const page = await browser.newPage();
   page.on('console', m => { if (['error', 'warn'].includes(m.type())) console.log(`[page${tag}]`, m.text()); });
   page.on('pageerror', e => { if (!/inesistente|incompleto|Personaggio/.test(e.message)) console.log(`[page error${tag}]`, e.message); });
-  const query = '?render' + (args.style ? '&style=' + encodeURIComponent(args.style) : '')
+  const query = '?render' + (args.progetto ? '&progetto=' + encodeURIComponent(args.progetto) : '') + (args.style ? '&style=' + encodeURIComponent(args.style) : '')
     + (args.format ? '&format=' + encodeURIComponent(args.format) : '')
     + (args.loop ? '&loop=' + encodeURIComponent(args.loop) : '')
     + (args.safe ? '&safe' : '')
@@ -132,7 +141,7 @@ const lengthOf = page => page.evaluate(() => window.LOOP ? window.LOOP.len : DUR
 if (args.encode) {
   // The frames' own settings (stamped by --frames) win over the defaults: their fps, so a draft doesn't play at double
   // speed, and their style, format and loop, so the sound is the plan of what was rendered.
-  const stamp = readStamp(FRAMES_DIR) || {}, out = args.out || 'out/video.mp4', n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length;
+  const stamp = readStamp(FRAMES_DIR) || {}, out = args.out || `${OUT}video.mp4`, n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length;
   const efps = args.fps ? fps : stamp.fps ?? fps;
   for (const k of ['style', 'format', 'loop']) if (!args[k] && stamp[k]) args[k] = stamp[k];
   const mixFile = 'out/tmp-mix.m4a', mixed = await mixFor(await openPage(), [0, n / efps], mixFile);
@@ -143,7 +152,7 @@ if (args.encode) {
   if (mixed) unlinkSync(mixFile);
   console.log('wrote ' + out);
 } else if (args.sheet || args.strip) {
-  const page = await openPage(), out = args.out || 'out/sheet.jpg'; mkdirSync(dirname(out), { recursive: true });
+  const page = await openPage(), out = args.out || `${OUT}sheet.jpg`; mkdirSync(dirname(out), { recursive: true });
   let ts;
   if (args.strip) { const [a, b] = span(args.strip); ts = []; for (let i = Math.round(a * fps); i <= Math.round(b * fps); i++) ts.push(i / fps); }
   else ts = times(args.sheet);
@@ -152,7 +161,7 @@ if (args.encode) {
   writeFileSync(out, Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'));
   console.log(`${out}  (${ts.length} frames)  ms/frame: ${ms.join(' ')}`);
 } else if (args.stills) {
-  const page = await openPage(), out = args.out || 'out/stills'; mkdirSync(out, { recursive: true });
+  const page = await openPage(), out = args.out || `${OUT}stills`; mkdirSync(out, { recursive: true });
   console.log('GPU:', await page.evaluate(() => window.gpuInfo()));
   for (const s of times(args.stills)) {
     const t0 = Date.now(), buf = await frameOf(page, s, 'image/png');
@@ -163,7 +172,7 @@ if (args.encode) {
   // PNG sequence (for GIFs): a loop's full cycle (frame n equals frame 0, so it isn't rendered), or --range=a:b.
   const probe = await openPage(), len = await lengthOf(probe); await probe.close();
   const [a, b] = args.range ? span(args.range) : [0, len], n = Math.round((b - a) * fps);
-  const out = args.out || `out/${args.loop ? 'loop_' + args.loop : 'png'}`, workers = +(args.workers || 3); mkdirSync(out, { recursive: true });
+  const out = args.out || `${OUT}${args.loop ? 'loop_' + args.loop : 'png'}`, workers = +(args.workers || 3); mkdirSync(out, { recursive: true });
   let next = 0; const start = Date.now();
   await Promise.all(Array.from({ length: workers }, async (_, w) => {
     const st = {};
@@ -199,7 +208,7 @@ if (args.encode) {
 } else if (args.clip) {
   const page = await openPage(), len = await lengthOf(page);
   const [a, b] = args.range ? span(args.range) : typeof args.clip === 'string' ? span(args.clip) : [0, len];
-  const out = args.out || 'out/clip.mp4'; mkdirSync(dirname(out), { recursive: true });
+  const out = args.out || `${OUT}clip.mp4`; mkdirSync(dirname(out), { recursive: true });
   const mixFile = 'out/tmp-mix.m4a', mixed = await mixFor(page, [a, b], mixFile);   // the sound first: it takes seconds
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
     ...(mixed ? ['-i', mixFile, '-map', '0:v', '-map', '1:a', '-c:a', 'copy', '-shortest'] : []),
@@ -217,7 +226,7 @@ if (args.encode) {
 } else if (args.mix) {
   // Only the sound, nothing drawn: the quick way to listen to a scene's effects, ambience and music.
   const page = await openPage(), len = await lengthOf(page), [a, b] = args.range ? span(args.range) : [0, len];
-  const out = args.out || 'out/mix.wav'; mkdirSync(dirname(out), { recursive: true });
+  const out = args.out || `${OUT}mix.wav`; mkdirSync(dirname(out), { recursive: true });
   const m = await mixFor(page, [a, b], out);
   if (!m) { console.error('nessun suono da mixare'); await browser.close(); process.exit(1); }
   console.log(`wrote ${out}  (${m.lufs} LUFS, picco ${m.tp} dBTP)`);

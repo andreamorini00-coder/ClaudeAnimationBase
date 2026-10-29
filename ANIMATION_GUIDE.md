@@ -246,6 +246,21 @@ A style is everything that decides how the film looks but not what happens in it
 - To make one, copy `classic.js`, rename the entry, change the values and add its `<script>` tag in `studio.html`. Keep the `PAL` names: scenes use them.
 - Character proportions are not part of a style.
 
+### Projects
+
+One video per folder in `progetti/`, so a second video never touches `studio.html` or `src/config.js`:
+
+```
+progetti/my-video/
+  progetto.js      window.PROGETTO = { duration, bpm, offset, style, format, music, scene: ['scena.js'] }
+  scena.js         the scene (shots(), sounds()), as src/scenes/demo.js
+  STORYBOARD.md    the storyboard
+```
+
+- Run it with `node render.mjs --progetto=my-video` plus any mode (`--sheet`, `--strip`, `--stills`, `--clip`, `--frames`, `--encode`, `--mix`, `--draft`); `studio.html?progetto=my-video` opens it by hand. The sheet's values replace the defaults of `config.js`; `--style` and `--format` on the command line still win.
+- Outputs go to `out/my-video/` (frames too), so projects never share frames. A bad name or a broken sheet stops before Chrome opens, with the reason; `npm test` checks every folder.
+- The demo stays as it is, and is what loads when no project is given. `progetti/reel-gatto-mostro/` is the first project.
+
 ### Social formats
 
 The format is chosen before anything is drawn, and the scene is composed for it. **Never crop a 16:9 picture into a tall frame**: compose tall from the start.

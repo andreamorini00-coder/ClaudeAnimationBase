@@ -189,6 +189,10 @@ Spec: `../specs/2026-10-28-fase4b2-personaggi-design.md`. Piano: `2026-10-28-fas
   corporatura meno accentuata (Andrea, 2026-10-28).
 - **Dopo la 4b2:** pose sedute, sdraiate e appoggiate al muro, insieme agli oggetti di scena (sgabello, divano, muro).
 
+### Progetti · **fatta** (2026-10-29)
+
+Una cartella `progetti/` con un video per sottocartella (`progetto.js` con durata, bpm, formato, stile, musica e file di scena; scene; storyboard), lanciabile con `node render.mjs --progetto=<nome>` o `studio.html?progetto=<nome>`, senza toccare `studio.html` né `src/config.js` per ogni video. Uscite in `out/<nome>/`. Il primo progetto è il reel di prova (`progetti/reel-gatto-mostro/`); il demo landscape resta com'è. Design approvato da Andrea il 2026-10-29.
+
 ### 4c. Pagina web dei personaggi · **da fare**
 
 - Una pagina per creare e modificare le schede e vedere l'anteprima dal vivo, che salva lo stesso formato di scheda

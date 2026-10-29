@@ -28,6 +28,16 @@
   <div class="bar"><input id="scrub" type="range" min="0" max="11" step="0.0417" value="0"><span id="tt">loading…</span></div>
 </main>
 <!-- engine -->
+<script>
+  // ?progetto=<nome>: a project's sheet (progetti/<nome>/progetto.js) comes before config.js, which it overrides, and its
+  // scenes come in place of the demo (below). See tools/progetti.mjs.
+  const PROGETTO_NOME = new URLSearchParams(location.search).get('progetto');
+  const progettoMancante = () => { window.loadError = 'Progetto inesistente: ' + PROGETTO_NOME; };
+  if (PROGETTO_NOME) {
+    if (!/^[A-Za-z0-9_-]+$/.test(PROGETTO_NOME)) window.loadError = 'Nome di progetto "' + PROGETTO_NOME + '" non valido';
+    else document.write('<script src="progetti/' + PROGETTO_NOME + '/progetto.js" onerror="progettoMancante()"><\/script>');
+  }
+</script>
 <script src="src/config.js"></script>
 <!-- styles: one file each, registered in STYLES; pick one in config.js -->
 <script src="src/styles/registry.js"></script>
@@ -60,7 +70,10 @@
 <script src="src/characters/draw.js"></script>
 <script src="src/characters/modelsheets.js"></script>
 <!-- your video: add a script per scene file, in order -->
-<script src="src/scenes/demo.js"></script>
+<script>
+  if (window.PROGETTO) for (const f of window.PROGETTO.scene || []) document.write('<script src="progetti/' + PROGETTO_NOME + '/' + f + '"><\/script>');
+  else document.write('<script src="src/scenes/demo.js"><\/script>');
+</script>
 <script src="src/scenes/tall_example.js"></script>
 <script>
   // Open studio.html?loop=emotions (or views) to scrub a standalone loop instead of the video.

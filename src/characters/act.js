@@ -2,11 +2,12 @@
 // makes them (a squint while the face swaps, then a small take of the body); blendPose() mixes two poses;
 // resolveState() turns a scene's options into the state a body's layout() draws.
 
-// keys: [[t0, 'felice'], [t1, 'sorpreso'], ...] (expression names of the spec). Each change lasts D = 0.3 s:
+// keys: [[t0, 'felice'], [t1, 'sorpreso'], ...] (expression names of the spec, or an object of params made on the spot). Each change lasts D = 0.3 s:
 // numbers ease from the old value to the new one, names (eye and mouth shapes) swap halfway, where the eyes are
 // squinted shut (squint = 1); take is a damped bounce kicked halfway through, for the body.
 function act(t, keys, spec) {
   const D = .3, body = BODIES[spec.body], full = name => {
+    if (name && typeof name === 'object') return { ...body.EXPR0, ...name };         // an expression made on the spot
     if (!spec.expressions[name]) throw new Error(`Espressione "${name}" inesistente per ${spec.id}. Disponibili: ${Object.keys(spec.expressions).join(', ')}`);
     return { ...body.EXPR0, ...spec.expressions[name] };
   };
