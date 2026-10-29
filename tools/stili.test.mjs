@@ -311,3 +311,45 @@ test('cel.skinShadow, when given, is a colour', () => {
   assert.match(bad('pesca'), /cel\.skinShadow/);
   assert.equal(bad('#D99A86'), '');
 });
+
+// ---------- the styles draw the characters differently (grade, shadow, outline, eyes, paper) ----------
+const sat = h => { const [r, g, b] = channels(h).map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; return mx === mn ? 0 : (mx - mn) / (1 - Math.abs(2 * l - 1)); };
+const light = h => { const [r, g, b] = channels(h); return (Math.max(r, g, b) + Math.min(r, g, b)) / 510; };
+test('LIGHT.grade: saturation, contrast and warmth of a colour', () => {
+  const c = lib(), g = (h, o) => c.call('LIGHT.grade', h, o), col = '#D9956C';
+  assert.equal(g(col, {}), col, 'senza parametri non cambia');
+  assert.equal(g(col, { sat: 1, contrast: 1, warm: 0 }), col);
+  assert.ok(sat(g(col, { sat: 1.3 })) > sat(col) + .05, 'più saturo');
+  assert.ok(sat(g(col, { sat: .7 })) < sat(col) - .05, 'meno saturo');
+  const dark = '#3A4A6A', pale = '#E8E0C8';
+  assert.ok(light(g(pale, { contrast: 1.3 })) > light(pale) && light(g(dark, { contrast: 1.3 })) < light(dark), 'più contrasto: i chiari si schiariscono, gli scuri si scuriscono');
+  assert.ok(light(g(pale, { contrast: .7 })) < light(pale) && light(g(dark, { contrast: .7 })) > light(dark), 'meno contrasto: tutto verso il mezzo');
+  const cool = '#6F8FB0', warm = g(cool, { warm: .3, warmTone: '#F2C48D' });
+  assert.ok(channels(warm)[0] - channels(warm)[2] > channels(cool)[0] - channels(cool)[2], 'più caldo: più rosso che blu');
+  for (const h of ['#FFFFFF', '#808080']) assert.match(g(h, { sat: 1.5, contrast: 1.4 }), hex, 'resta un colore valido anche sui grigi e sui bianchi');
+});
+test('cozy and anime differ in how they draw a character, not only in tint', () => {
+  const c = lib(), cozy = c.get('STYLES.cozy'), anime = c.get('STYLES.anime');
+  assert.ok(cozy.character.lineWeight > anime.character.lineWeight * 1.8, 'contorno: cozy più spesso, anime sottile');
+  assert.ok(cozy.cel.shadeK < anime.cel.shadeK - .25, 'ombra: cozy più chiara, anime più decisa');
+  assert.ok(cozy.cel.shadeSize > anime.cel.shadeSize, 'ombra: cozy più ampia');
+  assert.ok(cozy.cel.shadeSoft > 0 && !anime.cel.shadeSoft, 'ombra: cozy con il bordo morbido, anime netto');
+  assert.ok(cozy.character.grade.sat < 1 && anime.character.grade.sat > 1, 'colori: cozy smorzati, anime saturi');
+  assert.ok(cozy.character.grade.contrast <= 1 && anime.character.grade.contrast > 1, 'contrasto');
+  assert.ok(cozy.character.grade.warm > 0 && !anime.character.grade.warm, 'cozy più caldo');
+  assert.ok(anime.character.eyeShine > 1 && !cozy.character.eyeShine, 'riflesso grande negli occhi dell\'anime');
+  assert.ok(cozy.paper.stains > 0 && cozy.paper.stainAlpha >= .045 && cozy.paper.fiberAlpha[1] >= .04, 'cozy: carta ben visibile');
+  assert.equal(anime.paper.stains, 0, 'anime: niente carta');
+  assert.ok(anime.cel.wobble < cozy.cel.wobble, 'anime: linea netta, cozy: più morbida');
+  // the shadow of a mid colour is really different: darker and cooler in the anime, lighter in the cozy
+  const mixHex = (a, b, k) => c.call('LIGHT.mixHex', a, b, k), col = '#D9956C';
+  assert.ok(light(mixHex(col, anime.cel.shadow, anime.cel.shadeK)) < light(mixHex(col, cozy.cel.shadow, cozy.cel.shadeK)) - .08);
+});
+test('styles without a grade leave the characters\' colours alone', () => {
+  const c = lib();
+  for (const n of ['classic', 'acquerello-leggero']) assert.equal(c.call('((s) => (s.character && s.character.grade) || null)', c.get(`STYLES['${n}']`)), null, n);
+});
+test('cel.shadeSoft, when given, is a number from 0', () => {
+  const c = lib(), bad = v => c.call('CEL.problems', { technique: 'cel', cel: { ...celOk, shadeSoft: v } }).join(' ');
+  assert.match(bad(-1), /cel\.shadeSoft/); assert.match(bad('molto'), /cel\.shadeSoft/); assert.equal(bad(2), ''); assert.equal(bad(0), '');
+});

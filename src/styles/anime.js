@@ -33,9 +33,10 @@ STYLES.anime = {
   brushScale: 5,
   boil: 12,
   paint: { fillOp: 1, bleed: 1, tex: 1, washOp: 1, sw: 1, fillAs: 'fill' },
-  character: { toPaper: 0, shadow: 'hard', lineWeight: 1, line: '#1C2440' },     // every outline in the style's ink, as the mood board
+  // a thin, sharp outline in the style's ink; the colours more saturated and contrasted, a big shine in the eyes
+  character: { toPaper: 0, shadow: 'hard', lineWeight: .6, line: '#1C2440', grade: { sat: 1.28, contrast: 1.15 }, eyeShine: 1.7 },
   // cel: the outer line thicker than the inner ones, a quiet breath, one hard shadow in viola ardesia from the upper left
-  cel: { line: 1, lineInner: .6, wobble: .25, light: [-1, -1], shadow: '#555B91', skinShadow: '#D99A86', shadeK: .5, shadeSize: .24, tones: 1, outline: 'constant' },
+  cel: { line: 1, lineInner: .6, wobble: .1, light: [-1, -1], shadow: '#555B91', skinShadow: '#D99A86', shadeK: .72, shadeSize: .2, tones: 1, outline: 'constant' },
   // the lights (src/lighting.js): the skin keeps its own colour in each
   luci: {
     giorno: { tone: '#2B3766', k: 0, skin: '#F5C6A5', skinShadow: '#D99A86', shadow: '#555B91' },

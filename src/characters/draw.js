@@ -1,7 +1,8 @@
 // draw.js: paints a character with the active style. The layout (bodies/*.js) says what the parts are; here each part
 // becomes a paint() or inkLine() call, so the character takes the style's technique, multipliers and boil like the
 // rest of the frame. Colours are the spec's roles, translated by the style:
-//   STYLE.character = { toPaper, shadow, lineWeight } (all optional): toPaper mixes every colour towards PAL.paper,
+//   STYLE.character = { toPaper, shadow, lineWeight, line, grade, eyeShine } (all optional; grade { sat, contrast, warm,
+//   warmTone } grades every role but the outline and eye whites, eyeShine scales the eyes' highlights): toPaper mixes every colour towards PAL.paper,
 //   shadow 'fill' paints shade parts as a watercolour glaze ('hard': a flat shape, for cel styles), lineWeight scales
 //   the outline. A spec can also give a role's colour for one style: spec.styles[<style>][<role>].
 //
@@ -19,11 +20,17 @@ for (const [id, spec] of Object.entries(CHARACTERS)) {
 
 // A role's colour: the spec's own for this style, else the spec's, mixed towards the paper as the style says, and then
 // in the light in force (luce(), src/lighting.js): none in the styles without lights.
+// A role's own colour as the style draws it: mixed towards the paper (toPaper) and graded (saturation, contrast, warmth:
+// STYLE.character.grade), except the outline and the eye whites. The spec's colours are never changed.
+function styleColor(hex, role) {
+  const c = mixCol(hex, PAL.paper, CHAR_STYLE.toPaper);
+  return CHAR_STYLE.grade && role !== 'line' && role !== 'eyeWhite' ? LIGHT.grade(c, CHAR_STYLE.grade) : c;
+}
 function roleColor(spec, role) {
   const own = spec.styles && spec.styles[STYLE_NAME] && spec.styles[STYLE_NAME][role];
   // a style may draw every character's outline in its own ink (anime): in a light, the light's ink (darker at night)
   if (role === 'line' && !own && CHAR_STYLE.line) return window.LUCE_NOW ? window.LUCE_NOW.ink : CHAR_STYLE.line;
-  return LIGHT.charRole(spec, role, own || mixCol(spec.roles[role], PAL.paper, CHAR_STYLE.toPaper), window.LUCE_NOW, STYLE_NAME);
+  return LIGHT.charRole(spec, role, own || styleColor(spec.roles[role], role), window.LUCE_NOW, STYLE_NAME);
 }
 
 // What the cel technique adds to a part: a thinner line for inner details, the part's own shadow colour when its role has
@@ -35,7 +42,7 @@ function celOptions(spec, p, col, shade) {
   // a skin with no shadow role of its own takes the style's warm skin shadow (cel.skinShadow), in the light in force
   let sc = sr ? roleColor(spec, sr) : null;
   if (!sc && LIGHT.isSkin(spec, p.role) && STYLE.cel.skinShadow)
-    sc = LIGHT.charRole(spec, 'skinShadow', mixCol(mixCol(spec.roles[p.role], PAL.paper, CHAR_STYLE.toPaper), STYLE.cel.skinShadow, .6), L, STYLE_NAME);
+    sc = LIGHT.charRole(spec, 'skinShadow', mixCol(styleColor(spec.roles[p.role], p.role), STYLE.cel.skinShadow, .6), L, STYLE_NAME);
   if (sc) o.shadeCol = p.dim ? mixCol(sc, shade, p.dim) : sc;
   if (L && L.rim && p.line) o.rim = L.rim;
   return o;
@@ -53,7 +60,10 @@ function character(id, x, y, u, o = {}) {
     boilSeed(`char ${key} ${p.id}`);               // each part boils from its own seed: a moving tail never re-boils the head
     let col = roleColor(spec, p.role);
     if (p.dim) col = mixCol(col, shade, p.dim);       // far legs and ears, a step darker
-    const pts = px(p.pts), sw = sw0 * (p.line || 0);
+    // the eye's highlight, larger when the style says so (anime): scaled about its own centre
+    let ppts = p.pts;
+    if (CHAR_STYLE.eyeShine && /highlight/.test(p.id)) { const cx = ppts.reduce((a, q) => a + q[0], 0) / ppts.length, cy = ppts.reduce((a, q) => a + q[1], 0) / ppts.length; ppts = ppts.map(([a, b]) => [cx + (a - cx) * CHAR_STYLE.eyeShine, cy + (b - cy) * CHAR_STYLE.eyeShine]); }
+    const pts = px(ppts), sw = sw0 * (p.line || 0);
     if (p.stroke) inkLine(pts, Math.max(sw, .3), col, 'ink', .5);
     else if (p.shade) paint(pts, CHAR_STYLE.shadow === 'hard' ? { wash: col, washOp: 255, ink: null }
       : { fill: col, fillOp: p.id === 'shadow' ? 90 : 110, bleed: .1, tex: .4, ink: null });

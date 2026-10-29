@@ -19,10 +19,10 @@ STYLES.cozy = {
     cream: '#FAF3E8',                  // crema 40% verso bianco
     sky: '#EED3A3',                    // oro tenue 45% verso crema (la luce calda del pomeriggio della mood board)
   },
-  // a light paper, a soft grain, a gentle vignette
-  paper: { seed: 11, stains: 40, stainR: [120, 380], stainAlpha: .02, stainRGB: '160,125,80',
-           fibers: 600, fiberLen: [6, 26], fiberAlpha: [.012, .022], fiberRGB: '110,88,60' },
-  grain: { seed: 5, density: .35, depth: 14, vignette: .12, vignetteRGB: '120,95,70', vignetteR: [.5, 1.1] },
+  // a visible paper (stains and fibres), a soft grain, a gentle vignette
+  paper: { seed: 11, stains: 70, stainR: [120, 380], stainAlpha: .05, stainRGB: '160,125,80',
+           fibers: 1500, fiberLen: [6, 26], fiberAlpha: [.03, .05], fiberRGB: '110,88,60' },
+  grain: { seed: 5, density: .5, depth: 22, vignette: .2, vignetteRGB: '120,95,70', vignetteR: [.5, 1.1] },
   // the brushes the page defines (the cel technique draws its marks itself; glow() and the lettering don't use them)
   brushes: {
     ink: { type: 'default', weight: 4.8, scatter: .25, sharpness: .8, grain: 40, opacity: 235, spacing: .2, pressure: [1.15, .75], rotate: 'natural', noise: .15 },
@@ -33,7 +33,9 @@ STYLES.cozy = {
   boil: 12,
   paint: { fillOp: 1, bleed: 1, tex: 1, washOp: 1, sw: 1, fillAs: 'fill' },
   // characters keep their own colours (the cat's are this palette's); the shadow is the cel technique's crescent
-  character: { toPaper: 0, shadow: 'hard', lineWeight: 1 },
+  // a thick, soft brown outline; the colours a little warmer and quieter (the specs' own colours are never touched)
+  character: { toPaper: 0, shadow: 'hard', lineWeight: 1.7, grade: { sat: .82, contrast: .9, warm: .12, warmTone: '#F2C48D' } },
   // cel: a soft, constant outline, a little breath in it, one shadow in tortora from the upper left
-  cel: { line: 1, lineInner: .8, wobble: .6, light: [-1, -1], shadow: '#8C8074', skinShadow: '#C99595', shadeK: .5, shadeSize: .2, tones: 1, outline: 'constant' },
+  // cel: a soft outline that breathes, one light and wide shadow with a softened edge (shadeSoft)
+  cel: { line: 1, lineInner: .8, wobble: .8, light: [-1, -1], shadow: '#8C8074', skinShadow: '#C99595', shadeK: .28, shadeSize: .3, shadeSoft: 3, tones: 1, outline: 'constant' },
 };

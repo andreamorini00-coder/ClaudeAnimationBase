@@ -214,6 +214,20 @@ Cambiato rispetto al design, con il motivo:
   del `cozy` ricavato da oro tenue verso crema (i cieli della mood board sono caldi) e `anime` con il contorno dei
   personaggi in inchiostro (`character.line`), come nella mood board.
 
+**Seconda correzione (Andrea, 2026-10-29), dopo i primi model sheet:** `cozy` e `anime` erano quasi indistinguibili sui
+personaggi (cambiavano solo il contorno e la tinta dell'ombra), perché lo stile non toccava i loro colori e la forma di
+disegno era la stessa. Ora lo stile cambia *come* si disegnano, con parametri dello stile e senza toccare le schede
+(`STYLE.character.grade`, `lineWeight`, `eyeShine`; `STYLE.cel.shadeK`, `shadeSize`, `shadeSoft`; carta):
+- **`cozy`:** contorno spesso e morbido (`lineWeight` 1,7, `wobble` .8), ombra chiara e larga con il bordo morbido (`shadeK` .28,
+  `shadeSize` .3, `shadeSoft` 3 px), colori graduati più caldi e smorzati (`sat` .82, `contrast` .9, `warm` .12 verso #F2C48D),
+  carta ben visibile (macchie e fibre più forti, grana più marcata).
+- **`anime`:** contorno sottile e netto in inchiostro (`lineWeight` .6, `wobble` .1), ombra scura e decisa (`shadeK` .72,
+  `shadeSize` .2, nessun bordo morbido), colori più saturi e contrastati (`sat` 1,28, `contrast` 1,15), riflesso grande negli
+  occhi (`eyeShine` 1,7), nessuna carta.
+Nota: la nota di riferimento del `cozy` dice «una sola ombra netta in tortora»; Andrea ha chiesto un'ombra più chiara e
+diffusa e il design segue la richiesta più recente (un solo tono, bordo morbido di 3 px). `classic` e `acquerello-leggero`
+restano identici: la gradazione si applica solo se lo stile la dichiara.
+
 Autocritica contro `reference/styles/cozy/moodboard.png` e `anime/moodboard.png`:
 - **Vicino:** colori piatti, una sola ombra netta, contorno costante e pulito (anime: esterno più spesso delle linee
   interne), carta leggera nel `cozy` e nessuna nell'`anime`, pelle viva sotto ogni luce, bordo di luce calda nel controluce,

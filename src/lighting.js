@@ -57,6 +57,20 @@ const LIGHT = {
       skin: m(A.skin, B.skin), skinShadow: m(A.skinShadow, B.skinShadow), shadow: m(A.shadow, B.shadow), rim,
       light: [lerp(A.light[0], B.light[0]), lerp(A.light[1], B.light[1])] };
   },
+  // A colour graded by a style: o = { sat (x the saturation), contrast (x the lightness' distance from the middle), warm,
+  // warmTone (mixed in by that share) }; all optional, nothing given = the colour as it is.
+  grade(hex, o = {}) {
+    const sat = o.sat ?? 1, con = o.contrast ?? 1, warm = o.warm ?? 0;
+    if (sat === 1 && con === 1 && !warm) return hex;
+    const n = parseInt(hex.slice(1), 16), r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let l = (mx + mn) / 2, s = d ? d / (1 - Math.abs(2 * l - 1)) : 0, h = 0;
+    if (d) h = (mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60;
+    s = Math.max(0, Math.min(1, s * sat)); l = Math.max(0, Math.min(1, .5 + (l - .5) * con));
+    const a = s * Math.min(l, 1 - l), f = k => { const kk = (k + h / 30) % 12; return l - a * Math.max(-1, Math.min(kk - 3, 9 - kk, 1)); };
+    const to = v => Math.round(Math.max(0, Math.min(1, v)) * 255), out = '#' + ((1 << 24) + (to(f(0)) << 16) + (to(f(8)) << 8) + to(f(4))).toString(16).slice(1).toUpperCase();
+    return warm ? LIGHT.mixHex(out, o.warmTone || '#F2C48D', warm) : out;
+  },
   // The colour of one of a character's roles in a light, for the character's spec (draw.js): its own colour in no light or
   // in the day, the spec's own colour for that light if it gives one (spec.styles.<style>.luci.<light>.<role>), the light's
   // skin for the skin roles (and any role that is the skin's colour, like the girl's legs), else LIGHT.role.

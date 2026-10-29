@@ -12,6 +12,7 @@
 //   light       [dx, dy] direction towards the light; the shadow falls on the opposite side
 //   shadow      hex, the tone the shadows are mixed towards (skinShadow, optional: the warm shadow of skin, draw.js); shadeK how far (0..1); shadeSize the crescent's width as a
 //               share of the shape's larger side
+//   shadeSoft   optional, px of blur on the shadow's edge (cozy: a soft shadow; 0 or absent: a hard one)
 //   tones       shadow tones (1; 2 in the visual-novel style, 3b); outline  'constant' ('shadowThick' in 3b)
 // paint(pts, o) options it reads: wash / fill (colour, washOp / fillOp = opacity), ink (outline colour; null = none),
 // sw (weight), inner, shade (false = no shadow, true = a shadow even without an outline), shadeCol (the shadow's own
@@ -35,6 +36,7 @@ const CEL = {
     if (c.light != null && (!Array.isArray(c.light) || c.light.length !== 2 || c.light.some(v => typeof v !== 'number') || !Math.hypot(...c.light))) errs.push('cel.light ([dx, dy], non nulla)');
     if (c.shadow != null && !/^#[0-9A-Fa-f]{6}$/.test(c.shadow)) errs.push('cel.shadow (#RRGGBB)');
     if (c.skinShadow != null && !/^#[0-9A-Fa-f]{6}$/.test(c.skinShadow)) errs.push('cel.skinShadow (#RRGGBB)');
+    if (c.shadeSoft != null && (typeof c.shadeSoft !== 'number' || !(c.shadeSoft >= 0 && c.shadeSoft <= 50))) errs.push('cel.shadeSoft (px, da 0 a 50)');
     if (c.tones != null && ![1, 2].includes(c.tones)) errs.push('cel.tones (1 o 2)');
     if (c.outline != null && !['constant', 'shadowThick'].includes(c.outline)) errs.push('cel.outline (constant o shadowThick)');
     return errs;
@@ -82,12 +84,12 @@ TECHNIQUES.cel = {
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, g.width, g.height); c.setTransform(zoom, 0, 0, zoom, -x0 * zoom, -y0 * zoom);
     const path = (dx = 0, dy = 0) => { c.moveTo(P[0][0] + dx, P[0][1] + dy); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0] + dx, P[i][1] + dy); c.closePath(); };
     // the shape minus a copy of itself moved by (dx, dy), clipped to the shape: a crescent on the side the copy leaves
-    const crescent = (dx, dy, style) => {
-      c.save(); c.beginPath(); path(); c.clip();
+    const crescent = (dx, dy, style, blur = 0) => {
+      c.save(); c.beginPath(); path(); c.clip(); if (blur) c.filter = `blur(${blur * zoom}px)`;
       c.beginPath(); c.rect(x0 - 5, y0 - 5, w + 10, h + 10); path(dx, dy); c.fillStyle = style; c.fill('evenodd'); c.restore();
     };
     if (col) { c.beginPath(); path(); c.fillStyle = CEL.rgba(col, alpha); c.fill(); }
-    if (shade && col) crescent(cr.dx, cr.dy, CEL.rgba(o.shadeCol || mixCol(col, (window.LUCE_NOW && window.LUCE_NOW.shadow) || C.shadow, C.shadeK), alpha));
+    if (shade && col) crescent(cr.dx, cr.dy, CEL.rgba(o.shadeCol || mixCol(col, (window.LUCE_NOW && window.LUCE_NOW.shadow) || C.shadow, C.shadeK), alpha), C.shadeSoft || 0);
     if (outlined) { c.beginPath(); path(); c.lineWidth = sw; c.lineJoin = 'round'; c.strokeStyle = CEL.rgba(o.ink || PAL.ink); c.stroke(); }
     // the rim light goes over the outline's inner half, so it reads: its width is the rim's plus half the line
     if (rim) { const n = Math.hypot(light[0], light[1]) || 1, f = rim.fade ?? 1, w = rimW + (outlined ? sw / 2 * f : 0); crescent(-light[0] / n * w, -light[1] / n * w, CEL.rgba(rim.colore, 255 * f)); }
