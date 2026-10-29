@@ -2,7 +2,8 @@
 // A shape with an outline, a shadow or a rim light is drawn on a small 2D canvas: the flat fill, the shadow as a
 // crescent (the shape minus itself moved towards the light, clipped to the shape), a rim light on the edge facing the
 // light (backlight), then the outline; the canvas is copied into the frame under p5's current matrix (camera included).
-// A shape with none of those goes straight to p5 as a flat polygon. The marks are exact, not brushed: no pigment, no
+// A shape with none of those goes straight to p5 as a flat polygon. Nothing here goes through p5.brush, so there is no
+// brush queue to flush between shapes (that flush, once per shape, was most of the time). The marks are exact, not brushed: no pigment, no
 // bleed, no hatching (those options are ignored, with a single warning each).
 //
 // The style's STYLE.cel block (all fields required for technique 'cel', checked by CEL.problems at load):
@@ -60,7 +61,6 @@ TECHNIQUES.cel = {
     const outlined = o.ink !== null, shade = o.shade === true || (o.shade !== false && outlined), rim = o.rim && o.rim.spessore > 0 ? o.rim : null;
     if (!col && !outlined) return;
     if (!outlined && !shade && !rim) {                  // a flat polygon straight into the frame
-      flushBrush();
       const c = color(col); noStroke(); fill(red(c), green(c), blue(c), alpha); beginShape(); for (const [x, y] of pts) vertex(x, y); endShape(CLOSE);
       return;
     }
@@ -84,11 +84,10 @@ TECHNIQUES.cel = {
     if (outlined) { c.beginPath(); path(); c.lineWidth = sw; c.lineJoin = 'round'; c.strokeStyle = CEL.rgba(o.ink || PAL.ink); c.stroke(); }
     // the rim light goes over the outline's inner half, so it reads: its width is the rim's plus half the line
     if (rim) { const n = Math.hypot(light[0], light[1]) || 1, w = rimW + (outlined ? sw / 2 : 0); crescent(-light[0] / n * w, -light[1] / n * w, CEL.rgba(rim.colore)); }
-    flushBrush();
     push(); noStroke(); image(g, x0, y0, w, h, 0, 0, pw, ph); pop();
   },
   inkLine(P, sw, col, br, curv) {
-    flushBrush(); noFill(); const c = color(col); stroke(red(c), green(c), blue(c)); strokeWeight(Math.max(1, sw * CEL.UNIT * STYLE.cel.line));
+    noFill(); const c = color(col); stroke(red(c), green(c), blue(c)); strokeWeight(Math.max(1, sw * CEL.UNIT * STYLE.cel.line));
     beginShape(); for (const [x, y] of P) vertex(x, y); endShape(); noStroke();
   },
   // flat paper (the texture of the watercolour paper only if the style asks for stains); the grain is the same speckle

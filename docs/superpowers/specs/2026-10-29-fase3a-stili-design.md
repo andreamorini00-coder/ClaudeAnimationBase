@@ -171,11 +171,20 @@ Nuovo file puro `src/lighting.js` (testabile con `node:vm`), caricato prima di `
 - **Render a mano:** gli sheet di §5, controllati con le regole della guida (contorno che si legge, mezzaluna dal lato
   giusto, nessuna sfumatura, nessuna linea spezzata sotto la camera).
 
-### 7. Tempi
+### 7. Tempi (misurati, mediana dei ms a fotogramma su 10 istanti, scartato il primo; Intel UHD, 2026-10-29)
 
-`cel` è piatta: attesa più veloce di `classic` (a occhio 3-5 volte, da misurare nella prova del primo compito). Si
-scrivono nella spec finale i ms a fotogramma di `classic`, `acquerello-leggero`, `cozy` e `anime` sulla demo e sul
-reel (finale e draft).
+| | classic | acquerello-leggero | cozy | anime | cozy / anime rispetto ad acquerello-leggero |
+|---|---|---|---|---|---|
+| demo, finale | 2451 | 461 | 181 | 121 | 0.39 / 0.26 |
+| demo, `--draft` | 452 | 467 | 335 | 116 | 0.72 / 0.25 |
+| reel, finale | 867 | 596 | 243 | 199 | 0.41 / 0.33 |
+| reel, `--draft` | 586 | 591 | 265 | 201 | 0.45 / 0.34 |
+
+Il vincolo di Andrea (cel al massimo circa 1,5 volte acquerello-leggero) è rispettato con ampio margine: `cel` è circa un
+terzo di `acquerello-leggero`. Il primo prototipo (Task 1, tre personaggi) dava 1,07; sul reel intero, prima della
+correzione, `cozy` e `anime` erano 2,0 e 1,8 volte (1237 e 1126 ms contro 615): il costo era una chiamata `flushBrush()`
+per ogni forma, inutile perché `cel` non usa p5.brush. Tolta quella, gli stessi fotogrammi escono con gli stessi byte
+e il reel intero in finale costa circa 70 s (288 fotogrammi) invece di 6 minuti. `--draft` non accelera `cel` (è già piatta).
 
 ## Rischi
 
