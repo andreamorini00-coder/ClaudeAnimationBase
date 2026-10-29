@@ -164,6 +164,15 @@ Spec: `../specs/2026-10-28-fase4b2-personaggi-design.md`. Piano: `2026-10-28-fas
   - arti morbidi e affusolati invece di tubi con giunture tonde; guanti e stivali più snelli e proporzionati;
   - frangia della ragazza: 3 ciocche vere invece della fila di smerli; la testa dal retro meno "a fungo";
   - capelli del supereroe da davanti più simili a un ciuffo che a una corona.
+- Piccolezze dalla revisione finale della 4b2 (2026-10-29), da fare quando servono:
+  - manica a sbuffo della ragazza: con il gomito tra 2,35 e 2,6 il contorno si incrocia (nessuna posa supera 2,2);
+  - il filo della riga di mara manca nei mezzi busti (aggiungere `parting` al filtro del busto); la luce `clothLight`
+    nello sheet del viso di mara è una striscia sottilissima;
+  - `blink(NaN)` non termina: aggiungere un controllo `isFinite`;
+  - validazione degli abiti: chiavi sconosciute e `remove` di un tratto inesistente passano in silenzio, gli errori della
+    scheda base si ripetono con il prefisso `abito`;
+  - `approve --check` dice "deriva" invece di "da approvare" se una scheda aggiunge `faceSheet` senza alzare la versione;
+  - abito ufficio: la piega (#1C2440 su #292A34) è quasi invisibile e le gambe non hanno luce: guardare lo sheet.
 - Corporatura di vale e mara come nei loro `base.png`, in parametri della scheda; l'abito ufficio di vale con la sua
   corporatura meno accentuata (Andrea, 2026-10-28).
 - **Dopo la 4b2:** pose sedute, sdraiate e appoggiate al muro, insieme agli oggetti di scena (sgabello, divano, muro).
