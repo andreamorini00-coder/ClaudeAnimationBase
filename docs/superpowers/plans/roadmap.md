@@ -24,8 +24,8 @@ Sei, e nessun altro (i quattro nuovi decisi da Andrea il 2026-10-27):
 |---|---|---|
 | `classic` | fatto | 1 |
 | `acquerello-leggero` | fatto | 1 |
-| `cozy` | in design | 3a |
-| `anime` | in design | 3a |
+| `cozy` | fatto | 3a |
+| `anime` | fatto | 3a |
 | `marker-comic` | da fare | 3b |
 | `visual-novel` | da fare | 3b |
 
@@ -77,9 +77,9 @@ unita in `main` (21aca5c), push fatto da Andrea.
   lettere ÷ 15 + 1,5 s; un titolo almeno 4 s. Un controllo legge i testi visibili a ogni istante e segnala quelli
   troppo brevi, come fa il loro `readcheck`.
 
-## Fase 3 — Stili · **in design** (divisa in 3a e 3b, scelta di Andrea 2026-10-29)
+## Fase 3 — Stili · **3a chiusa, 3b da fare** (divisa in 3a e 3b, scelta di Andrea 2026-10-29)
 
-- **3a** (branch `fase3a-stili`, spec `../specs/2026-10-29-fase3a-stili-design.md`): tecnica `cel` (colori piatti, ombra
+- **3a · chiusa** (2026-10-29, merge in main; spec `../specs/2026-10-29-fase3a-stili-design.md`, piano `2026-10-29-fase3a-stili.md`): tecnica `cel` (colori piatti, ombra
   netta a mezzaluna, contorno costante), stili `cozy` e `anime`, set di luci dell'anime (giorno, notte, controluce).
 - **Piccolezze dalla revisione finale della 3a** (2026-10-29), da fare quando servono:
   - `cel` ignora `curv` senza avviso: le bocche e la lente di Clawd escono come poligoni (appiattirle con `through()`);
@@ -90,6 +90,9 @@ unita in `main` (21aca5c), push fatto da Andrea.
   - le forme semitrasparenti con solo `fill` hanno l'ombra più opaca, e il bordo di luce è sempre opaco;
   - la larghezza della mezzaluna è proporzionale al lato maggiore: code e arti lunghi e sottili sono quasi tutta ombra;
   - alcuni test controllano solo dati di stile.
+  Sei personaggi approvati da Andrea in `cozy` e `anime` (2026-10-29), dopo una seconda correzione che ha reso i due stili
+  riconoscibili sul singolo personaggio (gradazione dei colori, contorno, ombra, riflesso degli occhi, carta). Tempi misurati:
+  `cel` è circa un terzo di `acquerello-leggero` (spec §7).
 - **3b**: `marker-comic` (contorno che si ispessisce sul lato in ombra) e `visual-novel` (ombre a due toni), con i set di
   luci del visual-novel; vale e mara restano bozza fino a lì.
 
