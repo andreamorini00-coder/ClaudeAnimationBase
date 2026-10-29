@@ -34,6 +34,7 @@ export const STYLE_SCRIPTS = [
   'src/techniques/cel.js',
   'src/styles/classic.js',
   'src/styles/acquerello-leggero.js',
+  'src/styles/cozy.js',
   'src/styles/anime.js',
 ];
 

@@ -110,3 +110,49 @@ test('the crescent is shifted towards the light, and its canvas holds the shape 
     assert.ok(k.box.y0 <= box.y0 + Math.min(0, k.dy) && k.box.y1 >= box.y1 + Math.max(0, k.dy));
   }
 });
+
+// ---------- the styles' data ----------
+const REQUIRED = ['technique', 'palette', 'paper', 'grain', 'brushes', 'brushScale', 'boil', 'paint', 'character', 'cel'];
+const PAINT_KEYS = ['fillOp', 'bleed', 'tex', 'washOp', 'sw', 'fillAs'];
+test('cozy and anime are complete cel styles', () => {
+  const c = lib();
+  for (const name of ['cozy', 'anime']) {
+    const st = c.get(`STYLES.${name}`);
+    for (const k of REQUIRED) assert.ok(st[k] != null, `${name}: manca ${k}`);
+    for (const k of PAINT_KEYS) assert.ok(st.paint[k] != null, `${name}: manca paint.${k}`);
+    assert.equal(st.technique, 'cel');
+    assert.deepEqual(c.call('CEL.problems', st), [], name);
+    for (const n of PAL_NAMES) assert.match(st.palette[n], hex, `${name}: ${n}`);
+    assert.deepEqual(Object.keys(st.palette).sort(), [...PAL_NAMES].sort(), `${name}: i nomi di PAL`);
+    for (const v of Object.values(st.palette)) assert.ok(!['#000000', '#FFFFFF'].includes(v.toUpperCase()), `${name}: nero o bianco puro`);
+    for (const b of ['ink', 'inkfine', 'dry']) assert.ok(st.brushes[b], `${name}: pennello ${b}`);
+    assert.equal(st.character.shadow, 'hard');
+  }
+});
+test('the styles\' palettes follow the notes, and the derived colours their rule', () => {
+  const c = lib(), mix = (a, b, k) => c.call('LIGHT.mixHex', a, b, k), P = n => c.get(`STYLES.${n}.palette`);
+  const cozy = P('cozy'), anime = P('anime');
+  // given by reference/styles/cozy/note.md
+  assert.deepEqual([cozy.paper, cozy.ink, cozy.clay, cozy.clayDk, cozy.night, cozy.rose, cozy.ochre, cozy.sap, cozy.violet],
+    ['#F6EBD8', '#59463B', '#D9956C', '#B8674F', '#7E8C9A', '#C99595', '#E8BF78', '#A6B39A', '#8C8074']);
+  // derived
+  assert.equal(cozy.clayLt, mix(cozy.clay, cozy.paper, .35));
+  assert.equal(cozy.indigo, mix(cozy.night, cozy.ink, .25));
+  assert.equal(cozy.teal, mix(cozy.night, cozy.sap, .4));
+  assert.equal(cozy.cream, mix(cozy.paper, '#FFFFFF', .4));
+  assert.equal(cozy.sky, mix(cozy.night, cozy.paper, .55));
+  // given by reference/styles/anime/note.md
+  assert.deepEqual([anime.paper, anime.ink, anime.clay, anime.night, anime.indigo, anime.ochre, anime.sap, anime.violet, anime.cream, anime.sky],
+    ['#F7F2E8', '#1C2440', '#FF5D73', '#2B3766', '#555B91', '#FFD166', '#3FAE9B', '#ADA2E8', '#F7F2E8', '#427BEF']);
+  assert.equal(anime.clayDk, mix(anime.clay, anime.ink, .25));
+  assert.equal(anime.clayLt, mix(anime.clay, anime.paper, .35));
+  assert.equal(anime.rose, mix(anime.clay, anime.violet, .3));
+  assert.equal(anime.teal, mix(anime.sap, anime.sky, .35));
+});
+test('the styles\' shadow tones and outlines', () => {
+  const c = lib(), cozy = c.get('STYLES.cozy'), anime = c.get('STYLES.anime');
+  assert.equal(cozy.cel.shadow, '#8C8074'); assert.equal(anime.cel.shadow, '#555B91');
+  assert.ok(anime.cel.lineInner < 1 && anime.cel.line >= 1, 'il contorno esterno dell\'anime è più spesso delle linee interne');
+  assert.equal(anime.paper.stains, 0, 'l\'anime non ha texture di carta'); assert.ok(cozy.paper.stains > 0, 'cozy ha una carta leggera');
+  assert.equal(c.get('STYLES.cozy.luci'), undefined, 'cozy non ha set di luci');
+});
