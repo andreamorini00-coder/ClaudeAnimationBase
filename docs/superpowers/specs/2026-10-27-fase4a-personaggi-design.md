@@ -21,7 +21,7 @@ Criteri di successo:
 4. `npm run check` resta `OK` (classic e demo identici al byte): Clawd e le scene esistenti non cambiano.
 
 Fuori scope (4b e 4c): corpi bipede e strisciante, ali, gli altri quattro personaggi, la pagina web di modifica.
-Gli stili cozy, anime, marker-comic e visual-novel sono della Fase 3: qui si predispone solo il punto in cui uno
+Gli stili cozy e anime sono della Fase 3: qui si predispone solo il punto in cui uno
 stile traduce i colori dei personaggi.
 
 ## Decisioni già prese (Andrea, 2026-10-27)

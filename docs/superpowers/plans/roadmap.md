@@ -26,8 +26,7 @@ Sei, e nessun altro (i quattro nuovi decisi da Andrea il 2026-10-27):
 | `acquerello-leggero` | fatto | 1 |
 | `cozy` | fatto | 3a |
 | `anime` | fatto | 3a |
-| `marker-comic` | da fare | 3b |
-| `visual-novel` | da fare | 3b |
+| `visual-novel` | solo idea | |
 
 ## Fase 1 — STYLE, anteprima, acquerello leggero · **chiusa**
 
@@ -93,26 +92,24 @@ unita in `main` (21aca5c), push fatto da Andrea.
   Sei personaggi approvati da Andrea in `cozy` e `anime` (2026-10-29), dopo una seconda correzione che ha reso i due stili
   riconoscibili sul singolo personaggio (gradazione dei colori, contorno, ombra, riflesso degli occhi, carta). Tempi misurati:
   `cel` è circa un terzo di `acquerello-leggero` (spec §7).
-- **3b**: `marker-comic` (contorno che si ispessisce sul lato in ombra) e `visual-novel` (ombre a due toni), con i set di
-  luci del visual-novel; vale e mara restano bozza fino a lì.
+- **3b** marker-comic abbandonata (tag archivio/marker-comic). Il `visual-novel` resta solo un'idea (sotto); vale e mara
+  restano bozza.
 
 Descrizione generale della fase:
 
 **Si parte dai riferimenti di Andrea in `reference/styles/`** (mood board, palette e codici colore): il design di
-ogni stile li legge prima di proporre valori. Per `marker-comic` e `visual-novel` i riferimenti arriveranno lì.
+ogni stile li legge prima di proporre valori. Per il `visual-novel` i riferimenti arriveranno lì.
 
-Quattro stili nuovi, ciascuno con uno sheet di confronto (stessi istanti della demo, accanto a `classic`) e con i
+Tre stili nuovi (due fatti, il terzo solo un'idea), ciascuno con uno sheet di confronto (stessi istanti della demo, accanto a `classic`) e con i
 model sheet dei personaggi da approvare prima di chiuderlo. Se uno stile chiede un modo di disegnare diverso
 dall'acquerello, si aggiunge una tecnica in `src/techniques/`, come previsto dalla Fase 1.
 
 - **`cozy`:** palette calda e morbida, luce soffusa, forme tonde.
 - **`anime`:** tratto pulito, ombra netta, colori vivi. Riferimento: le regole cel di html-anime (colore piatto,
   una sola ombra dura, linea esterna più spessa di quelle interne).
-- **`marker-comic`:** campiture piatte, ombra netta, contorno che si ispessisce sul lato in ombra. Tecnica presa
-  come idea da anidoodle (solo idee, niente codice).
 - **`visual-novel`:** anime con proporzioni adulte, ombre a due toni morbide, fondali dipinti; l'animazione passa
   soprattutto dalle espressioni.
-- **Set di colori per illuminazione** in `anime` e `visual-novel` (idea da lemo-opuscar, MIT, solo idee): ogni
+- **Set di colori per illuminazione** in `anime` (e nel `visual-novel`, se si farà) (idea da lemo-opuscar, MIT, solo idee): ogni
   personaggio ha i suoi colori di giorno, di notte e in controluce (con un bordo di luce calda), ricavati dai ruoli e
   non un filtro sull'immagine; la pelle ha il suo colore in ogni set, così sotto le luci colorate non diventa rosa.
 

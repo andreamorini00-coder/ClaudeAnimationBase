@@ -1,7 +1,7 @@
 # Fase 3a — Tecnica `cel` e stili `cozy` e `anime` (con le luci dell'anime)
 
 Spec della 3a. La Fase 3 è divisa in due (scelta di Andrea, 2026-10-29): **3a** = tecnica `cel` + `cozy` + `anime` + set
-di luci dell'anime; **3b** = `marker-comic` + `visual-novel` + set di luci del visual-novel. Principi comuni dalla
+di luci dell'anime; il resto (un `visual-novel`) è rimasto un'idea. Principi comuni dalla
 Fase 1 (`2026-10-21-fase1-style-draft-design.md`): uno stile è un file in `src/styles/`, una tecnica è come si mettono i
 segni (`src/techniques/`), i nomi di `PAL` non cambiano, `classic` resta identico al byte.
 
@@ -27,8 +27,8 @@ segni (`src/techniques/`), i nomi di `PAL` non cambiano, `classic` resta identic
 ## Scelte mie da confermare (nella lettura della spec)
 
 1. **Una tecnica `cel` sola, parametrica**, non una per stile: i quattro stili chiedono la stessa cosa (piatto, ombra
-   netta, linea pulita) e cambiano solo i valori. Il contorno che si ispessisce sul lato in ombra (marker-comic) e le
-   ombre a due toni (visual-novel) sono parametri che si accendono in 3b.
+   netta, linea pulita) e cambiano solo i valori. Le
+   ombre a due toni (visual-novel) sarebbero un parametro da accendere.
 2. **Ombra automatica a mezzaluna** per ogni forma con contorno, dalla direzione della luce, invece di disegnare
    un'ombra per ogni parte di ogni personaggio. Le forme senza contorno (cieli, prati) non hanno ombra.
 3. **Le luci cambiano `PAL` frame per frame**: `luce('notte')` riscrive i colori di `PAL` per il resto dell'inquadratura
@@ -244,11 +244,10 @@ Autocritica contro `reference/styles/cozy/moodboard.png` e `anime/moodboard.png`
     la mood board li ha più blu e con pochi colori caldi (finestre, lampioni).
   - il contrasto contorno su notte è basso (1,34) come nella mood board; di notte il contorno si scurisce (#111830, 1,5).
 
-## Fuori dalla 3a (in 3b)
+## Fuori dalla 3a
 
-`marker-comic` (contorno che si ispessisce sul lato in ombra, neri pieni, linee di velocità), `visual-novel` (ombre a due
-toni, fondali a tre piani, proporzioni adulte), i set di luci del visual-novel, e la ripresa di vale e mara nello stile
-visual-novel (restano bozza fino a 3b).
+`visual-novel` (ombre a due toni, fondali a tre piani, proporzioni adulte) e i suoi set di luci: solo un'idea; vale e mara
+restano bozza.
 
 ## Regole operative
 

@@ -1,4 +1,4 @@
-// cel.js: flat colour, one hard shadow, a clean constant outline (cozy and anime; marker-comic and visual-novel in 3b).
+// cel.js: flat colour, one hard shadow, a clean constant outline (cozy and anime).
 // A shape with an outline, a shadow or a rim light is drawn on a small 2D canvas: the flat fill, the shadow as a
 // crescent (the shape minus itself moved towards the light, clipped to the shape), a rim light on the edge facing the
 // light (backlight), then the outline; the canvas is copied into the frame under p5's current matrix (camera included).
