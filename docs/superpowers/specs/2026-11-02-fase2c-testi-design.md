@@ -19,6 +19,12 @@ li decide la scena, non un audio.
 
 ## Decisioni di Andrea (2026-11-02)
 
+- **Il carattere è locale, mai di sistema** (un carattere di sistema non è deterministico tra macchine e romperebbe il
+  controllo byte-identico): **Atkinson Hyperlegible** (SIL OFL 1.1) in `assets/fonts/`, con la licenza accanto come per
+  Permanent Marker.
+- **La velocità di lettura è un parametro:** 15 lettere al secondo di base, `--lettura=bambini` a 13; vale anche per
+  `--controlla-testi`.
+
 - I testi e i loro tempi stanno **nel codice della scena** (non da un `.srt` esterno).
 - Si disegnano come **livello nella pagina** (non impressi da ffmpeg).
 - Flusso solito: brainstorming, spec, piano, esecuzione, revisione; mi fermo dopo la spec per l'approvazione.
@@ -29,13 +35,13 @@ li decide la scena, non un audio.
 
 1. **Due tipi di testo, non di più:** `sottotitolo` (nella fascia del formato) e `titolo` (in alto, più grande). Una
    didascalia o altro si aggiunge quando serve (YAGNI).
-2. **Carattere:** i titoli in Permanent Marker (già nel kit); i sottotitoli in un carattere di sistema leggibile
-   (`"Segoe UI", Arial, sans-serif`), perché un carattere a mano si legge male in piccolo. Aggiungere un carattere
-   leggibile al kit (con licenza) significherebbe scaricare un file: lo faccio solo se me lo chiedi.
+2. **Carattere** (deciso da Andrea, vedi sopra): i titoli in Permanent Marker, i sottotitoli in Atkinson Hyperlegible
+   (sottoinsieme latin in woff2, `AtkinsonHyperlegible-latin.woff2` + `LICENSE-AtkinsonHyperlegible.txt`, caricato da
+   `studio.html` e atteso da `core.js` come Permanent Marker, così la pagina non dipende dalla rete).
 3. **Aspetto neutro che prende i colori dello stile:** testo `PAL.paper` su una targa arrotondata `PAL.ink` al 72%; così ogni
    stile ha il suo sapore senza parametri nuovi. Nessuno stile cambia.
 4. **Entrata e uscita:** dissolvenza di 0,2 s (nessun movimento, per non disturbare l'animazione).
-5. **Esportazione `.srt`** dello stesso elenco di sottotitoli (`--srt`), perché i social lo accettano come sottotitoli
+5. **Esportazione `.srt`** (confermata) dello stesso elenco di sottotitoli (`--srt`), perché i social lo accettano come sottotitoli
    caricati a parte. Piccola e a costo basso; la tolgo se non la vuoi.
 6. **Il controllo avvisa all'inizio di ogni render** che ha testi (senza bloccarlo), e un comando a parte lo lancia da solo
    con codice di uscita 1 se trova problemi.
@@ -67,7 +73,9 @@ volte: gli elenchi si sommano. Senza chiamate non cambia nulla.
 - `TESTI.layout(voce, formato, misura)` → `{ righe, size, x, y, w, h, fuori }`: il corpo che sta nella fascia del formato
   (corpo scelto dal formato e ridotto fino a un minimo se non entra); `fuori` vero se anche al minimo non sta (più di
   due righe nel sottotitolo, o fuori dalle zone sicure).
-- `TESTI.leggi(lista, durata)` → i **problemi di lettura**, uno per voce, con tempo e frase (vedi sotto).
+- `TESTI.LETTURA = { base: 15, bambini: 13 }` (lettere al secondo) e `TESTI.leggi(lista, durata, lettura = 'base')` → i
+  **problemi di lettura**, uno per voce, con tempo e frase (vedi sotto); un profilo sconosciuto è un errore che elenca i
+  disponibili.
 - `TESTI.srt(lista)` → il testo di un `.srt` (solo i sottotitoli, in ordine, tempi `hh:mm:ss,mmm`).
 
 ### 3. Il controllo del tempo di lettura
@@ -76,16 +84,21 @@ Per ogni testo (`lettere` = caratteri senza spazi, `visibile` = `a − da`, `ent
 
 - `visibile ≥ 1,8 s` (mai meno);
 - `visibile ≥ battuta + 0,6 s` se c'è `battuta`;
-- `visibile − entrata ≥ lettere ÷ 15 + 1,5 s`;
+- `visibile − entrata ≥ lettere ÷ velocità + 1,5 s`, con `velocità` = 15 lettere/s di base e 13 con `--lettura=bambini`;
 - un `titolo`: `visibile ≥ 4 s`.
 
-Ogni problema è una riga come «1,2–2,0 s «Ma dov'è finito?»: resta 0,8 s, ne servono 3,3 (lettere ÷ 15 + 1,5)». In più il
+Ogni problema è una riga come «1,2–2,0 s «Ma dov'è finito?»: resta 0,8 s, ne servono 3,3 (lettere ÷ 15 + 1,5)» (con la velocità
+in uso). In più il
 controllo segnala: **due sottotitoli sovrapposti** nello stesso istante (la fascia è una), **testo che non entra** (`fuori`
 del layout nel formato scelto), **testo dichiarato oltre la durata**. Un testo senza problemi non produce niente.
 
 Dove gira: `render.mjs` legge l'elenco dalla pagina (come per il piano audio: `window.testiPlan()`), lo controlla all'inizio
 di ogni render che lo ha e **avvisa**; `node render.mjs --controlla-testi [--progetto=… --loop=…]` lo fa da solo, senza
 disegnare, ed esce con codice 1 se trova problemi. `--srt` scrive `out/<nome>.srt` (o `--out=`).
+
+**La velocità di lettura** si sceglie con `--lettura=base|bambini` (o `PROJECT.lettura` in `config.js`; il flag vince):
+vale per l'avviso del render e per `--controlla-testi`. Un valore sbagliato ferma il render con un messaggio che elenca i
+profili.
 
 ### 4. Il disegno (`composite()` in `src/core.js`)
 
@@ -117,8 +130,8 @@ nella regola «No text»: il livello testi è separato e non dipinto nella scena
 
 ## Rischi
 
-- **Misurare il testo** (a capo e corpo) dipende dal carattere installato: con il carattere di sistema le righe possono
-  cambiare da una macchina a un'altra. Il layout è deterministico sulla stessa macchina; le approvazioni non lo coinvolgono.
+- **Misurare il testo** (a capo e corpo) dipende dal carattere: con i caratteri locali le righe sono le stesse su ogni
+  macchina. Il layout aspetta che i caratteri siano caricati prima del primo fotogramma (come Permanent Marker).
 - **Troppi controlli** stancano: il controllo è un avviso, non un blocco, e dice sempre il numero che manca.
 - **Un testo sopra un'inquadratura chiara** si legge per la targa, non per il colore: la targa è sempre opaca al 72%.
 - **I tempi sono quelli della scena**, non di una voce: quando la voce arriverà, `battuta` si potrà riempire da lì (fuori
@@ -127,7 +140,7 @@ nella regola «No text»: il livello testi è separato e non dipinto nella scena
 ## Fuori dalla 2c
 
 Voce e allineamento automatico ai tempi della voce; importare un `.srt` esterno; didascalie e altri tipi; testi animati
-(entrate con movimento); impressione con ffmpeg; un carattere nuovo nel kit.
+(entrate con movimento); impressione con ffmpeg.
 
 ## Regole operative
 
