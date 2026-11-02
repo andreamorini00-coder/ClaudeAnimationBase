@@ -14,7 +14,7 @@ Regole che valgono per tutte le fasi:
 - Gli stili e i formati nuovi si approvano su sheet di confronto prima di chiuderli.
 
 **Ordine delle prossime fasi** (scelta di Andrea, 2026-10-27): prima la **Fase 4** (creatore di personaggi), poi
-la **Fase 3** (stili `cozy` e `anime`), poi la **2c** (testi e sottotitoli).
+la **Fase 3** (stili `cozy` e `anime`), poi la **2c** (testi e sottotitoli): fatte tutte e tre.
 
 ## Stili previsti
 
@@ -37,7 +37,7 @@ Piano: `2026-10-21-fase1-style-draft.md` · Spec: `../specs/2026-10-21-fase1-sty
 - Confronto byte per byte (`npm run check`), timbro della cartella fotogrammi, errori immediati per stili sbagliati.
 - Unita in `main` (9ac23cf), push fatto da Andrea.
 
-## Fase 2 — Social · **2a e 2b chiuse, 2c dopo le Fasi 4 e 3**
+## Fase 2 — Social · **2a, 2b e 2c chiuse**
 
 Tre sotto-progetti, ognuno con spec e piano suoi.
 
@@ -64,17 +64,29 @@ unita in `main` (21aca5c), push fatto da Andrea.
 - Livelli di partenza per categoria, mix normalizzato a −14 LUFS, AAC 48 kHz; `--mix` per il solo audio.
 - Video in `yuv420p` a gamma TV. Funziona con `--clip`, `--encode` e con il draft a 12 fps.
 
-### 2c. Testi e sottotitoli · **da fare, dopo la Fase 3**
+### 2c. Testi, sottotitoli e controllo del tempo di lettura · **chiusa**
 
-- Livello opzionale sopra il video, separato dalla scena dipinta, spento per default. La regola "No text"
-  dell'ANIMATION_GUIDE resta valida per la scena.
-- Posizione secondo il formato (nel 9:16, il quinto basso) e tempi allineati alla voce di 2b.
-- Da decidere nel design: sottotitoli impressi da ffmpeg a partire da un `.srt`, oppure un livello di composizione
-  sopra la grana.
-- **Tempo di lettura dei testi, con un controllo automatico** (idea da lemo-opuscar, MIT, solo idee): ogni testo resta
-  a schermo almeno 1,8 s e mai meno della battuta parlata + 0,6 s; dopo l'animazione di entrata resta circa
-  lettere ÷ 15 + 1,5 s; un titolo almeno 4 s. Un controllo legge i testi visibili a ogni istante e segnala quelli
-  troppo brevi, come fa il loro `readcheck`.
+Branch `fase2c-testi`. Spec: `../specs/2026-11-02-fase2c-testi-design.md`. Piano: `2026-11-02-fase2c-testi.md`.
+
+- **Livello di testi nella pagina**, sopra il fotogramma finito e sopra la grana, separato dalla scena dipinta e spento per
+  default (senza `testi()` i byte non cambiano). Si dichiara nel codice della scena, `testi([{ da, a, testo, tipo, battuta }])`
+  (o `LOOPS.x.testi`), con i tempi dell'animazione, come `sounds()`. Due tipi: `sottotitolo` e `titolo`.
+- **Caratteri locali, mai di sistema** (deciso da Andrea): sottotitoli in Atkinson Hyperlegible Bold (OFL), titoli in Permanent
+  Marker, in `assets/fonts/` con le licenze. Un carattere che il font non ha è segnalato dal controllo (l'elenco è letto dalle
+  cmap dei file e un test lo tiene uguale: `tools/fontcmap.mjs`).
+- **Posizione e aspetto:** nella fascia sottotitoli del formato (16:9: dal 76% al 94% dell'altezza), corpo 66 / 81 / 75 px
+  (16:9 / 9:16 / feed), targa `PAL.ink` al 72% con testo `PAL.paper`, centrata sul fotogramma (la zona sicura è solo un
+  limite), righe bilanciate senza articolo o preposizione a fine riga; il titolo non scende sotto l'85% del corpo e, se per
+  una riga servirebbe meno, va a capo; una parola lunga fa scendere il corpo invece di spezzarsi.
+- **Controllo del tempo di lettura:** almeno 1,8 s, battuta + 0,6 s, lettere ÷ velocità + 1,5 s (+ 0,2 s di entrata), titolo
+  almeno 4 s; velocità 15 lettere/s di base, 13 con `--lettura=bambini`. Segnala anche sottotitoli sovrapposti, testi oltre
+  la durata e testi che non entrano. Avviso a inizio di ogni render con testi (non blocca); `--controlla-testi` da solo, con
+  codice 1 se trova problemi; `--srt` scrive i sottotitoli in `.srt`.
+- Provato nei tre formati con un loop di `prova-stili` e in un reel di prova verticale (`progetti/prova-testi/`); approvato da
+  Andrea. Revisione indipendente: nessun Critical, tre Important corretti (caratteri dalle cmap, parola lunga, argomento
+  sbagliato di `testi()`), le piccolezze sotto.
+- Non fatto (fuori dalla 2c): voce e allineamento automatico ai suoi tempi (`battuta` è il campo pronto), importare un `.srt`,
+  altri tipi di testo, testi animati.
 
 ## Fase 3 — Stili · **3a chiusa, 3b da fare** (divisa in 3a e 3b, scelta di Andrea 2026-10-29)
 
@@ -265,3 +277,24 @@ Dalla Fase 4a:
 - `render.mjs` aspetta la pagina con `networkidle0`, che include il font di Google: due volte il 27/10 il caricamento è
   andato in timeout (30 s) e il comando è caduto; rilanciato, passa. Un font locale o un'attesa più tollerante lo
   eviterebbero.
+
+Dalla Fase 2c:
+
+- Il bordo della targa tocca la linea di sicurezza invece di tenersene a 40 px (`SIDE` restringe solo lo spazio): un test lo
+  fissa così.
+- Un testo che non entra (`fuori`) si disegna comunque dove capita, magari fuori dal fotogramma: lo dice solo l'avviso.
+- `balance` evita l'articolo a fine riga solo se può aggiungere una riga (la guida dice «mai»); mancano `se`, `né`, `ne`, `col`,
+  `coi`, `li` in `FUNC`, e «e,» con la virgola conta come congiunzione appesa.
+- Messaggi del controllo: «resta 1,8 s, ne servono 1,8» per l'arrotondamento; l'etichetta della regola sulle lettere non dice
+  che nel conto ci sono anche 0,2 s di entrata; un `da` stringa dà «manca da».
+- `TESTI.LETTURA[lettura]` lascia passare nomi come `constructor`; un `lettura` sbagliato in `config.js` (non in un progetto,
+  che è validato) rompe ogni render dopo l'apertura di Chrome.
+- Accenti NFD: il messaggio mostra un segno combinante isolato; U+00A0 si spezza come uno spazio normale.
+- `.srt`: `da` negativo, `a < da` o una riga vuota dentro il testo lo rendono malformato; `--srt` scrive anche se ci sono errori;
+  `--srt --out=` vuoto dà ENOENT con uno stack; due `--loop` diversi scrivono lo stesso file; il messaggio «nessun sottotitolo»
+  non distingue una scena di soli titoli; la spec dice `out/<nome>.srt`, codice e guida `out/<nome>/sottotitoli.srt`;
+  `--mix` e `--encode` stampano anche gli avvisi sui testi.
+- `layout` gira a ogni fotogramma per ogni testo visibile (un titolo valuta tutti i corpi): si può mettere in cache. Codice
+  morto: la `@font-face` Regular di Atkinson (e il suo `fonts.load`), il parametro `durata` di `leggi`, il commento di `SIDE`.
+- I due avvisi WebGL «uniform … location is not from the associated program» compaiono all'apertura in stile
+  acquerello-leggero (già presenti prima della 2c).
