@@ -22,6 +22,10 @@ li decide la scena, non un audio.
 - **Il carattere è locale, mai di sistema** (un carattere di sistema non è deterministico tra macchine e romperebbe il
   controllo byte-identico): **Atkinson Hyperlegible** (SIL OFL 1.1) in `assets/fonts/`, con la licenza accanto come per
   Permanent Marker.
+- **Ritocchi dopo il reel di prova (2026-11-02):** sottotitoli più grandi (circa 1,5 volte) e in **Atkinson Hyperlegible Bold**
+  (stessa licenza OFL, anche il peso Bold in `assets/fonts/`); targa **centrata sul fotogramma** (la zona sicura è solo un limite: si
+  sposta la targa solo se uscirebbe); **titolo con a capo bilanciato** (righe di lunghezza simile, mai un articolo o una
+  preposizione corta a fine riga) oppure, se è corto, ridotto finché sta su una riga; più margine orizzontale nella targa.
 - **La velocità di lettura è un parametro:** 15 lettere al secondo di base, `--lettura=bambini` a 13; vale anche per
   `--controlla-testi`.
 
@@ -35,9 +39,9 @@ li decide la scena, non un audio.
 
 1. **Due tipi di testo, non di più:** `sottotitolo` (nella fascia del formato) e `titolo` (in alto, più grande). Una
    didascalia o altro si aggiunge quando serve (YAGNI).
-2. **Carattere** (deciso da Andrea, vedi sopra): i titoli in Permanent Marker, i sottotitoli in Atkinson Hyperlegible
-   (sottoinsieme latin in woff2, `AtkinsonHyperlegible-latin.woff2` + `LICENSE-AtkinsonHyperlegible.txt`, caricato da
-   `studio.html` e atteso da `core.js` come Permanent Marker, così la pagina non dipende dalla rete).
+2. **Carattere** (deciso da Andrea, vedi sopra): i titoli in Permanent Marker, i sottotitoli in Atkinson Hyperlegible Bold
+   (sottoinsieme latin in woff2, `AtkinsonHyperlegible-Bold-latin.woff2` e il Regular, + `LICENSE-AtkinsonHyperlegible.txt`,
+   caricati da `studio.html` e attesi da `core.js` come Permanent Marker, così la pagina non dipende dalla rete).
 3. **Aspetto neutro che prende i colori dello stile:** testo `PAL.paper` su una targa arrotondata `PAL.ink` al 72%; così ogni
    stile ha il suo sapore senza parametri nuovi. Nessuno stile cambia.
 4. **Entrata e uscita:** dissolvenza di 0,2 s (nessun movimento, per non disturbare l'animazione).
@@ -70,7 +74,10 @@ volte: gli elenchi si sommano. Senza chiamate non cambia nulla.
   entrata e in uscita; a `t` esattamente `da` è 0, `a` è 0).
 - `TESTI.wrap(testo, larghezza, misura)` → righe (`misura(riga)` dà la larghezza in px: nei test una misura finta
   a larghezza fissa per lettera); va a capo sulle parole e su `\n`; una parola più larga della riga si spezza.
-- `TESTI.layout(voce, formato, misura)` → `{ righe, size, x, y, w, h, fuori }`: il corpo che sta nella fascia del formato
+  `TESTI.balance(testo, larghezza, misura)` → le stesse righe ma **bilanciate** (la riga più larga la più stretta possibile, a parità
+  di numero di righe) e senza parola funzionale a fine riga (`TESTI.FUNC`: articoli, preposizioni, congiunzioni); oltre 24 parole
+  o 4 righe è il `wrap` semplice.
+- `TESTI.layout(voce, formato, misura)` → `{ righe, size, x, y, w, h, padX, padY, fuori }`: il corpo che sta nella fascia del formato
   (corpo scelto dal formato e ridotto fino a un minimo se non entra); `fuori` vero se anche al minimo non sta (più di
   due righe nel sottotitolo, o fuori dalle zone sicure).
 - `TESTI.LETTURA = { base: 15, bambini: 13 }` (lettere al secondo) e `TESTI.leggi(lista, durata, lettura = 'base')` → i
@@ -106,10 +113,16 @@ Dopo la grana e prima delle zone sicure: `drawTesti(c, T)` disegna sul composito
 uguale in bozza `--draft`, che compone a piena risoluzione). Nessuna camera, nessun boil: i testi non si muovono con la
 scena. Senza testi dichiarati la funzione esce subito: **stessi byte di oggi**.
 
-- **Sottotitolo:** centrato nella fascia `SAFE.subs` del formato (nel 16:9, dove non c'è, una fascia in basso di `H × 0,80` a
-  `H × 0,93`), entro le zone sicure a sinistra e a destra; massimo due righe; corpo 44 px (16:9), 54 px (9:16), 50 px (feed),
-  ridotto fino a un minimo di 70% se non entra; targa arrotondata `PAL.ink` al 72% con 14 px di margine; testo `PAL.paper`.
-- **Titolo:** centrato in alto, sotto `SAFE.top`, Permanent Marker, corpo doppio di quello del sottotitolo, stessa targa.
+- **Centratura:** la targa è centrata sul **fotogramma**; le zone sicure sono solo un limite (se la targa uscirebbe a destra o a
+  sinistra si sposta del minimo, per esempio nel 9:16, dove la zona utile è larga 940 px e non 1080, una targa larga più di 800 px
+  scivola a sinistra). La targa lascia 40 px dal limite e ha più margine ai lati (45% del corpo) che sopra e sotto (20%).
+- **Sottotitolo:** nella fascia `SAFE.subs` del formato (nel 16:9, dove non c'è, una fascia in basso da `H × 0,76` a `H × 0,94`);
+  Atkinson Hyperlegible **Bold**; massimo due righe, **bilanciate** (come il titolo); corpo **66 px (16:9), 81 px (9:16), 75 px (feed)**,
+  1,5 volte la prima versione, ridotto fino a un minimo di 70% se non entra; targa arrotondata `PAL.ink` al 72%; testo `PAL.paper`.
+- **Titolo:** in alto, sotto `SAFE.top`, Permanent Marker, corpo 88 px (16:9), 108 px (9:16), 100 px (feed). **Se è corto** si riduce
+  (fino al 70%) finché sta **su una riga**; altrimenti va a capo **bilanciato** su al massimo tre righe, di lunghezza simile e **senza
+  articolo, preposizione o congiunzione corta a fine riga** («Il gatto e il / mostro» diventa «Il gatto / e il mostro»; se serve
+  una riga in più per evitarlo, la usa). Stessa targa.
 - **Più voci contemporanee** di tipo diverso stanno nelle loro posizioni; due dello stesso tipo si segnalano nel controllo.
 - Il `?safe` (zone sicure sugli sheet) resta sopra ai testi, così si vede se la fascia è rispettata.
 

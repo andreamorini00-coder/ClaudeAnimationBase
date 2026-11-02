@@ -310,7 +310,7 @@ async function setup() {
   brush.scaleBrushes(STYLE.brushScale); defineBrushes();
   paperG = TECH.makePaper(STYLE); grainC = TECH.makeGrain(STYLE); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
   outC = document.getElementById('out'); outC.width = W; outC.height = H; outC.style.aspectRatio = `${W} / ${H}`; outX = outC.getContext('2d');
-  await document.fonts.load('100px "Permanent Marker"'); await document.fonts.load('100px "Atkinson Hyperlegible"');
+  await document.fonts.load('100px "Permanent Marker"'); await document.fonts.load('100px "Atkinson Hyperlegible"'); await document.fonts.load('700 100px "Atkinson Hyperlegible"');
   const mismatch = formatMismatch();
   if (mismatch) {   // render.mjs prints loadError; studio.html opened by hand shows it in place of the time
     window.loadError = mismatch;

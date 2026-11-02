@@ -5,15 +5,20 @@
 //                                                       battuta: seconds of spoken line (the field the voice will fill)
 // A loop declares its own as LOOPS.name.testi = [...].
 // TESTI is the pure part (numbers and strings in, numbers and strings out: tested without a browser); the page functions at the
-// bottom measure, check and draw. Only local fonts: Permanent Marker for titles, Atkinson Hyperlegible for subtitles (a system
+// bottom measure, check and draw. Only local fonts: Permanent Marker for titles, Atkinson Hyperlegible Bold for subtitles (a system
 // font would differ from machine to machine and break the byte-identical checks).
 const TESTI = {
   LETTURA: { base: 15, bambini: 13 },          // letters per second a reader takes in: --lettura=bambini for the slower one
   FADE: .2,                                    // seconds in and out
-  CORPO: { landscape: 44, vertical: 54, feed: 50 },   // a subtitle's size in px, by format; a title is twice as big
+  CORPO: { landscape: 66, vertical: 81, feed: 75 },   // a subtitle's size in px, by format (1.5 times the first draft)
+  CORPO_TITOLO: { landscape: 88, vertical: 108, feed: 100 },   // a title's, in Permanent Marker (unchanged from the first draft)
   TIPI: ['sottotitolo', 'titolo'],
-  PAD: 14,                                     // px between the text and the edge of its plate
+  PADX: .45, PADY: .2,                         // the room between the text and the edge of its plate, times the size: more at the sides
   SIDE: 40,                                    // px the plate keeps from the safe margins at the sides
+  // the short words an Italian line never ends with (articles, prepositions, conjunctions): the next line starts with them
+  FUNC: new Set(['il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'uno', 'una', 'di', 'a', 'da', 'in', 'con', 'su', 'per', 'tra', 'fra', 'e', 'ed', 'o', 'ma', 'che', 'non',
+    'del', 'dello', 'della', 'dei', 'degli', 'delle', 'al', 'allo', 'alla', 'ai', 'agli', 'alle', 'dal', 'dallo', 'dalla', 'dai', 'dagli', 'dalle',
+    'nel', 'nello', 'nella', 'nei', 'negli', 'nelle', 'sul', 'sullo', 'sulla', 'sui', 'sugli', 'sulle', 'si', 'mi', 'ti', 'ci', 'vi']),
   LINE: 1.25,                                  // line height, times the size
   MINIMO: .7,                                  // the smallest share of its size a text may shrink to
   // what the local fonts have (the latin subset: Latin-1, the punctuation block, a few symbols)
@@ -71,22 +76,55 @@ const TESTI = {
     }
     return lines;
   },
-  // Where a text goes in a format ({ nome, w, h, safe }): its lines, the size it fits at (shrinking by 5% down to MINIMO), and its
-  // plate (x = the centre, y = the top, w, h); fuori when it does not fit even at the smallest. misura(text, size, tipo) in px.
-  // A subtitle fills the format's band (safe.subs; in 16:9 the strip from 80% to 93% of the height) in at most 2 lines; a title
-  // starts 40 px under the top safe margin, in at most 3.
-  layout(voce, formato, misura) {
-    const tipo = TESTI.tipo(voce), titolo = tipo === 'titolo', { safe } = formato, base = (TESTI.CORPO[formato.nome] ?? 44) * (titolo ? 2 : 1);
-    const x0 = safe.left, x1 = formato.w - safe.right, maxW = Math.max(1, x1 - x0 - 2 * TESTI.SIDE - 2 * TESTI.PAD), maxRighe = titolo ? 3 : 2;
-    const band = titolo ? [safe.top + 40, safe.top + 40 + formato.h * .3] : (safe.subs || [formato.h * .8, formato.h * .93]), bandH = band[1] - band[0];
-    let r = null;
-    for (let pct = 1; pct >= TESTI.MINIMO - 1e-9; pct -= .05) {
-      const size = base * pct, righe = TESTI.wrap(voce.testo, maxW, s => misura(s, size, tipo));
-      const w = Math.max(0, ...righe.map(s => misura(s, size, tipo))) + 2 * TESTI.PAD, h = righe.length * size * TESTI.LINE + 2 * TESTI.PAD;
-      r = { righe, size, w, h, fuori: righe.length > maxRighe || h > bandH + 1e-9 };
-      if (!r.fuori) break;
+  // Like wrap, but with the lines of similar length (the narrowest widest line for the same number of lines as the plain wrap) and, when
+  // it can, with no line ending in a short article or preposition ("Il gatto e il / mostro" becomes "Il gatto / e il mostro"; if that
+  // takes one more line, it takes it).
+  // Past 24 words or 4 lines it is the plain wrap (the search is only for short texts: titles and subtitles).
+  balance(testo, larghezza, misura) {
+    const out = [], last = l => l.split(' ').pop().toLowerCase().replace(/[^a-zàèéìòù']/g, '');
+    for (const par of String(testo).split('\n')) {
+      const words = par.split(/\s+/).filter(Boolean);
+      if (!words.length) continue;
+      const greedy = TESTI.wrap(par, larghezza, misura), n = greedy.length;
+      if (n <= 1 || n > 4 || words.length > 24 || words.some(w => misura(w) > larghezza)) { out.push(...greedy); continue; }
+      let best = null, bestKey = null;
+      const take = lines => {
+        const bad = lines.slice(0, -1).filter(l => TESTI.FUNC.has(last(l))).length, widths = lines.map(misura), key = [bad, Math.max(...widths), widths.reduce((s, w) => s + w * w, 0)];
+        if (!bestKey || key[0] < bestKey[0] || (key[0] === bestKey[0] && (key[1] < bestKey[1] - 1e-9 || (Math.abs(key[1] - bestKey[1]) <= 1e-9 && key[2] < bestKey[2])))) { best = lines; bestKey = key; }
+      };
+      const rec = (i, left, lines) => {
+        if (left === 1) { const tail = words.slice(i).join(' '); if (tail && misura(tail) <= larghezza) take([...lines, tail]); return; }
+        for (let j = i + 1; j <= words.length - (left - 1); j++) { const line = words.slice(i, j).join(' '); if (misura(line) > larghezza) break; rec(j, left - 1, [...lines, line]); }
+      };
+      rec(0, n, []);
+      if (bestKey && bestKey[0] > 0 && n < 4) {            // a short word still hangs: one more line, if that gets rid of it
+        const keep = [best, bestKey]; best = null; bestKey = null; rec(0, n + 1, []);
+        if (!(best && bestKey[0] < keep[1][0])) { best = keep[0]; bestKey = keep[1]; }
+      }
+      out.push(...(best || greedy));
     }
-    return { tipo, righe: r.righe, size: r.size, x: (x0 + x1) / 2, y: titolo ? band[0] : band[0] + (bandH - r.h) / 2, w: r.w, h: r.h, fuori: r.fuori };
+    return out;
+  },
+  // Where a text goes in a format ({ nome, w, h, safe }): its balanced lines, the size it fits at (shrinking by 5% down to MINIMO), and
+  // its plate (x = the centre, y = the top, w, h, padX, padY); fuori when it does not fit even at the smallest. misura(text, size, tipo)
+  // in px. The plate is centred on the FRAME; the safe zone only limits it (it moves just enough not to cross it). A subtitle sits in
+  // the format's band (safe.subs; in 16:9 the strip from 76% to 94% of the height) in at most 2 lines; a title starts 40 px under
+  // the top safe margin, in at most 3 and, if it is short enough to fit on one line at no less than MINIMO of its size, on one.
+  layout(voce, formato, misura) {
+    const tipo = TESTI.tipo(voce), titolo = tipo === 'titolo', { safe } = formato, base = (titolo ? TESTI.CORPO_TITOLO : TESTI.CORPO)[formato.nome] ?? (titolo ? 88 : 66);
+    const x0 = safe.left, x1 = formato.w - safe.right, room = Math.max(1, x1 - x0 - 2 * TESTI.SIDE), maxRighe = titolo ? 3 : 2;
+    const band = titolo ? [safe.top + 40, safe.top + 40 + formato.h * .3] : (safe.subs || [formato.h * .76, formato.h * .94]), bandH = band[1] - band[0];
+    const at = pct => {
+      const size = base * pct, padX = size * TESTI.PADX, padY = size * TESTI.PADY, m = s => misura(s, size, tipo);
+      const righe = TESTI.balance(voce.testo, Math.max(1, room - 2 * padX), m);
+      const w = Math.max(0, ...righe.map(m)) + 2 * padX, h = righe.length * size * TESTI.LINE + 2 * padY;
+      return { righe, size, padX, padY, w, h, fuori: righe.length > maxRighe || h > bandH + 1e-9 };
+    };
+    const steps = []; for (let pct = 1; pct >= TESTI.MINIMO - 1e-9; pct -= .05) steps.push(pct);
+    let r = titolo ? steps.map(at).find(t => t.righe.length === 1 && !t.fuori) : null;      // a short title: one line, shrunk if need be
+    if (!r) for (const pct of steps) { r = at(pct); if (!r.fuori) break; }
+    const x = Math.min(x1 - r.w / 2, Math.max(x0 + r.w / 2, formato.w / 2));
+    return { tipo, righe: r.righe, size: r.size, padX: r.padX, padY: r.padY, x, y: titolo ? band[0] : band[0] + (bandH - r.h) / 2, w: r.w, h: r.h, fuori: r.fuori };
   },
   // The problems of reading, one string each: a text on screen too short for its words (or for its spoken line, or a title under
   // 4 s), and two of the same kind on screen together. lettura: a key of LETTURA.
@@ -114,12 +152,12 @@ const TESTI = {
   },
   // What to paint for a text on screen (voce.alpha 0..1 from `at`) at its layout `lay`, with the palette's ink and paper: the plate
   // (the ink at 72%, rounded) and one entry per line. Pure: the page only has to fill it. Fonts: local ones only, nothing after them.
-  font: (tipo, size) => `${size}px "${tipo === 'titolo' ? 'Permanent Marker' : 'Atkinson Hyperlegible'}"`,
+  font: (tipo, size) => tipo === 'titolo' ? `${size}px "Permanent Marker"` : `700 ${size}px "Atkinson Hyperlegible"`,
   draw(voce, lay, pal) {
     const alpha = voce.alpha ?? 1, n = parseInt(pal.ink.slice(1), 16), rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255], size = lay.size;
     return {
       placca: { x: lay.x - lay.w / 2, y: lay.y, w: lay.w, h: lay.h, r: size * .35, fill: `rgba(${rgb.join(',')},${+(.72 * alpha).toFixed(4)})` },
-      righe: lay.righe.map((txt, i) => ({ txt, x: lay.x, y: lay.y + TESTI.PAD + (i + .5) * size * TESTI.LINE, font: TESTI.font(lay.tipo, size), fill: pal.paper, alpha })),
+      righe: lay.righe.map((txt, i) => ({ txt, x: lay.x, y: lay.y + lay.padY + (i + .5) * size * TESTI.LINE, font: TESTI.font(lay.tipo, size), fill: pal.paper, alpha })),
     };
   },
   // The subtitles as an .srt file (the titles are not subtitles), in order of time.

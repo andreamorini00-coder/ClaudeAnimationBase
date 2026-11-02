@@ -52,3 +52,20 @@ LOOPS.aureola = t => {
   boilSeed('tree'); paint(rectPts(560, 330, 280, 140, 4), { wash: PAL.sap, ink: PAL.ink, sw: 1 });    // in front of the halo
 };
 LOOPS.aureola.len = 1; LOOPS.aureola.format = 'landscape';
+
+// The texts layer in the three formats: a short title (one line, shrunk to fit) with a short subtitle, then a long title (balanced over
+// lines) with a two-line subtitle. Run: --loop=testi --format=vertical|landscape|feed --stills=2.5,6.5   (add --safe to see the zones)
+LOOPS.testi = t => {
+  const G = H * .55, u = Math.min(W, H) * .037;
+  boilSeed('sky'); paint(rectPts(-50, -50, W + 100, G + 50), { wash: PAL.sky, ink: null });
+  boilSeed('hill'); paint(ellPts(W / 2, G + H * .08, W * .85, H * .16, 40, 3), { wash: PAL.sap, ink: PAL.ink, sw: 1 });
+  boilSeed('ground'); paint(rectPts(-50, G, W + 100, H), { wash: PAL.sap, ink: null });
+  character('gatto', W * .36, G + u, u, { view: 'side', pose: 'inPiedi', expression: 'curioso', t, key: 'gatto' });
+};
+LOOPS.testi.len = 10; LOOPS.testi.format = ['landscape', 'vertical', 'feed'];
+LOOPS.testi.testi = [
+  { da: .3, a: 4.3, testo: 'Il gatto e il mostro', tipo: 'titolo' },
+  { da: 1.2, a: 4.2, testo: 'Ma dov\'è finito?' },
+  { da: 4.4, a: 9.8, testo: 'Il gatto e il mostro che non voleva dormire mai', tipo: 'titolo' },
+  { da: 4.6, a: 9.8, testo: 'Eccolo! Era dietro la siepe, a dormire tranquillo.' },
+];
