@@ -38,6 +38,7 @@ Underneath all three, the viewer has to be able to follow it. Timing (rule 4) is
 - **Clawd's reactions are painted marks, never letters**: `!`, `?`, zzz, sweat, hearts, a bulb, a rain cloud. Use the emotes (see the reference).
 - **A sign that repeats the story is the classic failure.** If Clawd holds a sign saying "I'm lost", the shot has failed. Show Clawd being lost: looking left, then right, the map upside down, a sweat drop.
 - If the prompt truly needs a word (a name, a shop sign that is the joke), use `letter()`. Paint it into the scene, keep it to one or two words and use it once.
+- **Subtitles and titles are a different thing: a separate layer, never part of the picture.** They go through `testi()` (see "Texts and subtitles"), are drawn over the finished frame, are off unless the scene declares them, and are for what a voice or a title card says, never for explaining what the picture already shows. The rule above stays in force for everything painted in the scene.
 
 ### 3. Something happens in every scene
 
@@ -231,6 +232,9 @@ If a long render slows down as it goes, `--recycle=N` makes `--clip`, `--frames`
 | `src/scenes/demo.js` | an 11-second example. **Don't copy it** (see the end of this guide) |
 | `src/audio.js` | `sounds()`: the effects, ambiences and music a scene declares (see Sound) |
 | `tools/audio.mjs` | the mix: variations, levels, ducking, ffmpeg graph, -14 LUFS |
+| `src/testi.js` | `testi()`: the subtitles and titles layer, and the reading check (see Texts and subtitles) |
+| `tools/testi.mjs` | the command-line side of the texts: `--lettura` profiles and the `.srt` |
+| `assets/fonts/` | the fonts, local so every machine draws the same (Permanent Marker for the lettering and titles, Atkinson Hyperlegible for the subtitles), with their licences |
 | `assets/sfx/` | the sound effects and ambience loops (licences in `licenze.md`) |
 | `src/scenes/tall_example.js` | `LOOPS.tall`, a 5-second check of the tall formats (`--loop=tall --format=vertical`) |
 | `src/characters/` | the character library: `character()`, the bodies, one data file per character, model sheets (see Characters) |
@@ -523,6 +527,27 @@ sounds({
 - Listen without rendering a frame: `node render.mjs --mix --loop=tall --format=vertical --out=out/check/tall.wav`.
 - One sound per event, timed to the frame the viewer sees it; a sound with no visible cause reads as a mistake. Don't stack effects on one moment.
 - `voice` is reserved for a later version and stops the render for now.
+
+## Texts and subtitles (optional)
+
+A layer of subtitles and titles painted by the page **over the finished frame, over the grain**, in every frame that has them: preview, sheets, stills and video. It is off by default: a scene with no `testi()` renders byte for byte as before. The scene lists its texts once, **on the same times its animation uses**, like `sounds()`:
+
+```js
+testi([
+  { da: 0.3, a: 4.3, testo: 'Il gatto e il mostro', tipo: 'titolo' },
+  { da: 1.2, a: 4.2, testo: 'Ma dov\'è finito?', battuta: 1.9 },        // tipo 'sottotitolo' is the default
+]);
+```
+
+- Fields: `da` and `a` (seconds on the scene's timeline), `testo` (`\n` breaks a line), `tipo` (`'sottotitolo'` or `'titolo'`), `battuta` (seconds of spoken line, optional: the reading check never lets the text vanish before the line is done plus 0.6 s). A loop declares the same list as `LOOPS.name.testi`.
+- **Subtitles** sit in the format's subtitle band (see Social formats; in 16:9 the strip from 76% to 94% of the height), in Atkinson Hyperlegible Bold at 66 px (16:9), 81 px (vertical) or 75 px (feed), on at most two lines. **Titles** sit under the top safe margin in Permanent Marker (88 / 108 / 100 px), on at most three lines.
+- The plate (the style's ink at 72%, the text in its paper colour) is **centred on the frame**; the safe zone only limits it. Lines are **balanced** (similar lengths, never an article, a preposition or a conjunction at the end of a line). A text that doesn't fit shrinks, down to 70% of its size for a subtitle and **85% for a title** (a title that would need less goes over more lines instead); if it still doesn't fit, the check says so.
+- Only the local fonts are used, so every machine draws the same: a character they don't have (an emoji, Cyrillic) is reported by the check instead of falling back to a system font.
+- Fades are 0.2 s in and out. Nothing moves with the camera or boils.
+- **Reading time, checked automatically.** Each text stays on screen at least 1.8 s, never less than its `battuta` + 0.6 s, after the fade at least `letters ÷ speed + 1.5` s (letters without spaces), and a title at least 4 s. The speed is **15 letters/s** (`--lettura=base`, the default) or **13** for children (`--lettura=bambini`, or `lettura: 'bambini'` in the project sheet). The check also reports two subtitles on screen together, texts past the end of the video and texts that don't fit.
+- Every render with texts **warns** at the start about the problems it finds, and doesn't stop. To check without drawing: `node render.mjs --progetto=nome --controlla-testi [--lettura=bambini]` (exit code 1 on problems).
+- **Subtitles for the social apps:** `node render.mjs --progetto=nome --srt` writes `out/nome/sottotitoli.srt` (only the subtitles, not the titles), which Instagram, TikTok and YouTube accept as uploaded subtitles.
+- Look at it with `--safe` (yellow band) on a still, in each format you publish.
 
 ## Music (optional)
 
