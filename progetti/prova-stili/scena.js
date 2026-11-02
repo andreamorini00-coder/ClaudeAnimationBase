@@ -66,6 +66,6 @@ LOOPS.testi.len = 10; LOOPS.testi.format = ['landscape', 'vertical', 'feed'];
 LOOPS.testi.testi = [
   { da: .3, a: 4.3, testo: 'Il gatto e il mostro', tipo: 'titolo' },
   { da: 1.2, a: 4.2, testo: 'Ma dov\'è finito?' },
-  { da: 4.4, a: 9.8, testo: 'Il gatto e il mostro che non voleva dormire mai', tipo: 'titolo' },
+  { da: 4.4, a: 9.8, testo: 'Il gatto e il mostro del bosco', tipo: 'titolo' },
   { da: 4.6, a: 9.8, testo: 'Eccolo! Era dietro la siepe, a dormire tranquillo.' },
 ];

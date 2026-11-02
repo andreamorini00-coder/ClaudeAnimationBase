@@ -95,13 +95,19 @@ test('layout: the plate has more room at the sides than above and below', () => 
   assert.ok(L.padX > L.padY && L.padX >= L.size * .4 && L.padY > 0, `${L.padX} ${L.padY}`);
   assert.ok(near(L.h, L.righe.length * L.size * 1.25 + 2 * L.padY, 1e-6));
 });
-test('layout: a short title shrinks until it fits on one line', () => {
+test('layout: a title never shrinks below 85% of its size: if one line would need less, it is balanced over two', () => {
   const c = lib(), T = lay(c, v(1, 5, 'Il gatto e il mostro', { tipo: 'titolo' }), 'vertical');
-  assert.equal(T.righe.length, 1); assert.ok(T.size < 108 && T.size >= 108 * .7 - 1e-9, `${T.size}`); assert.equal(T.fuori, false);
-  assert.equal(lay(c, v(1, 5, 'Il gatto', { tipo: 'titolo' }), 'vertical').size, 108, 'se sta già a una riga resta grande');
+  assert.deepEqual(T.righe, ['Il gatto', 'e il mostro']); assert.equal(T.fuori, false);
+  assert.ok(T.size >= 108 * .85 - 1e-9 && T.size > 81, `${T.size}: mai sotto l'85%, e più grande del sottotitolo`);
+  const one = lay(c, v(1, 5, 'Il gatto', { tipo: 'titolo' }), 'vertical');
+  assert.equal(one.righe.length, 1); assert.equal(one.size, 108, 'se sta già a una riga resta grande');
+  const mid = lay(c, v(1, 5, 'Il gatto e il', { tipo: 'titolo' }), 'vertical');            // 13 letters: one line at 91.8 px or more
+  assert.equal(mid.righe.length, 1); assert.ok(mid.size >= 108 * .85 - 1e-9 && mid.size <= 108);
+  for (const f of ['landscape', 'feed']) { const t = lay(c, v(1, 5, 'Una frase lunga di titolo che va a capo per forza di cose', { tipo: 'titolo' }), f); assert.ok(t.fuori || t.size >= { landscape: 88, feed: 100 }[f] * .85 - 1e-9, f); }
+  assert.ok(lay(c, v(1, 5, 'ab', { tipo: 'sottotitolo' }), 'vertical').size === 81, 'il sottotitolo non cambia: si riduce fino al 70% se serve');
 });
 test('layout: a long title is balanced over lines of similar length, none ending with a short article or preposition', () => {
-  const c = lib(), T = lay(c, v(1, 5, 'Il gatto e il mostro che non voleva dormire mai', { tipo: 'titolo' }), 'vertical');
+  const c = lib(), T = lay(c, v(1, 5, 'Il piccolo gatto e il grande mostro del bosco', { tipo: 'titolo' }), 'vertical');
   assert.ok(T.righe.length >= 2 && T.righe.length <= 3, T.righe.join(' / ')); assert.equal(T.fuori, false);
   const widths = T.righe.map(r => r.length); assert.ok(Math.max(...widths) - Math.min(...widths) <= 14, `${widths}`);
   for (const r of T.righe.slice(0, -1)) assert.doesNotMatch(r, /\b(il|lo|la|i|gli|le|un|uno|una|di|a|da|in|con|su|per|tra|fra|e|ed|o|ma|che|non)$/i, r);
@@ -116,6 +122,8 @@ test('balance: even lines, no short word hanging at the end of a line', () => {
   const eq = b('alfa beta gamma delta epsilon zeta eta theta', 190); assert.equal(eq.length, 3);
   assert.ok(Math.max(...eq.map(r => r.length)) - Math.min(...eq.map(r => r.length)) <= 6, eq.join(' / '));
   assert.ok(b('abcdefghijkl uno', 50).every(r => r.length <= 5), 'una parola troppo lunga si spezza come prima');
+  const cap = c.call(`((t, n) => TESTI.balance(t, n, (s) => s.length * 10, 2))`, 'Il gatto e il mostro che non dormiva', 150);
+  assert.ok(cap.length <= 3, 'senza il tetto di righe ne userebbe una in più'); assert.equal(c.call(`((t, n) => TESTI.balance(t, n, (s) => s.length * 10, 3))`, 'Il gatto e il', 80).length, 2);
 });
 test('leggi: the roadmap\'s rules', () => {
   const c = lib(), l = (voce, d = 100, r) => c.call('TESTI.leggi', [voce], d, r);

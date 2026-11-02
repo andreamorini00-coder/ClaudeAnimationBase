@@ -20,7 +20,8 @@ const TESTI = {
     'del', 'dello', 'della', 'dei', 'degli', 'delle', 'al', 'allo', 'alla', 'ai', 'agli', 'alle', 'dal', 'dallo', 'dalla', 'dai', 'dagli', 'dalle',
     'nel', 'nello', 'nella', 'nei', 'negli', 'nelle', 'sul', 'sullo', 'sulla', 'sui', 'sugli', 'sulle', 'si', 'mi', 'ti', 'ci', 'vi']),
   LINE: 1.25,                                  // line height, times the size
-  MINIMO: .7,                                  // the smallest share of its size a text may shrink to
+  MINIMO: .7,                                  // the smallest share of its size a subtitle may shrink to
+  MINIMO_TITOLO: .85,                          // a title never shrinks below this: if one line would need less, it is balanced over lines
   // what the local fonts have (the latin subset: Latin-1, the punctuation block, a few symbols)
   GLYPHS: /[^\n -ÿıŒœʻʼˆ˚˜ -⁯€™↑↓−∕]/u,
   tipo: voce => voce.tipo || 'sottotitolo',
@@ -78,9 +79,9 @@ const TESTI = {
   },
   // Like wrap, but with the lines of similar length (the narrowest widest line for the same number of lines as the plain wrap) and, when
   // it can, with no line ending in a short article or preposition ("Il gatto e il / mostro" becomes "Il gatto / e il mostro"; if that
-  // takes one more line, it takes it).
+  // takes one more line, it takes it, up to maxRighe).
   // Past 24 words or 4 lines it is the plain wrap (the search is only for short texts: titles and subtitles).
-  balance(testo, larghezza, misura) {
+  balance(testo, larghezza, misura, maxRighe = 4) {
     const out = [], last = l => l.split(' ').pop().toLowerCase().replace(/[^a-zàèéìòù']/g, '');
     for (const par of String(testo).split('\n')) {
       const words = par.split(/\s+/).filter(Boolean);
@@ -97,7 +98,7 @@ const TESTI = {
         for (let j = i + 1; j <= words.length - (left - 1); j++) { const line = words.slice(i, j).join(' '); if (misura(line) > larghezza) break; rec(j, left - 1, [...lines, line]); }
       };
       rec(0, n, []);
-      if (bestKey && bestKey[0] > 0 && n < 4) {            // a short word still hangs: one more line, if that gets rid of it
+      if (bestKey && bestKey[0] > 0 && n < Math.min(4, maxRighe)) {            // a short word still hangs: one more line, if that gets rid of it
         const keep = [best, bestKey]; best = null; bestKey = null; rec(0, n + 1, []);
         if (!(best && bestKey[0] < keep[1][0])) { best = keep[0]; bestKey = keep[1]; }
       }
@@ -109,18 +110,18 @@ const TESTI = {
   // its plate (x = the centre, y = the top, w, h, padX, padY); fuori when it does not fit even at the smallest. misura(text, size, tipo)
   // in px. The plate is centred on the FRAME; the safe zone only limits it (it moves just enough not to cross it). A subtitle sits in
   // the format's band (safe.subs; in 16:9 the strip from 76% to 94% of the height) in at most 2 lines; a title starts 40 px under
-  // the top safe margin, in at most 3 and, if it is short enough to fit on one line at no less than MINIMO of its size, on one.
+  // the top safe margin, in at most 3 and, if it is short enough to fit on one line at no less than MINIMO_TITOLO (85%) of its size, on one.
   layout(voce, formato, misura) {
     const tipo = TESTI.tipo(voce), titolo = tipo === 'titolo', { safe } = formato, base = (titolo ? TESTI.CORPO_TITOLO : TESTI.CORPO)[formato.nome] ?? (titolo ? 88 : 66);
     const x0 = safe.left, x1 = formato.w - safe.right, room = Math.max(1, x1 - x0 - 2 * TESTI.SIDE), maxRighe = titolo ? 3 : 2;
     const band = titolo ? [safe.top + 40, safe.top + 40 + formato.h * .3] : (safe.subs || [formato.h * .76, formato.h * .94]), bandH = band[1] - band[0];
     const at = pct => {
       const size = base * pct, padX = size * TESTI.PADX, padY = size * TESTI.PADY, m = s => misura(s, size, tipo);
-      const righe = TESTI.balance(voce.testo, Math.max(1, room - 2 * padX), m);
+      const righe = TESTI.balance(voce.testo, Math.max(1, room - 2 * padX), m, maxRighe);
       const w = Math.max(0, ...righe.map(m)) + 2 * padX, h = righe.length * size * TESTI.LINE + 2 * padY;
       return { righe, size, padX, padY, w, h, fuori: righe.length > maxRighe || h > bandH + 1e-9 };
     };
-    const steps = []; for (let pct = 1; pct >= TESTI.MINIMO - 1e-9; pct -= .05) steps.push(pct);
+    const steps = [], min = titolo ? TESTI.MINIMO_TITOLO : TESTI.MINIMO; for (let pct = 1; pct >= min - 1e-9; pct -= .05) steps.push(pct);
     let r = titolo ? steps.map(at).find(t => t.righe.length === 1 && !t.fuori) : null;      // a short title: one line, shrunk if need be
     if (!r) for (const pct of steps) { r = at(pct); if (!r.fuori) break; }
     const x = Math.min(x1 - r.w / 2, Math.max(x0 + r.w / 2, formato.w / 2));
