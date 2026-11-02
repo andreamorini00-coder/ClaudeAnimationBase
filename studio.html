@@ -11,6 +11,13 @@
     src: url(assets/fonts/PermanentMarker-latin.woff2) format('woff2');
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
   }
+  /* Atkinson Hyperlegible (Braille Institute, SIL OFL 1.1), the latin subset Google Fonts serves: the subtitles' font, local so every
+     machine measures and draws the same */
+  @font-face {
+    font-family: 'Atkinson Hyperlegible'; font-style: normal; font-weight: 400; font-display: block;
+    src: url(assets/fonts/AtkinsonHyperlegible-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
   html, body { margin: 0; background: #1b1820; color: #eee; font: 13px system-ui, sans-serif; }
   main { padding: 12px; display: grid; gap: 8px; }
   #out { width: auto; height: auto; max-width: min(100%, 1280px); max-height: 85vh; background: #F3EBDC; }   /* size and aspect come from the format (core.js) */
@@ -49,6 +56,7 @@
 <script src="src/techniques/watercolor.js"></script>
 <script src="src/techniques/cel.js"></script>
 <script src="src/core.js"></script>
+<script src="src/testi.js"></script>
 <script src="src/clawd.js"></script>
 <script src="src/timeline.js"></script>
 <script src="src/audio.js"></script>

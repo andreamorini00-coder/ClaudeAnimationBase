@@ -122,3 +122,26 @@ test('srt: format, order, titles left out', () => {
   assert.equal(c.call('TESTI.srt', [v(0, 3661.5, 'Lungo')]), '1\n00:00:00,000 --> 01:01:01,500\nLungo\n\n');
   assert.equal(c.call('TESTI.srt', [v(0, 3, 'T', { tipo: 'titolo' })]), '');
 });
+
+// ---------- what to draw (TESTI.draw: pure, no canvas) ----------
+const PALD = { ink: '#15151B', paper: '#F7F2E8' };
+const draw = (c, voce, f = 'vertical') => c.call(`((voce, f) => { const lay = TESTI.layout(voce, f, ${misura.toString()}); return TESTI.draw(voce, lay, ${JSON.stringify(PALD)}); })`, voce, FORMATI[f]);
+test('draw: the plate is the ink at 72% and the text is the paper', () => {
+  const c = lib(), d = draw(c, { ...v(1, 5), alpha: 1 });
+  assert.equal(d.placca.fill, 'rgba(21,21,27,0.72)');
+  assert.ok(d.righe.length > 0); for (const r of d.righe) assert.equal(r.fill, '#F7F2E8');
+});
+test('draw: subtitles use Atkinson Hyperlegible, titles Permanent Marker, and no system font is in the stack', () => {
+  const c = lib(), sub = draw(c, { ...v(1, 5), alpha: 1 }), tit = draw(c, { ...v(1, 5, 'Titolo', { tipo: 'titolo' }), alpha: 1 });
+  assert.match(sub.righe[0].font, /^\d+(\.\d+)?px "Atkinson Hyperlegible"$/); assert.match(tit.righe[0].font, /^\d+(\.\d+)?px "Permanent Marker"$/);
+  for (const f of [sub.righe[0].font, tit.righe[0].font]) assert.doesNotMatch(f, /sans|serif|cursive|Arial|Segoe|Comic|system/i);
+});
+test('draw: the lines are centred inside the plate, in order', () => {
+  const c = lib(), d = draw(c, { ...v(1, 5, 'abcde '.repeat(20).trim()), alpha: 1 });
+  assert.ok(d.righe.length >= 2);
+  d.righe.forEach((r, i) => { assert.equal(r.x, d.placca.x + d.placca.w / 2); assert.ok(r.y > d.placca.y && r.y < d.placca.y + d.placca.h); if (i) assert.ok(r.y > d.righe[i - 1].y); });
+});
+test('draw: alpha scales the plate and the text', () => {
+  const c = lib(), d = draw(c, { ...v(1, 5), alpha: .5 });
+  assert.equal(d.placca.fill, 'rgba(21,21,27,0.36)'); for (const r of d.righe) assert.equal(r.alpha, .5);
+});

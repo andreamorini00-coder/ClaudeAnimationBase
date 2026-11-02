@@ -112,6 +112,16 @@ const TESTI = {
     if (formato && misura && Array.isArray(lista)) lista.forEach((voce, i) => { if (TESTI.valid(voce) && TESTI.layout(voce, formato, misura).fuori) out.push(`testo ${i + 1}: non entra nel formato ${formato.nome}`); });
     return [...new Set(out)];
   },
+  // What to paint for a text on screen (voce.alpha 0..1 from `at`) at its layout `lay`, with the palette's ink and paper: the plate
+  // (the ink at 72%, rounded) and one entry per line. Pure: the page only has to fill it. Fonts: local ones only, nothing after them.
+  font: (tipo, size) => `${size}px "${tipo === 'titolo' ? 'Permanent Marker' : 'Atkinson Hyperlegible'}"`,
+  draw(voce, lay, pal) {
+    const alpha = voce.alpha ?? 1, n = parseInt(pal.ink.slice(1), 16), rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255], size = lay.size;
+    return {
+      placca: { x: lay.x - lay.w / 2, y: lay.y, w: lay.w, h: lay.h, r: size * .35, fill: `rgba(${rgb.join(',')},${+(.72 * alpha).toFixed(4)})` },
+      righe: lay.righe.map((txt, i) => ({ txt, x: lay.x, y: lay.y + TESTI.PAD + (i + .5) * size * TESTI.LINE, font: TESTI.font(lay.tipo, size), fill: pal.paper, alpha })),
+    };
+  },
   // The subtitles as an .srt file (the titles are not subtitles), in order of time.
   srt(lista) {
     const hms = x => { const ms = Math.round(x * 1000), p = (n, d = 2) => String(n).padStart(d, '0'); return `${p(Math.floor(ms / 36e5))}:${p(Math.floor(ms / 6e4) % 60)}:${p(Math.floor(ms / 1e3) % 60)},${p(ms % 1000, 3)}`; };
@@ -119,3 +129,29 @@ const TESTI = {
       .map((v, i) => `${i + 1}\n${hms(v.da)} --> ${hms(v.a)}\n${v.testo.trim()}\n\n`).join('');
   },
 };
+
+// ---------- page functions ----------
+let TESTI_LIST = [];
+function testi(lista) { TESTI_LIST.push(...lista); }
+let testiCtx = null;                         // made on first use: this file also loads where there is no page (the tests)
+function testiMisura(txt, size, tipo) { testiCtx = testiCtx || document.createElement('canvas').getContext('2d'); testiCtx.font = TESTI.font(tipo, size); return testiCtx.measureText(txt).width; }
+const testiFormato = () => ({ nome: FORMAT_NAME, w: W, h: H, safe: SAFE });
+// Paint the texts on screen at t onto the compositor c (screen pixels, no camera): composite() calls it after the grain. Nothing to
+// see = nothing painted, so a scene without testi() is byte for byte what it was.
+function drawTesti(c, t) {
+  const vis = TESTI.at(window.LOOP ? window.LOOP.testi || [] : TESTI_LIST, t);
+  if (!vis.length) return;
+  c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (const voce of vis) {
+    const d = TESTI.draw(voce, TESTI.layout(voce, testiFormato(), testiMisura), { ink: PAL.ink, paper: PAL.paper }), p = d.placca;
+    c.globalAlpha = 1; c.fillStyle = p.fill; c.beginPath(); c.roundRect(p.x, p.y, p.w, p.h, p.r); c.fill();
+    for (const r of d.righe) { c.globalAlpha = r.alpha; c.font = r.font; c.fillStyle = r.fill; c.fillText(r.txt, r.x, r.y); }
+  }
+  c.restore();
+}
+// What render.mjs reads: the list of the loop being shown (or of the scene), its length, the format and the reading profile; and the
+// check of it all (shape, reading, fit) with the real measure of the fonts.
+if (typeof window !== 'undefined') {
+  window.testiPlan = () => ({ lista: window.LOOP ? window.LOOP.testi || [] : TESTI_LIST, duration: window.LOOP ? window.LOOP.len : DUR, formato: testiFormato(), lettura: PROJECT.lettura || 'base' });
+  window.testiControl = lettura => { const p = window.testiPlan(); return TESTI.controllo(p.lista, p.duration, lettura || p.lettura, p.formato, testiMisura); };
+}
