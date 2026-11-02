@@ -38,6 +38,9 @@ export const STYLE_SCRIPTS = [
   'src/styles/anime.js',
 ];
 
+// The texts layer: the pure TESTI, no p5 until a page function is called.
+export const TESTI_SCRIPTS = ['src/testi.js'];
+
 // get(expr): the value of an expression in the page context. run(code): runs more code there.
 // call(fn, ...args): calls a page function and returns a plain copy of the result (JSON), so assert.deepEqual compares
 // values rather than objects from another realm.
