@@ -40,6 +40,8 @@ test('the sheet is checked field by field', () => {
   assert.match(errs({ scene: ['manca.js'] }), /manca\.js/);
   assert.match(errs({ scene: ['../fuori.js'] }), /fuori\.js/);
   assert.match(errs({ music: 'assets/non_c_e.mp3' }), /music/);
+  assert.match(errs({ lettura: 'veloce' }), /lettura.*Disponibili: base, bambini/);
+  assert.equal(errs({ lettura: 'bambini' }), '');
 });
 test('a project name is only letters, digits, dash and underscore', () => {
   assert.throws(() => loadProgetto('../src', ROOT), /nome/i);

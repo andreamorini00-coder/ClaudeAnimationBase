@@ -15,6 +15,10 @@
 //   style and scenes, and the outputs go to out/<nome>/ (frames included) instead of out/.
 //   Standalone loops (LOOPS in the page): add --loop=<name> to any of the above (times are then loop times), or
 //     node render.mjs --loop=emotions --png --out=out/loop_emotions                          one cycle as PNGs (for GIFs)
+//   Texts (src/testi.js, testi([...]) in the scene): they are painted in every frame that has them. Checks and subtitles:
+//     node render.mjs --controlla-testi [--progetto=… --loop=… --lettura=bambini]    reading check, nothing drawn; exit 1 on problems
+//     node render.mjs --srt [--progetto=…] [--out=file.srt]                           the subtitles as an .srt (default out/<nome>/sottotitoli.srt)
+//     --lettura=base|bambini   reading speed of the check (15 or 13 letters a second); every render warns about short texts
 //   Sound: the scene's sounds() (or LOOPS.x.sounds) are mixed into --clip and --encode at -14 LUFS, AAC 48 kHz.
 //     node render.mjs --mix [--loop=tall] [--range=a:b] --out=out/mix.wav                    only the sound, nothing drawn
 //     --music=assets/x.mp3 (or the older --audio=…) sets the music; PROJECT.music is the default. Other flags: --fps=24,
@@ -32,6 +36,7 @@ import { homedir } from 'node:os';
 import { checkStamp, writeStamp, readStamp } from './tools/stamp.mjs';
 import { resolvePlan, levelGains, renderMix } from './tools/audio.mjs';
 import { validateProgetto, loadProgetto, outDir } from './tools/progetti.mjs';
+import { profiloLettura, srtDi, righeAvviso } from './tools/testi.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 const CHROMES = [args.chrome, process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -49,6 +54,9 @@ if (!CHROME) { console.error('Chrome not found: pass --chrome=<path> or set CHRO
 if (args.safe && (args.clip || args.frames || args.png || args.encode)) {
   console.error('--safe è solo per sheet, strip e stills: non va mai in un video'); process.exit(1);
 }
+// --lettura=<profilo>: checked before Chrome opens, with the list of the profiles when it is wrong
+let LETTURA;
+try { LETTURA = profiloLettura(args.lettura); } catch (e) { console.error(e.message); process.exit(1); }
 // --progetto=<nome>: checked before Chrome opens, so a typo or a broken sheet stops here with the reason
 if (args.progetto) {
   const errs = validateProgetto(args.progetto);
@@ -79,6 +87,13 @@ const browser = await puppeteer.launch({
   executablePath: CHROME, headless: true, protocolTimeout: 0,
   args: [...sandbox, '--allow-file-access-from-files', '--ignore-gpu-blocklist', ...gpu, '--enable-gpu-rasterization', '--window-size=1920,1080', '--disable-renderer-backgrounding', '--disable-background-timer-throttling']
 });
+// Every render that has texts says, once, which of them are too short, don't fit or overlap (a warning: nothing stops).
+let testiAvvisati = false;
+async function avvisaTesti(page) {
+  if (testiAvvisati || args['controlla-testi']) return;
+  testiAvvisati = true;
+  for (const r of righeAvviso(await page.evaluate(l => window.testiControl(l), LETTURA))) console.warn('Attenzione: ' + r);
+}
 async function openPage(tag = '') {
   const page = await browser.newPage();
   page.on('console', m => { if (['error', 'warn'].includes(m.type())) console.log(`[page${tag}]`, m.text()); });
@@ -96,6 +111,7 @@ async function openPage(tag = '') {
     const ok = await page.evaluate(name => { if (!LOOPS[name]) return false; window.LOOP = LOOPS[name]; return true; }, args.loop);
     if (!ok) { console.error(`no loop named "${args.loop}"`); process.exit(1); }
   }
+  await avvisaTesti(page);
   return page;
 }
 // --recycle=N: --clip, --frames and --png reopen the page every N frames (0 = never, the default). Frames are pure
@@ -138,7 +154,19 @@ const frameOf = async (page, t, type, q) => {
 // the length of whatever is being rendered: a loop's .len, or the video's duration
 const lengthOf = page => page.evaluate(() => window.LOOP ? window.LOOP.len : DUR);
 
-if (args.encode) {
+if (args['controlla-testi']) {
+  // The reading check alone: the texts' shape, their time on screen at the reading speed, overlaps and fit; nothing is drawn.
+  const page = await openPage(), plan = await page.evaluate(() => window.testiPlan()), problemi = await page.evaluate(l => window.testiControl(l), LETTURA);
+  const lettura = LETTURA || plan.lettura;
+  if (problemi.length) { for (const r of righeAvviso(problemi)) console.error(r); console.error(`${problemi.length} problemi (lettura: ${lettura})`); await browser.close(); process.exit(1); }
+  console.log(`Testi: ok (${plan.lista.length} ${plan.lista.length === 1 ? 'voce' : 'voci'}, lettura: ${lettura})`);
+} else if (args.srt) {
+  // The subtitles of the scene (or loop) as an .srt file
+  const page = await openPage(), srt = srtDi((await page.evaluate(() => window.testiPlan())).lista);
+  if (!srt) { console.error('nessun sottotitolo da scrivere: dichiara testi([{ da, a, testo }]) nella scena'); await browser.close(); process.exit(1); }
+  const out = typeof args.out === 'string' ? args.out : `${OUT}sottotitoli.srt`; mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, srt); console.log(`wrote ${out}`);
+} else if (args.encode) {
   // The frames' own settings (stamped by --frames) win over the defaults: their fps, so a draft doesn't play at double
   // speed, and their style, format and loop, so the sound is the plan of what was rendered.
   const stamp = readStamp(FRAMES_DIR) || {}, out = args.out || `${OUT}video.mp4`, n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length;

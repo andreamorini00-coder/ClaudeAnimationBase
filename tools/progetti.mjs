@@ -1,5 +1,5 @@
 // progetti.mjs: the projects folder. One video per subfolder, progetti/<nome>/:
-//   progetto.js   its sheet: window.PROGETTO = { duration, bpm, offset?, style, format, music?, scene: ['scena.js', …] }
+//   progetto.js   its sheet: window.PROGETTO = { duration, bpm, offset?, style, format, music?, lettura?, scene: ['scena.js', …] }
 //   <scene files> the scenes it lists, loaded by studio.html in that order, in place of the demo
 // Run one with: node render.mjs --progetto=<nome> …   (studio.html?progetto=<nome> opens it by hand)
 // Pure node, no browser: render.mjs refuses a bad project before it opens Chrome, and the tests check every folder.
@@ -7,6 +7,7 @@ import vm from 'node:vm';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, dirname, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { profiloLettura } from './testi.mjs';
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // The formats core.js draws (a test keeps this list equal to FORMATS there).
@@ -52,5 +53,6 @@ export function validateProgetto(name, root = HERE) {
     else if (!existsSync(join(dirOf(root, name), f))) errs.push(`scene: manca il file "${f}"`);
   }
   if (p.music && !existsSync(resolve(root, p.music))) errs.push(`music: manca il file "${p.music}"`);
+  if (p.lettura != null) { try { profiloLettura(p.lettura); } catch (e) { errs.push(`lettura: ${e.message}`); } }
   return errs;
 }
