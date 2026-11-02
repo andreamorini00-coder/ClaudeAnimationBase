@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPageScripts, TESTI_SCRIPTS } from './pagecode.mjs';
+import { cmapOf, rangesOf } from './fontcmap.mjs';
 
 const lib = () => loadPageScripts(TESTI_SCRIPTS);
 const near = (a, b, tol = 1e-9) => Math.abs(a - b) <= tol;
@@ -189,4 +190,57 @@ test('draw: the lines are centred inside the plate, in order', () => {
 test('draw: alpha scales the plate and the text', () => {
   const c = lib(), d = draw(c, { ...v(1, 5), alpha: .5 });
   assert.equal(d.placca.fill, 'rgba(21,21,27,0.36)'); for (const r of d.righe) assert.equal(r.alpha, .5);
+});
+
+// ---------- review fix 1: the allowed characters are the fonts' own, not a guess from the CSS unicode-range ----------
+test('GLYPHS: the allowed characters are exactly the ones the woff2 fonts have, per kind of text', () => {
+  const c = lib(), G = JSON.parse(JSON.stringify(c.get('TESTI.GLYPHS')));
+  assert.deepEqual(G.sottotitolo, rangesOf(cmapOf('assets/fonts/AtkinsonHyperlegible-Bold-latin.woff2')), 'i sottotitoli: Atkinson Bold');
+  assert.deepEqual(G.titolo, rangesOf(cmapOf('assets/fonts/PermanentMarker-latin.woff2')), 'i titoli: Permanent Marker');
+});
+test('problems flags the characters that are in the CSS range but not in the font (they would fall back to a system font)', () => {
+  const c = lib(), p = (t, tipo) => c.call('TESTI.problems', [{ da: 1, a: 3, testo: t, ...(tipo ? { tipo } : {}) }], 10).join(' ');
+  for (const ch of ['‼', '‰', '†', '′', '″', '‐', '‑', '​', '↑', 'ʼ']) assert.match(p(`Ciao ${ch}`), /fuori dal font locale/, `U+${ch.codePointAt(0).toString(16)}`);
+  assert.equal(p('Ciao™'), '', 'Atkinson Bold ha ™');
+  assert.match(p('Ciao™', 'titolo'), /fuori dal font locale/, 'Permanent Marker non ha ™');
+  assert.equal(p('Perché è già così? « » “ ” — … € – ’   x'), '');
+  assert.equal(p('due\ttab\r\nriga'), '', 'tab e a capo non si disegnano come glifi: niente falso allarme');
+  assert.equal(p('è'), ''); assert.equal(p('è'), '', 'accento combinato: lo ha Atkinson');
+});
+
+// ---------- review fix 2: a word is never split while a smaller size would keep it whole ----------
+test('layout: a long word makes the text shrink instead of being split in the middle', () => {
+  const c = lib(), word = 'abcdefghijklmnopqrstu';                       // 21 letters: too wide at 81 px, fits at 90% of it
+  const L = lay(c, v(1, 3, `${word} arriva il mostro`), 'vertical');
+  assert.ok(L.righe.some(r => r.includes(word)), `la parola resta intera: ${L.righe.join(' / ')}`);
+  assert.ok(L.size < 81 && L.size >= 81 * .7 - 1e-9, `${L.size}`); assert.equal(L.fuori, false);
+  assert.ok(L.righe.every(r => r.length < 40), 'nessuna riga è stata spezzata in due');
+});
+test('layout: a word that cannot fit whole even at the smallest size is reported (fuori), not silently split', () => {
+  const c = lib();
+  assert.equal(lay(c, v(1, 3, 'x'.repeat(40)), 'vertical').fuori, true);
+  assert.equal(lay(c, v(1, 5, 'abcdefghijklmnopqrstuvwxyz', { tipo: 'titolo' }), 'vertical').fuori, true, 'un titolo non scende sotto l\'85%');
+  assert.match(c.call(`((l, f) => TESTI.controllo(l, 10, 'base', f, ${misura.toString()}))`, [v(1, 5, 'x'.repeat(40))], FORMATI.vertical).join(' '), /non entra nel formato vertical/);
+});
+test('layout: a word that fits whole is left alone (size 81, one line)', () => {
+  const c = lib(), L = lay(c, v(1, 3, 'abcdefghijklmnopq'), 'vertical');
+  assert.equal(L.size, 81); assert.deepEqual(L.righe, ['abcdefghijklmnopq']);
+});
+
+// ---------- review fix 3: a testi() with the wrong kind of argument is reported by the check, never thrown at load or on every frame ----------
+test('add: an array is spread, anything else is kept as ONE entry so the check can name it', () => {
+  const c = lib(), add = (l, x) => c.call('((l, x) => TESTI.add(l, x))', l, x);
+  assert.deepEqual(add([], [v(1, 3), v(4, 6)]), [v(1, 3), v(4, 6)]);
+  assert.deepEqual(add([v(0, 2)], v(1, 3)), [v(0, 2), v(1, 3)], 'un oggetto solo, senza le parentesi: una voce');
+  assert.deepEqual(add([], 'Ciao'), ['Ciao'], 'una stringa non diventa quattro lettere');
+  assert.deepEqual(add([], 42), [42]); assert.deepEqual(add([], null), [null]); assert.deepEqual(add([], undefined), [null], 'nulla: una voce vuota (il JSON del vm la mostra null)');
+  assert.match(c.call('TESTI.problems', add([], 'Ciao'), 10).join(' '), /testo 1: serve un oggetto/);
+});
+test('a list that is not an array never throws: at, srt, leggi and controllo ignore it, problems names it', () => {
+  const c = lib();
+  for (const bad of [{ da: 1, a: 3, testo: 'x' }, 'Ciao', 42, null, undefined]) {
+    assert.deepEqual(c.call('TESTI.at', bad, 2), [], String(bad)); assert.equal(c.call('TESTI.srt', bad), '', String(bad));
+    assert.deepEqual(c.call('TESTI.leggi', bad, 10), [], String(bad));
+    assert.match(c.call('TESTI.controllo', bad, 10, 'base').join(' '), /serve un elenco/, String(bad));
+  }
 });

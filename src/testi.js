@@ -22,8 +22,21 @@ const TESTI = {
   LINE: 1.25,                                  // line height, times the size
   MINIMO: .7,                                  // the smallest share of its size a subtitle may shrink to
   MINIMO_TITOLO: .85,                          // a title never shrinks below this: if one line would need less, it is balanced over lines
-  // what the local fonts have (the latin subset: Latin-1, the punctuation block, a few symbols)
-  GLYPHS: /[^\n -ÿıŒœʻʼˆ˚˜ -⁯€™↑↓−∕]/u,
+  // the code points the local fonts really have, as [lo, hi] ranges, read from their cmap tables (a test, tools/fontcmap.mjs, keeps
+  // this equal to the files): sottotitolo = Atkinson Hyperlegible Bold, titolo = Permanent Marker. The CSS unicode-range promises
+  // more than the files hold (‼ ‰ † ′ ‐ and more are in the range and not in the fonts), and a missing glyph is drawn from a system font.
+  GLYPHS: {
+    sottotitolo: [[33, 126], [160, 255], [305, 305], [338, 339], [710, 710], [730, 730], [732, 732], [768, 769], [771, 772], [776, 776], [8211, 8212], [8216, 8218], [8220, 8222], [8226, 8226],
+      [8230, 8230], [8249, 8250], [8260, 8260], [8364, 8364], [8482, 8482], [8722, 8722], [8725, 8725]],
+    titolo: [[33, 126], [160, 255], [305, 305], [338, 339], [710, 710], [730, 730], [732, 732], [8211, 8212], [8216, 8218], [8220, 8222], [8226, 8226], [8230, 8230], [8249, 8250], [8260, 8260],
+      [8364, 8364], [8722, 8722]],
+  },
+  // Does the font for this kind of text have a glyph for this character? (white space is never drawn as a glyph: wrap turns it into a space)
+  glyph(ch, tipo) {
+    if (/\s/.test(ch)) return true;
+    const c = ch.codePointAt(0);
+    return TESTI.GLYPHS[tipo === 'titolo' ? 'titolo' : 'sottotitolo'].some(([lo, hi]) => c >= lo && c <= hi);
+  },
   tipo: voce => voce.tipo || 'sottotitolo',
   letters: testo => String(testo).replace(/\s/g, '').length,
   valid: voce => !!voce && typeof voce === 'object' && Number.isFinite(voce.da) && Number.isFinite(voce.a) && typeof voce.testo === 'string' && voce.testo.trim() !== '',
@@ -41,15 +54,19 @@ const TESTI = {
       if (numA && durata != null && voce.a > durata) errs.push(n + `a (${TESTI.sec(voce.a)} s) è oltre la durata (${TESTI.sec(durata)} s)`);
       if (typeof voce.testo !== 'string') errs.push(n + 'testo deve essere una stringa');
       else if (voce.testo.trim() === '') errs.push(n + 'testo vuoto');
-      else { const bad = Array.from(voce.testo).find(ch => TESTI.GLYPHS.test(ch)); if (bad) errs.push(n + `carattere fuori dal font locale: «${bad}»`); }
+      else { const bad = Array.from(voce.testo).find(ch => !TESTI.glyph(ch, voce.tipo)); if (bad) errs.push(n + `carattere fuori dal font locale: «${bad}» (U+${bad.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')})`); }
       if (voce.tipo != null && !TESTI.TIPI.includes(voce.tipo)) errs.push(n + `tipo "${voce.tipo}" sconosciuto (${TESTI.TIPI.join(', ')})`);
       if (voce.battuta != null && !(typeof voce.battuta === 'number' && Number.isFinite(voce.battuta) && voce.battuta >= 0)) errs.push(n + 'battuta deve essere un numero di secondi, 0 o più');
     });
     return errs;
   },
+  // A list with what a testi() call gave added: an array is spread; anything else (a lone object without its brackets, a string, nothing)
+  // goes in as ONE entry, so the check can name it ("testo 3: serve un oggetto") instead of the scene failing to load.
+  add(lista, x) { return Array.isArray(x) ? [...lista, ...x] : [...lista, x]; },
   // The texts on screen at t, each with alpha 0..1 (a fade of FADE seconds in and out); one at alpha 0 is not on screen.
   at(lista, t) {
     const out = [];
+    if (!Array.isArray(lista)) return out;
     for (const voce of lista) {
       if (!TESTI.valid(voce) || t < voce.da || t >= voce.a) continue;
       const alpha = Math.round(Math.max(0, Math.min(1, (t - voce.da) / TESTI.FADE, (voce.a - t) / TESTI.FADE)) * 1e6) / 1e6;
@@ -107,7 +124,8 @@ const TESTI = {
     return out;
   },
   // Where a text goes in a format ({ nome, w, h, safe }): its balanced lines, the size it fits at (shrinking by 5% down to MINIMO), and
-  // its plate (x = the centre, y = the top, w, h, padX, padY); fuori when it does not fit even at the smallest. misura(text, size, tipo)
+  // its plate (x = the centre, y = the top, w, h, padX, padY); fuori when it does not fit even at the smallest (a word that would have
+  // to be split in the middle does not fit: the size goes down until the word is whole). misura(text, size, tipo)
   // in px. The plate is centred on the FRAME; the safe zone only limits it (it moves just enough not to cross it). A subtitle sits in
   // the format's band (safe.subs; in 16:9 the strip from 76% to 94% of the height) in at most 2 lines; a title starts 40 px under
   // the top safe margin, in at most 3 and, if it is short enough to fit on one line at no less than MINIMO_TITOLO (85%) of its size, on one.
@@ -117,9 +135,10 @@ const TESTI = {
     const band = titolo ? [safe.top + 40, safe.top + 40 + formato.h * .3] : (safe.subs || [formato.h * .76, formato.h * .94]), bandH = band[1] - band[0];
     const at = pct => {
       const size = base * pct, padX = size * TESTI.PADX, padY = size * TESTI.PADY, m = s => misura(s, size, tipo);
-      const righe = TESTI.balance(voce.testo, Math.max(1, room - 2 * padX), m, maxRighe);
+      const maxW = Math.max(1, room - 2 * padX), righe = TESTI.balance(voce.testo, maxW, m, maxRighe);
       const w = Math.max(0, ...righe.map(m)) + 2 * padX, h = righe.length * size * TESTI.LINE + 2 * padY;
-      return { righe, size, padX, padY, w, h, fuori: righe.length > maxRighe || h > bandH + 1e-9 };
+      const spezzata = voce.testo.split(/\s+/).some(word => m(word) > maxW);          // a word wider than a line is split in the middle: not a fit
+      return { righe, size, padX, padY, w, h, fuori: righe.length > maxRighe || h > bandH + 1e-9 || spezzata };
     };
     const steps = [], min = titolo ? TESTI.MINIMO_TITOLO : TESTI.MINIMO; for (let pct = 1; pct >= min - 1e-9; pct -= .05) steps.push(pct);
     let r = titolo ? steps.map(at).find(t => t.righe.length === 1 && !t.fuori) : null;      // a short title: one line, shrunk if need be
@@ -132,6 +151,7 @@ const TESTI = {
   leggi(lista, durata, lettura = 'base') {
     const vel = TESTI.LETTURA[lettura];
     if (!vel) throw new Error(`Lettura "${lettura}" inesistente. Disponibili: ${Object.keys(TESTI.LETTURA).join(', ')}`);
+    if (!Array.isArray(lista)) return [];
     const errs = [], ok = lista.map((voce, i) => [voce, i]).filter(([voce]) => TESTI.valid(voce));
     for (const [voce, i] of ok) {
       const visibile = voce.a - voce.da, n = TESTI.letters(voce.testo);
@@ -163,6 +183,7 @@ const TESTI = {
   },
   // The subtitles as an .srt file (the titles are not subtitles), in order of time.
   srt(lista) {
+    if (!Array.isArray(lista)) return '';
     const hms = x => { const ms = Math.round(x * 1000), p = (n, d = 2) => String(n).padStart(d, '0'); return `${p(Math.floor(ms / 36e5))}:${p(Math.floor(ms / 6e4) % 60)}:${p(Math.floor(ms / 1e3) % 60)},${p(ms % 1000, 3)}`; };
     return lista.filter(v => TESTI.valid(v) && TESTI.tipo(v) === 'sottotitolo').sort((a, b) => a.da - b.da)
       .map((v, i) => `${i + 1}\n${hms(v.da)} --> ${hms(v.a)}\n${v.testo.trim()}\n\n`).join('');
@@ -171,7 +192,7 @@ const TESTI = {
 
 // ---------- page functions ----------
 let TESTI_LIST = [];
-function testi(lista) { TESTI_LIST.push(...lista); }
+function testi(lista) { TESTI_LIST = TESTI.add(TESTI_LIST, lista); }
 let testiCtx = null;                         // made on first use: this file also loads where there is no page (the tests)
 function testiMisura(txt, size, tipo) { testiCtx = testiCtx || document.createElement('canvas').getContext('2d'); testiCtx.font = TESTI.font(tipo, size); return testiCtx.measureText(txt).width; }
 const testiFormato = () => ({ nome: FORMAT_NAME, w: W, h: H, safe: SAFE });
