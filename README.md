@@ -4,6 +4,8 @@ Un kit per fare animazioni dipinte a mano con [p5.js](https://p5js.org) e [p5.br
 
 Il punto di partenza è il kit Claude Animation Base, ricavato dal codice del video musicale «I'm Upping My P(doom)» ([repository originale](https://github.com/JohnHeibel/PDoomVideo)) e da un'analisi di che cosa il modello fa bene e male. Questa versione lo estende: gli stili `cozy` e `anime`, una libreria di personaggi, i formati verticale e feed, l'audio, i testi e i sottotitoli. Il personaggio originale, Clawd, c'è ancora.
 
+Questa è una **versione estesa** di [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) di John Heibel (licenza MIT), oltre al video musicale di partenza linkato qui sopra.
+
 ![Le emozioni di Clawd, animate](docs/emotions.webp)
 
 ## Indice
@@ -244,4 +246,4 @@ Lanciali **uno alla volta**: aprono tutti Chrome e in parallelo si rallentano fi
 
 ## Licenze
 
-Il codice è sotto licenza MIT ([LICENSE](LICENSE)). I caratteri hanno la loro licenza accanto ai file in [assets/fonts/](assets/fonts/): Permanent Marker (Apache 2.0) e Atkinson Hyperlegible (SIL OFL 1.1). Gli effetti sonori hanno le loro in `assets/sfx/licenze.md`.
+Codice MIT ([LICENSE](LICENSE)), copyright di John Heibel per il kit originale e di Andrea Morini per le estensioni. I caratteri hanno la loro licenza accanto ai file in [assets/fonts/](assets/fonts/): Permanent Marker (Apache 2.0) e Atkinson Hyperlegible (SIL OFL 1.1). Gli effetti sonori hanno le loro in `assets/sfx/licenze.md`.
